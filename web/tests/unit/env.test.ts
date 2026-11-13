@@ -1,5 +1,15 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { EnvError, getEnv, parseEnv, resetEnvCacheForTests } from "@/lib/env";
+import {
+  DEV_MOCK_SECRETS,
+  EnvError,
+  featureKeys,
+  getEnv,
+  missingFeatureKeys,
+  parseEnv,
+  requireFeatureKey,
+  resetEnvCacheForTests,
+  usedMockSecrets,
+} from "@/lib/env";
 
 const valid = {
   DATABASE_URL: "postgresql://user:pass@db.example.com/ableway?sslmode=require",
@@ -38,16 +48,67 @@ describe("parseEnv", () => {
     expect(parseEnv({ ...valid, SMS_API_KEY: "sms" }).SMS_API_KEY).toBe("sms");
   });
 
-  it("lists every missing variable by name", () => {
-    const problems = problemsFor({});
+  it("lists every missing variable by name (production)", () => {
+    const problems = problemsFor({ NODE_ENV: "production" });
     for (const name of Object.keys(valid)) {
       expect(problems).toContain(`${name} is missing`);
     }
     expect(problems.some((p) => p.startsWith("SMS_API_KEY"))).toBe(false);
   });
 
-  it("treats empty and blank strings as missing", () => {
-    expect(problemsFor({ ...valid, GEMINI_API_KEY: "", STT_API_KEY: "   " })).toEqual([
+  it("in development, does not require keys for features that are not built yet", () => {
+    const problems = problemsFor({});
+    for (const name of featureKeys) {
+      expect(problems.some((p) => p.startsWith(name))).toBe(false);
+    }
+    expect(problems).toEqual(["DATABASE_URL is missing", "APP_URL is missing"]);
+  });
+
+  it("in development, uses mock values for empty local secrets", () => {
+    const env = parseEnv({
+      ...valid,
+      AUTH_SECRET: "",
+      TELEGRAM_WEBHOOK_SECRET: undefined,
+      CRON_SECRET: " ",
+    });
+    expect(env.AUTH_SECRET).toBe(DEV_MOCK_SECRETS.AUTH_SECRET);
+    expect(env.TELEGRAM_WEBHOOK_SECRET).toBe(DEV_MOCK_SECRETS.TELEGRAM_WEBHOOK_SECRET);
+    expect(env.CRON_SECRET).toBe(DEV_MOCK_SECRETS.CRON_SECRET);
+    expect(usedMockSecrets(env)).toEqual(["AUTH_SECRET", "TELEGRAM_WEBHOOK_SECRET", "CRON_SECRET"]);
+  });
+
+  it("in development, a real secret that is set is kept and still validated", () => {
+    expect(parseEnv(valid).AUTH_SECRET).toBe(valid.AUTH_SECRET);
+    expect(usedMockSecrets(parseEnv(valid))).toEqual([]);
+    expect(problemsFor({ ...valid, AUTH_SECRET: "too-short" })).toHaveLength(1);
+  });
+
+  it("the mock values pass the same rules as real secrets", () => {
+    const prod = { ...valid, NODE_ENV: "production" };
+    expect(() => parseEnv({ ...prod, ...DEV_MOCK_SECRETS })).toThrow(/development mock value/);
+  });
+
+  it("in production, refuses mock values and empty secrets", () => {
+    const prod = { ...valid, NODE_ENV: "production" };
+    expect(problemsFor({ ...prod, AUTH_SECRET: DEV_MOCK_SECRETS.AUTH_SECRET })).toEqual([
+      "AUTH_SECRET is a development mock value. Use a real secret.",
+    ]);
+    expect(problemsFor({ ...prod, CRON_SECRET: "" })).toEqual(["CRON_SECRET is missing"]);
+  });
+
+  it("in development, still checks the format of feature keys that are set", () => {
+    expect(problemsFor({ ...valid, TELEGRAM_BOT_TOKEN: "not-a-token" })).toHaveLength(1);
+  });
+
+  it("missingFeatureKeys lists empty feature keys", () => {
+    const env = parseEnv({ ...valid, GEMINI_API_KEY: "", TTS_API_KEY: undefined });
+    expect(missingFeatureKeys(env)).toEqual(["GEMINI_API_KEY", "TTS_API_KEY"]);
+    expect(missingFeatureKeys(parseEnv(valid))).toEqual([]);
+  });
+
+  it("treats empty and blank strings as missing (production)", () => {
+    const prod = { ...valid, NODE_ENV: "production" };
+    expect(problemsFor({ ...prod, GEMINI_API_KEY: "", STT_API_KEY: "   " })).toEqual([
       "GEMINI_API_KEY is missing",
       "STT_API_KEY is missing",
     ]);
@@ -71,7 +132,12 @@ describe("parseEnv", () => {
     const secretValue = "super-secret-but-too-short";
     let message = "";
     try {
-      parseEnv({ ...valid, AUTH_SECRET: secretValue, GEMINI_API_KEY: undefined });
+      parseEnv({
+        ...valid,
+        NODE_ENV: "production",
+        AUTH_SECRET: secretValue,
+        GEMINI_API_KEY: undefined,
+      });
     } catch (error) {
       message = (error as Error).message;
     }
@@ -94,6 +160,24 @@ describe("getEnv", () => {
     const first = getEnv();
     vi.stubEnv("GEMINI_API_KEY", "changed");
     expect(getEnv()).toBe(first);
+  });
+
+  it("warns once in development about missing feature keys", () => {
+    for (const [key, value] of Object.entries(valid)) vi.stubEnv(key, value);
+    vi.stubEnv("GEMINI_API_KEY", "");
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    getEnv();
+    getEnv();
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(String(warn.mock.calls[0]?.[0])).toContain("GEMINI_API_KEY");
+  });
+
+  it("requireFeatureKey returns a set key and explains a missing one", () => {
+    for (const [key, value] of Object.entries(valid)) vi.stubEnv(key, value);
+    vi.stubEnv("TTS_API_KEY", "");
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    expect(requireFeatureKey("GEMINI_API_KEY")).toBe("gemini-key");
+    expect(() => requireFeatureKey("TTS_API_KEY")).toThrow(/TTS_API_KEY is missing/);
   });
 
   it("throws EnvError when process.env is invalid", () => {

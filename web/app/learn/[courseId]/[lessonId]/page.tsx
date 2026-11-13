@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { AppHeader } from "@/components/layout/app-header";
 import { AccessibleAudioPlayer } from "@/components/audio-player/accessible-audio-player";
-import { useA11y } from "@/core/a11y/a11y-context";
+import { useA11y } from "@/lib/a11y/a11y-context";
 import { useEarcons } from "@/hooks/use-earcons";
 import { Bot, ArrowLeft, CheckCircle2 } from "lucide-react";
 

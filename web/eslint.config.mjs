@@ -44,6 +44,8 @@ const eslintConfig = defineConfig([
     "playwright-report/**",
     "test-results/**",
     "next-env.d.ts",
+    // Static Savanna pages and vendor scripts (Bootstrap, Popper).
+    "public/**",
   ]),
 ]);
 

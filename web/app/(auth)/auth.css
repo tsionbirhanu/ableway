@@ -1,0 +1,110 @@
+/* Styles for the sign-in and sign-up pages only. Loaded by app/(auth)/layout.tsx. */
+
+.page {
+  width: 100%;
+  max-width: 48rem;
+  margin: 0 auto;
+  padding: 1.5rem 1rem;
+  font-size: 1.125rem;
+  line-height: 1.6;
+  --error: #ff8a8a;
+  --focus: #8ab4ff;
+}
+
+.page h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+}
+
+.page p {
+  margin: 0 0 1rem;
+}
+
+.page a {
+  text-decoration: underline;
+}
+
+.page :focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+
+.field {
+  margin: 0 0 1.25rem;
+}
+
+.field label {
+  display: block;
+  font-weight: 600;
+}
+
+.field input:not([type="checkbox"]) {
+  display: block;
+  width: 100%;
+  max-width: 28rem;
+  padding: 0.6rem 0.75rem;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 2px solid currentColor;
+  border-radius: 4px;
+}
+
+.field input[aria-invalid="true"] {
+  border-color: var(--error);
+  border-width: 3px;
+}
+
+.field-checkbox {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.field-checkbox input {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.field-hint {
+  margin: 0.25rem 0;
+}
+
+.field-error {
+  margin: 0.25rem 0;
+  color: var(--error);
+  font-weight: 600;
+}
+
+.error-summary {
+  margin: 0 0 1.5rem;
+  padding: 1rem;
+  border: 3px solid var(--error);
+}
+
+.error-summary h2 {
+  margin-top: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.error-summary a {
+  color: var(--error);
+}
+
+.button {
+  min-height: 2.75rem;
+  padding: 0.6rem 1.25rem;
+  font: inherit;
+  font-weight: 600;
+  color: #020617;
+  background: #f8fafc;
+  border: 2px solid #f8fafc;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.button[aria-disabled="true"] {
+  opacity: 0.7;
+}

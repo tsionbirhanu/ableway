@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Send, KeyRound, Shield, CheckCircle2, Trash2, Bell, User, Settings } from 'lucide-react';
-import { useA11y } from '@/core/a11y/a11y-context';
+import { useA11y } from '@/lib/a11y/a11y-context';
 
 export default function ProfilePage() {
   const { announce, mode, setMode, theme, setTheme, fontSize, setFontSize } = useA11y();

@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { BookOpen, Clock, BarChart2, Tag, ArrowRight, Volume2, CheckCircle2, Sparkles } from 'lucide-react';
-import { useA11y } from '@/core/a11y/a11y-context';
+import { useA11y } from '@/lib/a11y/a11y-context';
 import { Course } from '@/types';
 
 export default function CoursesPage() {

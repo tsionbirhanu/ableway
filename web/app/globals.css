@@ -1,143 +1,53 @@
+@import "tailwindcss";
+
 :root {
-  --background: #ffffff;
-  --foreground: #111111;
-  --focus: #1a56db;
-  --error: #b00020;
+  --background: #020617;
+  --foreground: #f8fafc;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #f2f2f2;
-    --focus: #8ab4ff;
-    --error: #ff8a8a;
-  }
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
 }
 
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
+/* WCAG 2.2 AA / AAA Contrast Themes (IR-1.5) */
+html.theme-high-contrast {
+  filter: contrast(1.4) brightness(1.1);
+}
+
+html.theme-dark-contrast {
+  --background: #000000;
+  --foreground: #ffffff;
+  background-color: #000000 !important;
+}
+
+html.theme-yellow-black {
+  --background: #000000;
+  --foreground: #ffff00;
+  background-color: #000000 !important;
+  color: #ffff00 !important;
+}
+
+html.theme-yellow-black * {
+  border-color: #ffff00 !important;
+}
+
+/* Text Size Scaling (IR-1.5: 400% zoom & large text reflow) */
+html.text-large {
+  font-size: 120%;
+}
+
+html.text-x-large {
+  font-size: 140%;
+}
+
+html.text-xx-large {
+  font-size: 170%;
 }
 
 body {
-  margin: 0;
-  color: var(--foreground);
-  background: var(--background);
-  font-family: system-ui, Arial, Helvetica, sans-serif;
-  font-size: 1.125rem;
-  line-height: 1.6;
-}
-
-main {
-  max-width: 48rem;
-  margin: 0 auto;
-  padding: 1.5rem 1rem;
-}
-
-:focus-visible {
-  outline: 3px solid var(--focus);
-  outline-offset: 3px;
-}
-
-.skip-link {
-  position: absolute;
-  left: 1rem;
-  top: -100px;
-  padding: 0.75rem 1rem;
   background: var(--background);
   color: var(--foreground);
-  border: 2px solid var(--focus);
-  z-index: 1000;
-}
-
-.skip-link:focus {
-  top: 1rem;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  * {
-    animation: none !important;
-    transition: none !important;
-  }
-}
-
-/* ---------- Forms ---------- */
-
-.field {
-  margin: 0 0 1.25rem;
-}
-
-.field label {
-  display: block;
-  font-weight: 600;
-}
-
-.field input:not([type="checkbox"]) {
-  display: block;
-  width: 100%;
-  max-width: 28rem;
-  padding: 0.6rem 0.75rem;
-  font: inherit;
-  color: var(--foreground);
-  background: var(--background);
-  border: 2px solid currentColor;
-  border-radius: 4px;
-}
-
-.field input[aria-invalid="true"] {
-  border-color: var(--error);
-  border-width: 3px;
-}
-
-.field-checkbox {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-}
-
-.field-checkbox input {
-  width: 1.5rem;
-  height: 1.5rem;
-}
-
-.field-hint {
-  margin: 0.25rem 0;
-}
-
-.field-error {
-  margin: 0.25rem 0;
-  color: var(--error);
-  font-weight: 600;
-}
-
-.error-summary {
-  margin: 0 0 1.5rem;
-  padding: 1rem;
-  border: 3px solid var(--error);
-}
-
-.error-summary h2 {
-  margin-top: 0;
-  font-size: 1.25rem;
-}
-
-.error-summary a {
-  color: var(--error);
-}
-
-button {
-  min-height: 2.75rem;
-  padding: 0.6rem 1.25rem;
-  font: inherit;
-  font-weight: 600;
-  color: var(--background);
-  background: var(--foreground);
-  border: 2px solid var(--foreground);
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-button[aria-disabled="true"] {
-  opacity: 0.7;
 }

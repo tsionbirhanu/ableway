@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { ShieldCheck, PhoneCall, CheckCircle2, MessageSquare, Clock, User, ArrowRight, X } from 'lucide-react';
-import { useA11y } from '@/core/a11y/a11y-context';
+import { useA11y } from '@/lib/a11y/a11y-context';
 import { HelpRequest } from '@/types';
 
 export default function HelpQueuePage() {

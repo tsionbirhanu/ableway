@@ -3,8 +3,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Mic, MicOff, Send, PhoneCall, Volume2, VolumeX, X, HelpCircle, MessageSquare } from 'lucide-react';
-import { useA11y } from '@/core/a11y/a11y-context';
-import { playEarcon } from '@/core/audio/earcons';
+import { useA11y } from '@/lib/a11y/a11y-context';
+import { playEarcon } from '@/lib/audio/earcons';
 import { AllowedAction } from '@/types';
 
 interface Message {

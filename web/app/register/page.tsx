@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Mic, CheckCircle2, Shield, ArrowRight, UserCheck, AlertCircle } from 'lucide-react';
-import { useA11y } from '@/core/a11y/a11y-context';
+import { useA11y } from '@/lib/a11y/a11y-context';
 
 export default function RegisterPage() {
   const router = useRouter();

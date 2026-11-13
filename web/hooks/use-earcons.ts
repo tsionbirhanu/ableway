@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
-import { earcons } from "@/core/audio/earcons";
+import { earcons } from "@/lib/audio/earcons";
 import { EarconType } from "@/types/voice";
 
 export function useEarcons() {

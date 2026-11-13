@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/navigation';
 import { usePathname } from 'next/navigation';
 import { Sparkles, BookOpen, GraduationCap, CreditCard, User, HelpCircle, Layers, ShieldCheck } from 'lucide-react';
-import { useA11y } from '@/core/a11y/a11y-context';
+import { useA11y } from '@/lib/a11y/a11y-context';
 
 export function AccessibleHeader() {
   const pathname = usePathname();

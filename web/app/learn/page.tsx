@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Play, Pause, RotateCcw, FastForward, CheckCircle2, BookOpen, Volume2, HelpCircle, ArrowRight } from 'lucide-react';
-import { useA11y } from '@/core/a11y/a11y-context';
+import { useA11y } from '@/lib/a11y/a11y-context';
 
 export default function LearnPage() {
   const { announce, speechRate, setSpeechRate } = useA11y();

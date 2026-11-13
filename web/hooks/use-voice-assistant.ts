@@ -2,9 +2,9 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { speechRecognizer } from "@/core/audio/speech-recognition";
-import { parseVoiceCommand } from "@/core/audio/voice-commands";
-import { useA11y } from "@/core/a11y/a11y-context";
+import { speechRecognizer } from "@/lib/audio/speech-recognition";
+import { parseVoiceCommand } from "@/lib/audio/voice-commands";
+import { useA11y } from "@/lib/a11y/a11y-context";
 import { useEarcons } from "./use-earcons";
 import { VoiceCommandIntent, VoiceState } from "@/types/voice";
 

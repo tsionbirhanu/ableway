@@ -3,7 +3,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { PhoneCall, ShieldCheck, CheckCircle2, Clock, AlertCircle, ArrowRight, MessageSquare } from 'lucide-react';
-import { useA11y } from '@/core/a11y/a11y-context';
+import { useA11y } from '@/lib/a11y/a11y-context';
 import { HelpRequestStatus } from '@/types';
 
 function PaymentContent() {

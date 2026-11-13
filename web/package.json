@@ -22,6 +22,7 @@
   "dependencies": {
     "@neondatabase/serverless": "^1.2.0",
     "drizzle-orm": "^0.45.4",
+    "lucide-react": "^1.72.0",
     "next": "16.4.6",
     "next-auth": "5.0.0-beta.32",
     "react": "19.3.0",
@@ -34,6 +35,7 @@
     "@electric-sql/pglite": "^0.5.16",
     "@electric-sql/pglite-pgvector": "^0.0.17",
     "@playwright/test": "^1.65.0",
+    "@tailwindcss/turbopack": "4.3.3",
     "@types/node": "^24.19.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
@@ -43,6 +45,7 @@
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-jsx-a11y": "^6.10.2",
     "prettier": "^3.10.1",
+    "tailwindcss": "4.3.3",
     "tsx": "^4.23.15",
     "typescript": "^5",
     "vitest": "^5.1.0"

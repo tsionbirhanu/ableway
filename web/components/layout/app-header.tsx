@@ -4,7 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BookOpen, Briefcase, Bot, User, SunMoon, Home } from "lucide-react";
-import { useA11y } from "@/core/a11y/a11y-context";
+import { useA11y } from "@/lib/a11y/a11y-context";
 import { VoiceMicButton } from "../voice/voice-mic-button";
 import { useVoiceAssistant } from "@/hooks/use-voice-assistant";
 import { VoiceStatusBar } from "../voice/voice-status-bar";

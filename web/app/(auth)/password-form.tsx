@@ -91,7 +91,7 @@ export function PasswordForm({ mode, action }: PasswordFormProps) {
           <label htmlFor="show-password">Show password</label>
         </div>
 
-        <button type="submit" disabled={pending} aria-disabled={pending}>
+        <button type="submit" className="button" disabled={pending} aria-disabled={pending}>
           {text.submit}
         </button>
         <p role="status" aria-live="polite" className="form-status">
