@@ -13,6 +13,9 @@ export const LIMITS = {
   signUpPerEmail: { max: 3, windowSeconds: 60 * 60 },
   signUpPerIp: { max: 10, windowSeconds: 60 * 60 },
   helpRequestPerIp: { max: 10, windowSeconds: 60 * 60 },
+  // Passkeys: starting a ceremony is cheap, so allow more; finishing is where guessing would happen.
+  passkeyStartPerIp: { max: 30, windowSeconds: 15 * 60 },
+  passkeyFinishPerIp: { max: 30, windowSeconds: 15 * 60 },
 } satisfies Record<string, Limit>;
 
 /** Rate-limit keys never contain personal data in clear text. */

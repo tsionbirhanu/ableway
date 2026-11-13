@@ -36,6 +36,20 @@
       "when": 1794573021579,
       "tag": "0004_auth_tables_triggers",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794593663233,
+      "tag": "0005_passkeys",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794593674925,
+      "tag": "0006_passkeys_triggers",
+      "breakpoints": true
     }
   ]
 }

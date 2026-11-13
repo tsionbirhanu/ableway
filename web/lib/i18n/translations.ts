@@ -176,7 +176,7 @@ export const translations: Record<SupportedLanguage, Translations> = {
       a11yCalloutDesc:
         'Ableway provides blind and visually impaired learners with hands-free spoken voice dialog, screen reader optimization, and zero CAPTCHAs.',
       a11yRegisterBtn: 'Create Account (Accessible Registration)',
-      a11yOtpOption: 'Or use password-free one-time code login',
+      a11yOtpOption: 'Or sign in with a passkey (no password)',
       otpTitle: 'Accessible Sign-In',
       otpDesc: 'We will send a 6-digit one-time code to this address. No password or CAPTCHA required.',
       otpCodeLabel: '6-Digit One-Time Code',
@@ -311,7 +311,7 @@ export const translations: Record<SupportedLanguage, Translations> = {
       a11yCalloutDesc:
         'ኤብልዌይ ለእይታ እክል ላለባቸው ተማሪዎች እጅ-አልባ የድምጽ ውይይት፣ የስክሪን ሪደር ድጋፍ እና ያለ CAPTCHA ፈጣን ምዝገባ ያቀርባል።',
       a11yRegisterBtn: 'አካውንት ይፍጠሩ (ተደራሽ ምዝገባ)',
-      a11yOtpOption: 'ወይም ያለይለፍ ቃል በጊዜያዊ ኮድ ይግቡ',
+      a11yOtpOption: 'ወይም ያለይለፍ ቃል በፓስኪ ይግቡ',
       otpTitle: 'ተደራሽ መግቢያ',
       otpDesc: 'ባለ 6 ድጂት ጊዜያዊ ኮድ ወደ ኢሜይልዎ እንልካለን። ምንም ዓይነት የይለፍ ቃል ወይም CAPTCHA አያስፈልግም።',
       otpCodeLabel: 'ባለ 6 ድጂት ጊዜያዊ ኮድ',

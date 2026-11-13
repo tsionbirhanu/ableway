@@ -7,6 +7,8 @@ import { Suspense } from 'react';
 import { useA11y } from '@/lib/a11y/a11y-context';
 import { playEarcon } from '@/lib/audio/earcons';
 import { getTranslation } from '@/lib/i18n/translations';
+import { signInWithPasswordAction } from '@/app/(auth)/passkey-actions';
+import { signInWithPasskey } from '@/lib/passkeys/client';
 
 function LoginContent() {
   const router = useRouter();
@@ -44,8 +46,8 @@ function LoginContent() {
     }
   }, [announce]);
 
-  // Handle standard login
-  const handleStandardSubmit = (e: React.FormEvent) => {
+  // Handle standard ALX email/password submission
+  const handleStandardSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
       setError('Please enter a valid email address');
@@ -62,11 +64,38 @@ function LoginContent() {
     }
 
     setIsSubmitting(true);
+    setError(null);
+    const result = await signInWithPasswordAction(email, password);
+    if (!result.ok) {
+      setIsSubmitting(false);
+      setError(result.message);
+      playEarcon('error');
+      announce(result.message, 'assertive');
+      return;
+    }
     playEarcon('success');
     announce('Sign in successful. Redirecting to your learning portal...', 'polite');
-    setTimeout(() => {
-      router.push('/courses');
-    }, 1200);
+    router.push('/courses');
+    router.refresh();
+  };
+
+  // Sign in with a passkey: the device asks the learner to unlock it. No email or password needed.
+  const handlePasskeySignIn = async () => {
+    setIsSubmitting(true);
+    setError(null);
+    announce('Your device will ask you to unlock it.', 'polite');
+    const result = await signInWithPasskey();
+    if (!result.ok) {
+      setIsSubmitting(false);
+      setError(result.message);
+      playEarcon('error');
+      announce(result.message, 'assertive');
+      return;
+    }
+    playEarcon('success');
+    announce('Sign in successful. Going to courses...', 'polite');
+    router.push('/courses');
+    router.refresh();
   };
 
   // Handle Accessible OTP send code
@@ -303,8 +332,9 @@ function LoginContent() {
               </p>
               <button
                 type="button"
-                onClick={() => setIsAccessibleMode(true)}
-                className="w-full py-3 px-4 rounded-xl bg-[#0B132B] hover:bg-[#152248] text-orange-400 font-bold text-xs shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-400 min-h-[44px] flex items-center justify-center cursor-pointer"
+                onClick={handlePasskeySignIn}
+                disabled={isSubmitting}
+                className="w-full min-h-[40px] py-2 px-3 rounded-lg bg-white hover:bg-slate-100 text-slate-800 font-semibold border border-slate-300 text-xs flex items-center justify-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-slate-400 cursor-pointer"
               >
                 Go to Accessible Experience
               </button>
