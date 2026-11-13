@@ -1,10 +1,12 @@
 import "server-only";
 import NextAuth, { CredentialsSignin } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
+import { z } from "zod";
 import { getDb } from "@/lib/db/client";
 import { getEnv } from "@/lib/env";
 import { verifyPasswordLogin } from "./accounts";
-import { RateLimitError } from "./errors";
+import { ConflictError, RateLimitError } from "./errors";
+import { finishPasskeyRegistration, finishPasskeySignIn, relyingPartyFromAppUrl } from "./passkeys";
 import { clientIp } from "./request-ip";
 import { isRole, type Role } from "./roles";
 
@@ -22,8 +24,28 @@ class TooManyAttempts extends CredentialsSignin {
   code = "rate_limited";
 }
 
+/** Someone created an account with this email while the passkey was being made. */
+class EmailTaken extends CredentialsSignin {
+  code = "email_taken";
+}
+
+/** Passkey credentials arrive as form strings: { mode, challengeId, response (JSON) }. */
+const passkeyCredentialsSchema = z.object({
+  mode: z.enum(["register", "authenticate"]),
+  challengeId: z.string(),
+  response: z.string().max(20_000),
+});
+
+function parseJson(text: string): unknown {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
+
 /**
- * Auth.js: email and password only. JWT sessions, so no session table.
+ * Auth.js: passkeys (main) and email + password (fallback). JWT sessions, so no session table.
  * The role is in the session for the UI. Route handlers and server actions
  * re-read the role from the database (see session.ts), so a role change
  * takes effect on the next request.
@@ -51,6 +73,34 @@ export const { handlers, auth, signIn, signOut } = NextAuth(() => {
             return actor ? { id: actor.id, role: actor.role } : null;
           } catch (error) {
             if (error instanceof RateLimitError) throw new TooManyAttempts();
+            throw error;
+          }
+        },
+      }),
+      Credentials({
+        id: "passkey",
+        name: "Passkey",
+        credentials: { mode: {}, challengeId: {}, response: {} },
+        async authorize(credentials, request) {
+          const parsed = passkeyCredentialsSchema.safeParse(credentials);
+          if (!parsed.success) return null;
+          const input = {
+            challengeId: parsed.data.challengeId,
+            response: parseJson(parsed.data.response),
+          };
+          const options = {
+            ip: clientIp(request.headers),
+            rp: relyingPartyFromAppUrl(env.APP_URL),
+          };
+          try {
+            const actor =
+              parsed.data.mode === "register"
+                ? await finishPasskeyRegistration(getDb(), input, options)
+                : await finishPasskeySignIn(getDb(), input, options);
+            return actor ? { id: actor.id, role: actor.role } : null;
+          } catch (error) {
+            if (error instanceof RateLimitError) throw new TooManyAttempts();
+            if (error instanceof ConflictError) throw new EmailTaken();
             throw error;
           }
         },

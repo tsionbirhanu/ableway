@@ -25,6 +25,7 @@ import {
   type EnrollmentProgress,
   type LastPosition,
   type MessageFlag,
+  type PendingProfile,
   type QuizChoices,
 } from "./json-types";
 
@@ -142,6 +143,55 @@ export const passwordCredentials = pgTable("password_credentials", {
   /** Self-describing scrypt hash: scrypt$N$r$p$salt$hash (base64url). */
   passwordHash: text("password_hash").notNull(),
 });
+
+/**
+ * Passkeys (WebAuthn). We store only the public key: the private key never
+ * leaves the learner's device. One profile can have several passkeys.
+ */
+export const passkeyCredentials = pgTable(
+  "passkey_credentials",
+  {
+    ...baseColumns,
+    profileId: uuid("profile_id")
+      .notNull()
+      .references(() => profiles.id, { onDelete: "cascade" }),
+    /** Credential id from the authenticator, base64url. */
+    credentialId: text("credential_id").notNull().unique(),
+    /** COSE public key, base64url. */
+    publicKey: text("public_key").notNull(),
+    /** Signature counter, used to spot cloned authenticators. */
+    counter: bigint("counter", { mode: "number" }).notNull().default(0),
+    transports: text("transports").array().notNull().default(sql`'{}'::text[]`),
+    /** "singleDevice" or "multiDevice" (synced, e.g. Google Password Manager, iCloud Keychain). */
+    deviceType: text("device_type").notNull(),
+    backedUp: boolean("backed_up").notNull().default(false),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+  },
+  (t) => [
+    index("passkey_credentials_profile_id_idx").on(t.profileId),
+    check("passkey_credentials_counter_not_negative", sql`${t.counter} >= 0`),
+  ],
+);
+
+export const webauthnPurpose = pgEnum("webauthn_purpose", ["registration", "authentication"]);
+
+/**
+ * One-time WebAuthn challenges. Each is used once and expires after a few
+ * minutes. For a new account, `pendingProfile` holds the details the learner
+ * confirmed, until the passkey is created; it is cleared when used.
+ */
+export const webauthnChallenges = pgTable(
+  "webauthn_challenges",
+  {
+    ...baseColumns,
+    challenge: text("challenge").notNull().unique(),
+    purpose: webauthnPurpose("purpose").notNull(),
+    pendingProfile: jsonb("pending_profile").$type<PendingProfile>(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    usedAt: timestamp("used_at", { withTimezone: true }),
+  },
+  (t) => [index("webauthn_challenges_expires_at_idx").on(t.expiresAt)],
+);
 
 /**
  * Fixed-window counters for rate limiting (sign-in, sign-up, help requests).
@@ -579,6 +629,8 @@ export const auditLog = pgTable(
 export const allTables = {
   profiles,
   passwordCredentials,
+  passkeyCredentials,
+  webauthnChallenges,
   rateLimits,
   courses,
   modules,

@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useA11y } from '@/lib/a11y/a11y-context';
 import { playEarcon } from '@/lib/audio/earcons';
+import { createAccountWithPasskey, saveSignUpPrefill } from '@/lib/passkeys/client';
 
 interface RegisterFormData {
   fullName: string;
@@ -759,17 +760,15 @@ export default function RegisterPage() {
         // --- FULL SUMMARY CONFIRMATION ---
         case 'confirm_summary': {
           if (isAffirm(lower)) {
-            setStage('verification');
-            setAssistantStep('ask_code');
-            const codeMsg = isAmharic
-              ? 'የምዝገባ መረጃው ተቀምጧል። ባለ 6 ድጂት ማረጋገጫ ኮድ ወደ ኢሜይልዎ ተልኳል። ማረጋገጫ ኮድዎን ይናገሩ።'
-              : 'Registration details saved. A 6-digit one-time code was sent to your email. What is your one-time code?';
-            speakAssistant(codeMsg);
+            // Passkey step: the phone's own unlock prompt takes over, so stop listening first.
+            pausePasskeyListening();
+            const passkeyMsg = isAmharic
+              ? 'አመሰግናለሁ። አሁን ስልክዎ እንዲከፍቱት ይጠይቅዎታል፣ እንደተለመደው ይክፈቱት። ይህ የይለፍ ቁልፍዎን ይፈጥራል።'
+              : 'Thank you. Your phone will now ask you to unlock it, like you always do. This creates your passkey. You do not need a password.';
+            speakAssistant(passkeyMsg);
             setTimeout(() => {
-              if (oneTimeCodeInputRef.current) {
-                oneTimeCodeInputRef.current.focus();
-              }
-            }, 300);
+              void createAccountRef.current();
+            }, 2500);
           } else if (isDeny(lower)) {
             speakAssistant(
               isAmharic
@@ -879,26 +878,117 @@ export default function RegisterPage() {
     return true;
   };
 
-  // Keyboard / Form Submit: Step 1 (Details)
+  // Keyboard / Form Submit: Step 1 (Details) -> create the account with a passkey
   const handleDetailsFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateDetails()) {
       return;
     }
 
-    // Advance to One-Time Code Verification
-    setStage('verification');
-    setAssistantStep('ask_code');
-    const msg = `Registration details accepted. We sent a 6-digit one-time code to ${formData.email}. Enter or paste your code to sign in.`;
+    pausePasskeyListening();
+    const msg = 'Your device will now ask you to unlock it. This creates your passkey. You do not need a password.';
     announce(msg, 'polite');
     setAssistantSpokenText(msg);
-
-    setTimeout(() => {
-      if (oneTimeCodeInputRef.current) {
-        oneTimeCodeInputRef.current.focus();
-      }
-    }, 200);
+    // Called straight from the button press: some browsers (Safari) only allow passkeys after a tap or key press.
+    void createAccount();
   };
+
+  // ---------- Passkey account creation (replaces the one-time code step) ----------
+
+  // Stop hands-free listening while the device's unlock prompt is open.
+  // 'completed' is the state the listening guards already respect.
+  function pausePasskeyListening() {
+    assistantStepRef.current = 'completed';
+    setAssistantStep('completed');
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.abort();
+      } catch {}
+    }
+    setIsListening(false);
+  }
+
+  const fieldErrorKeys: Record<string, keyof FormErrors> = {
+    name: 'fullName',
+    email: 'email',
+    phone: 'phone',
+    language: 'preferredLanguage',
+  };
+
+  async function createAccount() {
+    const current = formDataRef.current;
+    const result = await createAccountWithPasskey({
+      name: current.fullName,
+      email: current.email,
+      phone: current.phone.trim() ? current.phone : undefined,
+      language: current.preferredLanguage || 'en',
+    });
+
+    if (result.ok) {
+      setStage('success');
+      setAssistantStep('completed');
+      playEarcon('success');
+      const successMsg = 'Account created. Going to course choice';
+      announce(successMsg, 'polite');
+      setAssistantSpokenText(successMsg);
+      if (mode === 'voice-first' && !preferences.suppressInAppTTS) {
+        speak(successMsg);
+      }
+      setTimeout(() => {
+        router.push('/courses');
+        router.refresh();
+      }, 1800);
+      return;
+    }
+
+    playEarcon('error');
+
+    // This device cannot make passkeys: continue with a password, keeping name and email.
+    if (result.reason === 'unsupported') {
+      saveSignUpPrefill({ name: current.fullName, email: current.email });
+      const msg = `${result.message} Going to the password page now.`;
+      announce(msg, 'assertive');
+      setAssistantSpokenText(msg);
+      if (mode === 'voice-first' && !preferences.suppressInAppTTS) {
+        speak(msg);
+      }
+      setTimeout(() => router.push('/sign-up'), 2500);
+      return;
+    }
+
+    // Wrong details: show them in the error summary, like other form errors.
+    if (result.fieldErrors) {
+      const mapped: FormErrors = {};
+      for (const [field, message] of Object.entries(result.fieldErrors)) {
+        const key = fieldErrorKeys[field];
+        if (key) mapped[key] = message;
+      }
+      setErrors(mapped);
+      if (errorSummaryRef.current) {
+        errorSummaryRef.current.focus();
+      }
+    }
+
+    const detail = result.fieldErrors ? Object.values(result.fieldErrors).join(' ') : '';
+    const retry =
+      result.reason === 'email_taken'
+        ? ' You can sign in on the login page.'
+        : ' Say yes to try again, or say change email. You can also press the Create account button.';
+    const msg = `${result.message} ${detail}${retry}`.replace(/\s+/g, ' ').trim();
+
+    if (assistantActiveRef.current) {
+      assistantStepRef.current = 'confirm_summary';
+      setAssistantStep('confirm_summary');
+      speakAssistant(msg);
+    } else {
+      announce(msg, 'assertive');
+      setAssistantSpokenText(msg);
+    }
+  }
+
+  // The voice handler is created earlier than createAccount; this ref always points at the latest one.
+  const createAccountRef = useRef(createAccount);
+  createAccountRef.current = createAccount;
 
   // Step 2: Verification with One-Time Code
   const completeRegistration = () => {
@@ -1512,7 +1602,7 @@ export default function RegisterPage() {
               type="submit"
               className="w-full min-h-[48px] bg-[#0B132B] hover:bg-[#131E3D] text-orange-400 hover:text-orange-300 font-bold py-3.5 px-6 rounded-lg flex items-center justify-center gap-2 border-2 border-orange-500 shadow-md hover:shadow-lg transition-all focus:outline-none focus:ring-4 focus:ring-orange-400 cursor-pointer text-base"
             >
-              <span>Continue to Verification</span>
+              <span>Create account</span>
               <ArrowRight className="w-5 h-5 text-orange-400" aria-hidden="true" />
             </button>
           </div>

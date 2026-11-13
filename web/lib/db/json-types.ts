@@ -92,3 +92,40 @@ export const auditMetadataSchema = z.record(
   z.union([jsonPrimitive, z.array(jsonPrimitive).max(50)]),
 );
 export type AuditMetadata = z.infer<typeof auditMetadataSchema>;
+
+// ---------- webauthn_challenges.pending_profile ----------
+
+/**
+ * Details a learner confirmed before creating their passkey.
+ * Phone must be in international form (+251...), because we cannot guess
+ * the country from a local number.
+ */
+export const pendingProfileSchema = z.strictObject({
+  name: z
+    .string()
+    .trim()
+    .min(1, { error: "Please tell us your name." })
+    .max(100, { error: "Please use a shorter name." }),
+  email: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .pipe(z.email({ error: "Please enter a full email address, like name@example.com." }).max(254)),
+  phone: z
+    .string()
+    .transform((value) => value.replace(/[\s().-]/g, ""))
+    .pipe(
+      z.string().regex(/^\+[1-9][0-9]{6,14}$/, {
+        error: "Please say the phone number with the country code, like +251 911 234 567.",
+      }),
+    )
+    .optional(),
+  /** BCP 47 tag such as "en", "am" or "om". */
+  language: z
+    .string()
+    .trim()
+    .regex(/^[a-z]{2,3}(-[A-Za-z]{2})?$/, { error: "Please choose a language." })
+    .default("en"),
+});
+export type PendingProfile = z.output<typeof pendingProfileSchema>;
+export type PendingProfileInput = z.input<typeof pendingProfileSchema>;

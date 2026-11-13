@@ -17,6 +17,8 @@ import {
 import { useA11y } from '@/lib/a11y/a11y-context';
 import { playEarcon } from '@/lib/audio/earcons';
 import { getTranslation } from '@/lib/i18n/translations';
+import { signInWithPasswordAction } from '@/app/(auth)/passkey-actions';
+import { signInWithPasskey } from '@/lib/passkeys/client';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -50,7 +52,7 @@ export default function LoginPage() {
   }, [announce]);
 
   // Handle standard ALX email/password submission
-  const handleStandardSubmit = (e: React.FormEvent) => {
+  const handleStandardSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
       setError('Please enter a valid email address');
@@ -67,11 +69,38 @@ export default function LoginPage() {
     }
 
     setIsSubmitting(true);
+    setError(null);
+    const result = await signInWithPasswordAction(email, password);
+    if (!result.ok) {
+      setIsSubmitting(false);
+      setError(result.message);
+      playEarcon('error');
+      announce(result.message, 'assertive');
+      return;
+    }
     playEarcon('success');
     announce('Sign in successful. Redirecting to your learning portal...', 'polite');
-    setTimeout(() => {
-      router.push('/courses');
-    }, 1200);
+    router.push('/courses');
+    router.refresh();
+  };
+
+  // Sign in with a passkey: the device asks the learner to unlock it. No email or password needed.
+  const handlePasskeySignIn = async () => {
+    setIsSubmitting(true);
+    setError(null);
+    announce('Your device will ask you to unlock it.', 'polite');
+    const result = await signInWithPasskey();
+    if (!result.ok) {
+      setIsSubmitting(false);
+      setError(result.message);
+      playEarcon('error');
+      announce(result.message, 'assertive');
+      return;
+    }
+    playEarcon('success');
+    announce('Sign in successful. Going to courses...', 'polite');
+    router.push('/courses');
+    router.refresh();
   };
 
   // Handle Accessible OTP send code
@@ -400,7 +429,8 @@ export default function LoginPage() {
             {!useOtpMode && (
               <button
                 type="button"
-                onClick={() => setUseOtpMode(true)}
+                onClick={handlePasskeySignIn}
+                disabled={isSubmitting}
                 className="w-full min-h-[40px] py-2 px-3 rounded-lg bg-white hover:bg-slate-100 text-slate-800 font-semibold border border-slate-300 text-xs flex items-center justify-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-slate-400 cursor-pointer"
               >
                 <KeyRound className="w-3.5 h-3.5 text-orange-800" aria-hidden="true" />
