@@ -28,7 +28,7 @@ class EarconManager {
     return this.audioCtx;
   }
 
-  public play(type: EarconType) {
+  public play(type: EarconType | 'listening' | 'stop') {
     if (!this.isEnabled) return;
     const ctx = this.getAudioContext();
     if (!ctx) return;
@@ -42,6 +42,7 @@ class EarconManager {
       gain.connect(ctx.destination);
 
       switch (type) {
+        case "listening":
         case "listening-start":
           // Ascending two-tone chime (440Hz -> 880Hz)
           osc.type = "sine";
@@ -53,6 +54,7 @@ class EarconManager {
           osc.stop(now + 0.18);
           break;
 
+        case "stop":
         case "listening-stop":
           // Descending soft chime (660Hz -> 330Hz)
           osc.type = "sine";
@@ -116,3 +118,6 @@ class EarconManager {
 
 export const earcons = new EarconManager();
 
+export function playEarcon(type: EarconType | 'listening' | 'stop') {
+  earcons.play(type);
+}

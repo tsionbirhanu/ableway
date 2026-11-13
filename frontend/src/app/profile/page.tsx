@@ -1,244 +1,231 @@
-"use client";
+'use client';
 
-import React, { useEffect } from "react";
-import { AppHeader } from "@/components/layout/app-header";
-import { useA11y } from "@/core/a11y/a11y-context";
-import { ContrastTheme, InteractionMode, TextSize } from "@/types/a11y";
-import { User, Volume2, Shield, Eye, Settings, Award } from "lucide-react";
+import React, { useState } from 'react';
+import { Send, KeyRound, Shield, CheckCircle2, Trash2, Bell, User, Settings } from 'lucide-react';
+import { useA11y } from '@/core/a11y/a11y-context';
 
 export default function ProfilePage() {
-  const {
-    preferences,
-    setInteractionMode,
-    setContrastTheme,
-    setTextSize,
-    setSpeechRate,
-    speak,
-  } = useA11y();
+  const { announce, mode, setMode, theme, setTheme, fontSize, setFontSize } = useA11y();
 
-  useEffect(() => {
-    speak(
-      "Profile and accessibility preferences. Configure speech rate, contrast theme, and interaction mode."
-    );
-  }, [speak]);
+  const [oneTimeCode, setOneTimeCode] = useState<string | null>(null);
+  const [codeExpiresIn, setCodeExpiresIn] = useState<number>(300);
+  const [isLinked, setIsLinked] = useState<boolean>(false);
+  const [alertTelegram, setAlertTelegram] = useState(true);
+  const [alertSMS, setAlertSMS] = useState(false);
+  const [jobInterests, setJobInterests] = useState('Customer support, accessibility testing, remote transcription');
 
-  const skills = [
-    { name: "Verbal Articulation", level: "Advanced", verified: true },
-    { name: "Active Listening", level: "Advanced", verified: true },
-    { name: "Email Etiquette", level: "Intermediate", verified: true },
-    { name: "Screen Reader Navigation", level: "Intermediate", verified: false },
-    { name: "Calendar Management", level: "Beginner", verified: false },
-  ];
+  const handleGenerateLinkCode = () => {
+    // Generates a 6-digit random code valid for 5 minutes (FR-6.3)
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    setOneTimeCode(code);
+    setCodeExpiresIn(300);
+    announce(`Your one-time Telegram linking code is ${code.split('').join(' ')}. Send this code to the Ableway Telegram bot using the command slash link space ${code}.`);
+  };
+
+  const handleSimulateBotLinked = () => {
+    setIsLinked(true);
+    setOneTimeCode(null);
+    announce('Telegram account linked successfully! You will now receive job alerts directly in Telegram.');
+  };
+
+  const handleUnlink = () => {
+    setIsLinked(false);
+    announce('Telegram account has been disconnected. All Telegram alerts have stopped.');
+  };
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100">
-      <AppHeader />
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-10 space-y-8">
+      {/* Header */}
+      <header className="space-y-2">
+        <div className="inline-flex items-center gap-2 text-xs font-semibold text-emerald-400 bg-emerald-950/60 border border-emerald-800 px-3 py-1 rounded-full">
+          <span>FR-6.1 to FR-6.6: Profile & Telegram Account Linking</span>
+        </div>
+        <h1 className="text-3xl font-extrabold text-white">Learner Profile & Integrations</h1>
+        <p className="text-slate-300 text-sm">
+          Manage your personal information, accessibility preferences, and connect your Telegram account for mobile job alerts.
+        </p>
+      </header>
 
-      <main id="main-content" className="flex-1 max-w-5xl w-full mx-auto px-4 py-8 sm:px-6 lg:px-8 space-y-8">
-        <div className="space-y-1">
-          <span className="text-xs font-mono font-semibold text-emerald-400 uppercase tracking-wider">
-            FR-7.1 &amp; FR-7.2 &bull; Settings
-          </span>
-          <h1 className="text-3xl font-extrabold text-white">Profile &amp; Accessibility Preferences</h1>
-          <p className="text-slate-400 text-sm">
-            Customize voice rates, contrast modes, and manage your verified skills credentials.
-          </p>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        {/* Left Column: Accessibility & Alert Settings */}
+        <div className="space-y-6">
+          <section aria-labelledby="a11y-prefs-heading" className="p-6 bg-slate-900 border border-slate-800 rounded-3xl space-y-4">
+            <h2 id="a11y-prefs-heading" className="text-lg font-bold text-white flex items-center gap-2">
+              <Settings className="w-5 h-5 text-emerald-400" />
+              <span>Accessibility Preferences</span>
+            </h2>
+
+            <div className="space-y-3 text-sm">
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 mb-1">Interaction Mode:</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { id: 'voice-first', label: 'Voice-First' },
+                    { id: 'screen-reader', label: 'Screen Reader' },
+                    { id: 'hybrid', label: 'Hybrid' },
+                  ].map((m) => (
+                    <button
+                      key={m.id}
+                      onClick={() => setMode(m.id as any)}
+                      className={`p-2 rounded-xl text-xs font-semibold border ${
+                        mode === m.id
+                          ? 'bg-emerald-700 border-emerald-400 text-white'
+                          : 'bg-slate-950 border-slate-800 text-slate-300'
+                      }`}
+                    >
+                      {m.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 mb-1">Contrast Theme:</label>
+                <select
+                  value={theme}
+                  onChange={(e) => setTheme(e.target.value as any)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white"
+                >
+                  <option value="default">Standard Contrast</option>
+                  <option value="high-contrast">High Contrast</option>
+                  <option value="dark-contrast">Pure Black (OLED)</option>
+                  <option value="yellow-black">Yellow on Black</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 mb-1">Text Sizing:</label>
+                <select
+                  value={fontSize}
+                  onChange={(e) => setFontSize(e.target.value as any)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white"
+                >
+                  <option value="normal">Normal (100%)</option>
+                  <option value="large">Large (125%)</option>
+                  <option value="x-large">Extra Large (150%)</option>
+                  <option value="xx-large">Maximum (170%)</option>
+                </select>
+              </div>
+            </div>
+          </section>
+
+          {/* Job Alerts & Notification Channels (FR-6.6) */}
+          <section aria-labelledby="alerts-heading" className="p-6 bg-slate-900 border border-slate-800 rounded-3xl space-y-4">
+            <h2 id="alerts-heading" className="text-lg font-bold text-white flex items-center gap-2">
+              <Bell className="w-5 h-5 text-emerald-400" />
+              <span>Job Alerts & Channels</span>
+            </h2>
+
+            <div className="space-y-3 text-sm">
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={alertTelegram}
+                  onChange={(e) => setAlertTelegram(e.target.checked)}
+                  className="w-4 h-4 rounded text-emerald-600 bg-slate-950 border-slate-700"
+                />
+                <span className="text-slate-200 text-xs">Receive instant alerts via Telegram Bot</span>
+              </label>
+
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={alertSMS}
+                  onChange={(e) => setAlertSMS(e.target.checked)}
+                  className="w-4 h-4 rounded text-emerald-600 bg-slate-950 border-slate-700"
+                />
+                <span className="text-slate-200 text-xs">Receive SMS job alerts (when available)</span>
+              </label>
+
+              <div className="pt-2">
+                <label className="block text-xs font-semibold text-slate-400 mb-1">Job Keywords of Interest:</label>
+                <input
+                  type="text"
+                  value={jobInterests}
+                  onChange={(e) => setJobInterests(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white"
+                />
+              </div>
+            </div>
+          </section>
         </div>
 
-        {/* Profile Card */}
-        <section aria-labelledby="profile-heading" className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl flex items-center gap-5">
-          <div className="h-16 w-16 rounded-2xl bg-emerald-950 border border-emerald-500/30 flex items-center justify-center text-emerald-400 flex-none">
-            <User className="h-8 w-8" aria-hidden="true" />
-          </div>
-          <div>
-            <h2 id="profile-heading" className="text-xl font-bold text-white">
-              Björn Sibanda
-            </h2>
-            <span className="text-sm text-slate-400">Learner &bull; bjorn.sibanda@example.com</span>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="text-xs bg-emerald-900/60 text-emerald-300 px-2 py-0.5 rounded border border-emerald-600/30">
-                Cohort F26-SEM-16W
+        {/* Right Column: Telegram Account Linking (FR-6.2 - FR-6.5) */}
+        <section aria-labelledby="telegram-link-heading" className="p-6 bg-slate-900 border border-slate-800 rounded-3xl space-y-6 flex flex-col justify-between">
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Send className="w-6 h-6 text-emerald-400" />
+              <h2 id="telegram-link-heading" className="text-xl font-bold text-white">Telegram Assistant Linking</h2>
+            </div>
+
+            <p className="text-xs text-slate-300 leading-relaxed">
+              Connect your account with the official <strong>@AblewayBot</strong> on Telegram. This allows the bot to recognize your enrollment, read your course alerts, and deliver tailored accessible job matches directly into your Telegram inbox.
+            </p>
+
+            {/* Linking Consent Warning (FR-6.4) */}
+            <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 text-xs text-slate-300 space-y-1">
+              <span className="font-semibold text-white flex items-center gap-1.5">
+                <Shield className="w-4 h-4 text-emerald-400" />
+                <span>Explicit Consent & Scope</span>
               </span>
-            </div>
-          </div>
-        </section>
-
-        {/* Accessibility Configuration Grid */}
-        <section aria-labelledby="a11y-heading" className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Interaction Mode */}
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4 shadow-xl">
-            <div className="flex items-center gap-2">
-              <Settings className="h-5 w-5 text-emerald-400" aria-hidden="true" />
-              <h2 id="a11y-heading" className="text-lg font-bold text-white">
-                Interaction Mode (FR-1.5)
-              </h2>
-            </div>
-            <p className="text-slate-400 text-xs">
-              Choose your primary method. Screen Reader mode automatically suppresses in-app speech to prevent dual voice conflicts.
-            </p>
-
-            <div className="space-y-2">
-              {[
-                { id: "voice-first", label: "Voice-First (Spoken Audio & Voice Input)" },
-                { id: "screen-reader", label: "Screen Reader (NVDA/JAWS with ARIA Live)" },
-                { id: "hybrid", label: "Hybrid (Voice Input + Screen Reader/Keyboard)" },
-              ].map((m) => (
-                <label
-                  key={m.id}
-                  className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition ${
-                    preferences.interactionMode === m.id
-                      ? "bg-emerald-950/60 border-emerald-500 text-white font-medium"
-                      : "bg-slate-950 border-slate-800 text-slate-300 hover:bg-slate-800"
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="interaction-mode"
-                    checked={preferences.interactionMode === m.id}
-                    onChange={() => setInteractionMode(m.id as InteractionMode)}
-                    className="h-4 w-4 text-emerald-600 focus:ring-emerald-500"
-                  />
-                  <span className="text-sm">{m.label}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-
-          {/* Speech Rate Controls */}
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4 shadow-xl">
-            <div className="flex items-center gap-2">
-              <Volume2 className="h-5 w-5 text-emerald-400" aria-hidden="true" />
-              <h2 className="text-lg font-bold text-white">Speech Synthesis Speed (FR-2.8)</h2>
-            </div>
-            <p className="text-slate-400 text-xs">
-              Adjust how fast the platform voice speaks. Currently:{" "}
-              <strong className="text-white">{preferences.speechRate}x</strong>
-            </p>
-
-            <div className="flex items-center gap-4">
-              <input
-                type="range"
-                min="0.5"
-                max="2.0"
-                step="0.1"
-                value={preferences.speechRate}
-                onChange={(e) => setSpeechRate(parseFloat(e.target.value))}
-                className="w-full accent-emerald-500 h-2 bg-slate-800 rounded-lg cursor-pointer"
-                aria-label="Speech speed rate slider"
-              />
+              <p>
+                Linking only grants @AblewayBot permission to send you job updates and messages you explicitly request. The bot <strong>CANNOT</strong> view or read your other private Telegram conversations (see SRS Section 3.2).
+              </p>
             </div>
 
-            <div className="flex items-center justify-between text-xs text-slate-400">
-              <span>0.5x (Slow)</span>
-              <span>1.0x (Normal)</span>
-              <span>2.0x (Fast)</span>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => speak("This is a test of your configured voice speed setting.")}
-              className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-emerald-300 rounded-xl text-xs font-semibold transition cursor-pointer"
-            >
-              Test Voice Rate
-            </button>
-          </div>
-
-          {/* Visual Contrast Theme */}
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4 shadow-xl">
-            <div className="flex items-center gap-2">
-              <Eye className="h-5 w-5 text-emerald-400" aria-hidden="true" />
-              <h2 className="text-lg font-bold text-white">Contrast Theme (IR-1.5)</h2>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              {[
-                { id: "default", label: "Default Dark" },
-                { id: "high-contrast", label: "High Contrast" },
-                { id: "dark-contrast", label: "Pure Black" },
-                { id: "yellow-black", label: "Yellow on Black" },
-              ].map((theme) => (
-                <button
-                  key={theme.id}
-                  type="button"
-                  onClick={() => setContrastTheme(theme.id as ContrastTheme)}
-                  className={`p-3 rounded-xl text-xs font-medium border text-center transition cursor-pointer ${
-                    preferences.contrastTheme === theme.id
-                      ? "bg-emerald-600 text-white border-emerald-400 font-semibold"
-                      : "bg-slate-950 border-slate-800 text-slate-300 hover:bg-slate-800"
-                  }`}
-                >
-                  {theme.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Text Size (IR-1.5) */}
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4 shadow-xl">
-            <div className="flex items-center gap-2">
-              <Eye className="h-5 w-5 text-emerald-400" aria-hidden="true" />
-              <h2 className="text-lg font-bold text-white">Text Size Scaling (IR-1.5)</h2>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              {[
-                { id: "normal", label: "Default 100%" },
-                { id: "large", label: "Large 125%" },
-                { id: "x-large", label: "X-Large 150%" },
-                { id: "xx-large", label: "Maximum 200%" },
-              ].map((size) => (
-                <button
-                  key={size.id}
-                  type="button"
-                  onClick={() => setTextSize(size.id as TextSize)}
-                  className={`p-3 rounded-xl text-xs font-medium border text-center transition cursor-pointer ${
-                    preferences.textSize === size.id
-                      ? "bg-emerald-600 text-white border-emerald-400 font-semibold"
-                      : "bg-slate-950 border-slate-800 text-slate-300 hover:bg-slate-800"
-                  }`}
-                >
-                  {size.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Verified Skills & Employer Sharing (FR-5.1 & FR-5.5) */}
-        <section aria-labelledby="skills-heading" className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4 shadow-xl">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
-            <div className="flex items-center gap-2">
-              <Award className="h-5 w-5 text-emerald-400" aria-hidden="true" />
-              <h2 id="skills-heading" className="text-lg font-bold text-white">
-                Verified Skills Profile (FR-5.1)
-              </h2>
-            </div>
-            <span className="text-xs text-emerald-400 font-medium">Granular Employer Sharing Active</span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {skills.map((s) => (
-              <div
-                key={s.name}
-                className="bg-slate-950 border border-slate-800 p-4 rounded-2xl flex items-center justify-between"
-              >
-                <div>
-                  <h3 className="font-semibold text-sm text-white">{s.name}</h3>
-                  <span className="text-xs text-slate-400">{s.level}</span>
+            {/* Active Link Status or Code Generator */}
+            {isLinked ? (
+              <div className="p-4 bg-emerald-950/70 border border-emerald-800 rounded-2xl space-y-3">
+                <div className="flex items-center gap-2 text-emerald-300 font-bold text-sm">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                  <span>Telegram Connected (@LearnerAccount)</span>
                 </div>
-                {s.verified ? (
-                  <span className="text-[10px] bg-emerald-950 text-emerald-400 border border-emerald-500/40 px-2 py-0.5 rounded font-mono">
-                    Verified
-                  </span>
+                <p className="text-xs text-slate-300">
+                  Your Telegram ID is securely linked. Job alerts and course summaries are delivered to your Telegram app.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleUnlink}
+                  className="w-full py-2 px-3 bg-red-950 hover:bg-red-900 border border-red-800 text-red-200 text-xs font-semibold rounded-xl flex items-center justify-center gap-2"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>Unlink Telegram Account</span>
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {!oneTimeCode ? (
+                  <button
+                    type="button"
+                    onClick={handleGenerateLinkCode}
+                    className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3.5 px-4 rounded-xl text-sm flex items-center justify-center gap-2 shadow-md"
+                  >
+                    <KeyRound className="w-4 h-4" />
+                    <span>Generate One-Time Linking Code</span>
+                  </button>
                 ) : (
-                  <span className="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded font-mono">
-                    In Progress
-                  </span>
+                  <div className="p-4 bg-slate-950 border border-emerald-500 rounded-2xl space-y-3 text-center">
+                    <span className="text-xs font-mono text-emerald-400 uppercase">Your One-Time Code:</span>
+                    <p className="text-3xl font-mono font-black text-white tracking-widest">{oneTimeCode}</p>
+                    <p className="text-xs text-slate-400">
+                      Open Telegram, search for <strong>@AblewayBot</strong>, and send:
+                      <br />
+                      <code className="text-emerald-300 font-bold font-mono">/link {oneTimeCode}</code>
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleSimulateBotLinked}
+                      className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 py-1.5 px-3 rounded-lg border border-slate-700"
+                    >
+                      [Demo] Simulate Bot Verified Code
+                    </button>
+                  </div>
                 )}
               </div>
-            ))}
+            )}
           </div>
         </section>
-      </main>
+      </div>
     </div>
   );
 }
-

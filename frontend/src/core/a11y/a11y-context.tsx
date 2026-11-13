@@ -21,9 +21,16 @@ const DEFAULT_PREFERENCES: AccessibilityPreferences = {
 
 interface A11yContextType {
   preferences: AccessibilityPreferences;
+  mode: InteractionMode;
+  setMode: (mode: InteractionMode) => void;
   setInteractionMode: (mode: InteractionMode) => void;
+  theme: ContrastTheme;
+  setTheme: (theme: ContrastTheme) => void;
   setContrastTheme: (theme: ContrastTheme) => void;
+  fontSize: TextSize;
+  setFontSize: (size: TextSize) => void;
   setTextSize: (size: TextSize) => void;
+  speechRate: number;
   setSpeechRate: (rate: number) => void;
   increaseSpeechRate: () => void;
   decreaseSpeechRate: () => void;
@@ -148,9 +155,16 @@ export function A11yProvider({ children }: { children: React.ReactNode }) {
     <A11yContext.Provider
       value={{
         preferences,
+        mode: preferences.interactionMode,
+        setMode: setInteractionMode,
         setInteractionMode,
+        theme: preferences.contrastTheme,
+        setTheme: setContrastTheme,
         setContrastTheme,
+        fontSize: preferences.textSize,
+        setFontSize: setTextSize,
         setTextSize,
+        speechRate: preferences.speechRate,
         setSpeechRate,
         increaseSpeechRate,
         decreaseSpeechRate,
@@ -172,4 +186,3 @@ export function useA11y() {
   }
   return context;
 }
-

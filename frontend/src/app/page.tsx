@@ -1,180 +1,196 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import Link from "next/link";
+import React from 'react';
+import { Sparkles, BookOpen, CreditCard, GraduationCap, Send, ShieldCheck, ExternalLink, ArrowRight, CheckCircle2 } from 'lucide-react';
 
-interface SavannaPage {
-  id: string;
-  name: string;
-  badge: string;
-  description: string;
-  path: string;
-}
+export default function HomePage() {
+  const learnerJourney = [
+    {
+      step: '1. Register',
+      title: 'Spoken & Accessible Registration',
+      description: 'Speak your details naturally. The assistant fills the form, reads it back, and confirms with you before submitting. Accessible sign-in with no CAPTCHAs.',
+      href: '/register',
+      icon: Sparkles,
+      status: 'Ready',
+    },
+    {
+      step: '2. Choose Course',
+      title: 'Voice Course Catalog & Recommendation',
+      description: 'Explore verified accessible courses. The assistant explains durations, levels, and prices, recommending the best course for your employment goals.',
+      href: '/courses',
+      icon: BookOpen,
+      status: 'Ready',
+    },
+    {
+      step: '3. Pay (Human-Assisted)',
+      title: 'One-Click Human Helper Payment',
+      description: 'No card numbers or mobile-money passwords needed. A dedicated staff helper calls or messages you to guide your payment safely.',
+      href: '/payment',
+      icon: CreditCard,
+      status: 'Ready',
+    },
+    {
+      step: '4. Learn',
+      title: 'Accessible Learning Platform',
+      description: 'Engage with structured modules, audio lessons with synchronized text transcripts, speed controls, voice-enabled quizzes, and assistant Q&A.',
+      href: '/learn',
+      icon: GraduationCap,
+      status: 'Ready',
+    },
+    {
+      step: '5. Link Telegram',
+      title: 'Profile & One-Time Linking Code',
+      description: 'Generate your secure 6-digit linking code to connect your account with the Telegram Assistant bot for job alerts and offline guidance.',
+      href: '/profile',
+      icon: Send,
+      status: 'Ready',
+    },
+    {
+      step: '6. Staff Console',
+      title: 'Human Helper Queue & Admin',
+      description: 'Real-time helper queue where staff view incoming assistance requests, accept tickets, take over live conversation, and confirm payments.',
+      href: '/staff/help-queue',
+      icon: ShieldCheck,
+      status: 'Staff Only',
+    },
+  ];
 
-const SAVANNA_PAGES: SavannaPage[] = [
-  {
-    id: "paced",
-    name: "Learner Homepage (Paced)",
-    badge: "WR 100",
-    description: "Björn Sibanda — Week 10 of Fundamentals of Effective Communication",
-    path: "/pages/homepage-v1-paced.html",
-  },
-  {
-    id: "self-paced",
-    name: "Learner Homepage (Self-Paced)",
-    badge: "VA-1",
-    description: "Amara Nwosu — Module 1 of 3 complete on VA Foundations",
-    path: "/pages/homepage-v1-self-paced.html",
-  },
-  {
-    id: "concept",
-    name: "Concept with Navigation",
-    badge: "Module 2",
-    description: "The Future of the VA Industry — Concept page with side navigation",
-    path: "/pages/concept-with-navigation.html",
-  },
-  {
-    id: "hub",
-    name: "Savanna Hub / Index",
-    badge: "Overview",
-    description: "Landing portal linking all captured static pages and resources",
-    path: "/savanna/index.html",
-  },
-];
-
-export default function Home() {
-  const [activePageId, setActivePageId] = useState<string>("paced");
-  const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
-
-  const activePage = SAVANNA_PAGES.find((p) => p.id === activePageId) || SAVANNA_PAGES[0];
+  const savannaPages = [
+    {
+      name: 'Homepage V1 - Paced',
+      description: 'Full ALX Savanna curriculum with weekly tracker and embedded voice-accessibility toolbar.',
+      path: '/savanna?page=homepage-v1-paced.html',
+      rawUrl: '/pages/homepage-v1-paced.html',
+    },
+    {
+      name: 'Homepage V1 - Self Paced',
+      description: 'Self-paced track with modular progress milestones and voice navigation.',
+      path: '/savanna?page=homepage-v1-self-paced.html',
+      rawUrl: '/pages/homepage-v1-self-paced.html',
+    },
+    {
+      name: 'Concept with Navigation',
+      description: 'Interactive concept lesson view with accessible focus states.',
+      path: '/savanna?page=concept-with-navigation.html',
+      rawUrl: '/pages/concept-with-navigation.html',
+    },
+  ];
 
   return (
-    <div className="flex flex-col h-screen w-screen overflow-hidden bg-slate-900 text-slate-100 font-sans">
-      {/* Top Navigation Bar */}
-      {!isFullscreen && (
-        <header className="flex-none bg-slate-950 border-b border-slate-800 px-4 py-2.5 z-20 shadow-md">
-          <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
-            {/* Project / Brand Identity */}
-            <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
-              <div className="flex items-center gap-2">
-                <span className="h-3 w-3 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span className="font-bold tracking-tight text-white text-base">
-                  Ableway <span className="text-emerald-400 font-normal">| Savanna</span>
-                </span>
-              </div>
-              <span className="text-xs bg-slate-800 text-slate-300 px-2 py-0.5 rounded border border-slate-700">
-                Frontend Integrated
-              </span>
-            </div>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-12">
+      {/* Hero Section */}
+      <section className="text-center space-y-4 max-w-3xl mx-auto" aria-labelledby="hero-heading">
+        <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-950/80 border border-emerald-700/60 text-emerald-300 rounded-full text-xs font-medium">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+          SRS Version 2.0 Track 3: Multilingual Assistant & Live Help
+        </div>
+        <h1 id="hero-heading" className="text-3xl sm:text-4xl md:text-5xl font-black text-white tracking-tight leading-tight">
+          Accessible Learning & Employment for Blind and Visually Impaired Learners
+        </h1>
+        <p className="text-slate-300 text-base sm:text-lg leading-relaxed">
+          Navigate the entire learner journey by voice, keyboard, or screen reader. From spoken registration to human-assisted payment, interactive audio learning, and Telegram job alerts.
+        </p>
 
-            {/* Navigation Tabs */}
-            <nav className="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto pb-1 md:pb-0">
-              {SAVANNA_PAGES.map((page) => {
-                const isActive = page.id === activePageId;
-                return (
-                  <button
-                    key={page.id}
-                    onClick={() => setActivePageId(page.id)}
-                    className={`px-3 py-1.5 rounded-lg text-xs md:text-sm font-medium transition-all duration-150 flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
-                      isActive
-                        ? "bg-emerald-600 text-white shadow-sm ring-1 ring-emerald-400"
-                        : "text-slate-300 hover:text-white hover:bg-slate-800"
-                    }`}
-                  >
-                    <span>{page.name}</span>
-                    <span
-                      className={`text-[10px] px-1.5 py-0.2 rounded font-mono ${
-                        isActive ? "bg-emerald-800 text-emerald-100" : "bg-slate-800 text-slate-400"
-                      }`}
-                    >
-                      {page.badge}
-                    </span>
-                  </button>
-                );
-              })}
-            </nav>
+        {/* Quick Voice Prompt Reminder */}
+        <div className="p-4 bg-slate-900 border border-slate-800 rounded-xl text-sm text-slate-300 flex flex-col sm:flex-row items-center justify-center gap-3">
+          <span className="font-semibold text-emerald-400">💡 Voice Tip:</span>
+          <span>Press <kbd className="px-2 py-0.5 bg-slate-800 rounded border border-slate-700 font-mono text-xs">Alt + V</kbd> anywhere or say <strong className="text-white">"Help"</strong> to activate the Web Assistant.</span>
+        </div>
+      </section>
 
-            {/* Actions */}
-            <div className="hidden lg:flex items-center gap-2">
+      {/* Learner Journey Grid (SRS Section 2.1) */}
+      <section aria-labelledby="journey-heading" className="space-y-6">
+        <div className="border-b border-slate-800 pb-3 flex items-center justify-between">
+          <h2 id="journey-heading" className="text-2xl font-bold text-white flex items-center gap-2">
+            <span>The 6-Step Learner Journey</span>
+          </h2>
+          <span className="text-xs text-slate-400 font-mono">SRS v2.0 Scope</span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {learnerJourney.map((item) => {
+            const Icon = item.icon;
+            return (
               <a
-                href={activePage.path}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-1.5 rounded-md transition-colors flex items-center gap-1.5"
-                title="Open page in a new standalone tab"
+                key={item.step}
+                href={item.href}
+                className="group p-6 bg-slate-900/80 hover:bg-slate-850 border border-slate-800 hover:border-emerald-600/60 rounded-2xl transition-all shadow-md flex flex-col justify-between focus:outline-none focus:ring-2 focus:ring-emerald-400"
               >
-                <span>Standalone Tab</span>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-3.5 w-3.5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                  />
-                </svg>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">{item.step}</span>
+                    <span className="text-[11px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded-full border border-slate-700">{item.status}</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 bg-emerald-950 border border-emerald-800 rounded-xl text-emerald-400 group-hover:scale-105 transition-transform">
+                      <Icon className="w-5 h-5" aria-hidden="true" />
+                    </div>
+                    <h3 className="font-bold text-white text-lg group-hover:text-emerald-300 transition-colors">
+                      {item.title}
+                    </h3>
+                  </div>
+                  <p className="text-sm text-slate-300 leading-relaxed">
+                    {item.description}
+                  </p>
+                </div>
+                <div className="pt-4 mt-4 border-t border-slate-800/80 flex items-center justify-between text-xs font-semibold text-emerald-400">
+                  <span>Enter {item.step}</span>
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </div>
               </a>
+            );
+          })}
+        </div>
+      </section>
 
-              <button
-                onClick={() => setIsFullscreen(true)}
-                className="text-xs text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 px-2.5 py-1.5 rounded-md transition-colors flex items-center gap-1 cursor-pointer"
-                title="Hide top bar for immersion"
-              >
-                <span>Full Screen</span>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-3.5 w-3.5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"
-                  />
-                </svg>
-              </button>
-            </div>
+      {/* Savanna Learning Portal Integration */}
+      <section aria-labelledby="savanna-heading" className="p-6 sm:p-8 bg-slate-900 border border-slate-800 rounded-3xl space-y-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+          <div>
+            <h2 id="savanna-heading" className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+              <span>Authentic ALX Savanna Portal Pages</span>
+            </h2>
+            <p className="text-sm text-slate-300 mt-1">
+              Preserved authentic Savanna design, integrated with the Ableway voice assistant toolbar, audio earcons, and WCAG AA accessibility controls.
+            </p>
           </div>
-        </header>
-      )}
-
-      {/* Floating Exit Fullscreen Button */}
-      {isFullscreen && (
-        <button
-          onClick={() => setIsFullscreen(false)}
-          className="fixed top-3 right-3 z-50 bg-slate-900/90 text-white text-xs px-3 py-1.5 rounded-full border border-slate-700 shadow-lg hover:bg-slate-800 transition-all cursor-pointer flex items-center gap-1.5 backdrop-blur-sm"
-        >
-          <span>Exit Full Screen</span>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-3.5 w-3.5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
+          <a
+            href="/savanna?page=homepage-v1-paced.html"
+            className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors shadow-sm self-start md:self-auto"
           >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-      )}
+            <span>Launch Savanna Portal</span>
+            <ArrowRight className="w-4 h-4" />
+          </a>
+        </div>
 
-      {/* Main Content Area Displaying the Savanna Page */}
-      <main className="flex-1 w-full h-full relative bg-white">
-        <iframe
-          key={activePage.path}
-          src={activePage.path}
-          title={activePage.name}
-          className="w-full h-full border-0 absolute inset-0"
-          style={{ width: "100%", height: "100%", display: "block" }}
-        />
-      </main>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {savannaPages.map((pg) => (
+            <div key={pg.name} className="p-4 bg-slate-950/80 border border-slate-800 rounded-xl flex flex-col justify-between space-y-3">
+              <div>
+                <h3 className="font-bold text-white text-base">{pg.name}</h3>
+                <p className="text-xs text-slate-300 mt-1 leading-relaxed">{pg.description}</p>
+              </div>
+              <div className="flex items-center gap-2 pt-2">
+                <a
+                  href={pg.path}
+                  className="text-xs bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded-lg font-medium transition-colors"
+                >
+                  View in Hub
+                </a>
+                <a
+                  href={pg.rawUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-slate-400 hover:text-emerald-400 flex items-center gap-1 px-2 py-1.5"
+                >
+                  <span>Standalone Tab</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }
