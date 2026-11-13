@@ -134,14 +134,25 @@ export function AssistantProvider({
   // Default global actions
   useEffect(() => {
     // Register standard goToPage and fillField actions
+    const navigateHandler = (p: Record<string, unknown>) => {
+      const targetPath = (typeof p.path === "string" ? p.path : "") || (typeof p.url === "string" ? p.url : "");
+      if (targetPath) router.push(targetPath);
+    };
+
     registeredActionsRef.current["goToPage"] = {
       name: "goToPage",
       description: "Navigate to a page",
       requiresConfirmation: false,
-      announcement: (p) => `Navigating to ${p.path || "page"}`,
-      handler: (p) => {
-        if (typeof p.path === "string") router.push(p.path);
-      },
+      announcement: (p) => `Navigating to ${p.path || p.url || "page"}`,
+      handler: navigateHandler,
+    };
+
+    registeredActionsRef.current["go_to_page"] = {
+      name: "go_to_page",
+      description: "Navigate to a page",
+      requiresConfirmation: false,
+      announcement: (p) => `Navigating to ${p.path || p.url || "page"}`,
+      handler: navigateHandler,
     };
 
     registeredActionsRef.current["fillField"] = {
@@ -153,6 +164,9 @@ export function AssistantProvider({
         if (typeof window === "undefined") return;
         const fieldName = String(p.field || "");
         const fieldValue = String(p.value ?? "");
+        if (typeof (window as any).fillField === "function") {
+          (window as any).fillField(fieldName, fieldValue);
+        }
         const input = (document.querySelector(`[name="${fieldName}"]`) ||
           document.getElementById(fieldName)) as HTMLInputElement | null;
         if (input) {
