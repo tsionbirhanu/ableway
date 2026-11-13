@@ -1,195 +1,474 @@
 'use client';
 
-import React from 'react';
-import { Sparkles, BookOpen, CreditCard, GraduationCap, Send, ShieldCheck, ExternalLink, ArrowRight } from 'lucide-react';
+import React, { useState } from 'react';
+import Link from 'next/link';
+import {
+  User,
+  Sparkles,
+  ArrowRight,
+  BookOpen,
+  Volume2,
+  Headphones,
+  CheckCircle2,
+  ShieldCheck,
+  PhoneCall,
+  Clock,
+  Award,
+  Layers,
+  HelpCircle,
+  ExternalLink,
+  Globe,
+  GraduationCap,
+  CreditCard,
+  Send,
+} from 'lucide-react';
+import { useA11y } from '@/lib/a11y/a11y-context';
+import { getTranslation } from '@/lib/i18n/translations';
 
 export default function HomePage() {
-  const learnerJourney = [
+  const { language, toggleLanguage } = useA11y();
+  const [selectedTrack, setSelectedTrack] = useState<'all' | 'data' | 'communication' | 'va'>('all');
+  const t = getTranslation(language);
+  const isAmharic = language === 'am-ET' || language === 'am';
+
+  const courses = [
     {
-      step: 'Step 1',
-      title: '1. Register',
-      description: 'Speak your details naturally. The assistant fills the form, reads it back, and confirms with you before saving. No CAPTCHAs.',
-      href: '/register',
-      icon: Sparkles,
-      status: 'Ready',
+      id: 'data-analytics',
+      title: 'Data Analytics',
+      track: 'data',
+      duration: '14 Weeks',
+      badge: t.home.badgeMostPopular || 'Most Popular',
+      description:
+        'Companies across every industry are hiring people who can turn data into decisions that drive real results. Learn Python, SQL, Tableau, and data modeling with audio lessons and screen reader friendly exercises.',
+      skills: ['Python', 'SQL', 'Tableau', 'Statistical Thinking'],
+      accessibleBadge: 'Audio Lessons & Voice Assisted',
+      link: '/courses',
     },
     {
-      step: 'Step 2',
-      title: '2. Choose Course',
-      description: 'Explore verified courses. The assistant explains durations, levels, and prices, and recommends the best course for your goals.',
-      href: '/courses',
-      icon: BookOpen,
-      status: 'Ready',
+      id: 'wr-100',
+      title: 'WR 100: Fundamentals of Effective Communication',
+      track: 'communication',
+      duration: '10 Weeks',
+      badge: t.home.badgeSavanna || 'Savanna Curriculum',
+      description:
+        'Master high-impact professional communication: written correspondence, active listening, executive presentation, and verbal persuasion designed specifically for inclusive workplace environments.',
+      skills: ['Business Writing', 'Verbal Pitching', 'Active Listening', 'Conflict Resolution'],
+      accessibleBadge: 'Full Spoken Audio & Quizzes',
+      link: '/courses',
     },
     {
-      step: 'Step 3',
-      title: '3. Pay (Human Help)',
-      description: 'No card numbers or mobile-money passwords needed. A dedicated staff helper calls or messages you to guide your payment safely.',
-      href: '/payment',
-      icon: CreditCard,
-      status: 'Ready',
-    },
-    {
-      step: 'Step 4',
-      title: '4. Learn',
-      description: 'Engage with structured modules, audio lessons with synchronized text transcripts, speed controls, voice-enabled quizzes, and assistant Q&A.',
-      href: '/learn',
-      icon: GraduationCap,
-      status: 'Ready',
-    },
-    {
-      step: 'Step 5',
-      title: '5. Link Telegram',
-      description: 'Generate your secure 6-digit linking code to connect your account with the Telegram Assistant bot for job alerts and offline guidance.',
-      href: '/profile',
-      icon: Send,
-      status: 'Ready',
-    },
-    {
-      step: 'Step 6',
-      title: '6. Staff Console',
-      description: 'Real-time helper queue where staff view incoming assistance requests, accept tickets, take over live conversation, and confirm payments.',
-      href: '/staff/help-queue',
-      icon: ShieldCheck,
-      status: 'Staff Only',
+      id: 'va-1',
+      title: 'VA-1: Virtual Assistant Foundations',
+      track: 'va',
+      duration: '8 Weeks',
+      badge: t.home.badgeFastTrack || 'Fast-Track',
+      description:
+        'Learn remote executive operations, calendar and email triage, meeting facilitation, and document preparation using accessible cloud tools and collaborative AI workflows.',
+      skills: ['Calendar Management', 'Email Triage', 'Google Docs', 'Customer Relations'],
+      accessibleBadge: 'Keyboard-Only Verified',
+      link: '/courses',
     },
   ];
+
+  const filteredCourses =
+    selectedTrack === 'all' ? courses : courses.filter((c) => c.track === selectedTrack);
 
   const savannaPages = [
     {
       name: 'Homepage V1 - Paced',
       description: 'Full ALX Savanna curriculum with weekly tracker and embedded voice-accessibility toolbar.',
       path: '/savanna?page=homepage-v1-paced.html',
-      rawUrl: '/pages/homepage-v1-paced.html',
     },
     {
       name: 'Homepage V1 - Self Paced',
       description: 'Self-paced track with modular progress milestones and voice navigation.',
       path: '/savanna?page=homepage-v1-self-paced.html',
-      rawUrl: '/pages/homepage-v1-self-paced.html',
     },
     {
       name: 'Concept with Navigation',
       description: 'Interactive concept lesson view with accessible focus states.',
       path: '/savanna?page=concept-with-navigation.html',
-      rawUrl: '/pages/concept-with-navigation.html',
     },
   ];
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-12">
-      {/* Hero Section (Rule 2: Exactly one h1) */}
-      <section className="text-center space-y-4 max-w-3xl mx-auto" aria-labelledby="hero-heading">
-        <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-950 border border-emerald-700 text-emerald-300 rounded-full text-xs font-bold">
-          <span>SRS Version 2.0: Track 3 Multilingual Assistant</span>
-        </div>
-        <h1 id="hero-heading" className="text-3xl sm:text-4xl md:text-5xl font-black text-white tracking-tight leading-tight">
-          Accessible Learning & Employment for Blind and Visually Impaired Learners
-        </h1>
-        <p className="text-slate-200 text-base sm:text-lg leading-relaxed">
-          Navigate your learning journey by voice, keyboard, or screen reader. From spoken registration to human-assisted payment, interactive audio lessons, and Telegram job alerts.
+    <div className="bg-white text-slate-900 font-sans flex flex-col w-full">
+      {/* 1. Announcement Banner Matching ALX Savanna Design */}
+      <aside
+        aria-label="Important Announcement"
+        className="bg-[#FFF8E6] border-b border-[#FEE7A6] py-2.5 px-4 text-center text-xs sm:text-sm text-slate-800"
+      >
+        <p>
+          {t.home.announcementText}{' '}
+          <Link
+            href="/register"
+            className="underline font-bold text-slate-900 hover:text-orange-800 focus:outline-none focus:ring-2 focus:ring-orange-500 rounded px-0.5"
+          >
+            {t.home.announcementLink}
+          </Link>
         </p>
+      </aside>
 
-        {/* Quick Voice Prompt Reminder */}
-        <div className="p-4 bg-slate-900 border border-slate-700 rounded-2xl text-sm text-slate-200 flex flex-col sm:flex-row items-center justify-center gap-3">
-          <span className="font-bold text-emerald-400">Voice Shortcut:</span>
-          <span>Press <kbd className="px-2 py-1 bg-slate-800 rounded border border-slate-600 font-mono text-xs text-white">Alt + Shift + V</kbd> anywhere or say <strong className="text-white">&quot;Help&quot;</strong> to activate the Web Assistant.</span>
+      {/* 2. HERO SECTION (Cosmic Dark Swirl Background) */}
+      <section
+        aria-labelledby="hero-heading"
+        className="relative bg-[#050B17] text-white py-16 sm:py-24 px-4 sm:px-8 overflow-hidden min-h-[520px] flex items-center"
+        style={{
+          backgroundImage:
+            'radial-gradient(circle at 75% 45%, rgba(147, 51, 234, 0.35) 0%, rgba(37, 99, 235, 0.25) 30%, rgba(5, 11, 23, 0.95) 70%)',
+        }}
+      >
+        <div
+          className="absolute right-0 top-0 bottom-0 w-full sm:w-2/3 opacity-30 pointer-events-none bg-no-repeat bg-right bg-contain"
+          style={{
+            backgroundImage:
+              'radial-gradient(circle, rgba(168, 85, 247, 0.4) 0%, rgba(59, 130, 246, 0.2) 40%, transparent 70%)',
+          }}
+        />
+
+        <div className="max-w-7xl mx-auto w-full relative z-10 space-y-6">
+          {/* Breadcrumb matching screenshot */}
+          <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-slate-300">
+            <Link href="/courses" className="hover:text-white underline underline-offset-4 focus:outline-none focus:ring-2 focus:ring-orange-400 rounded">
+              {isAmharic ? 'AI እና ዳታ' : 'AI & Data'}
+            </Link>
+            <span className="text-slate-500" aria-hidden="true">&gt;</span>
+            <span className="text-white">{t.home.heroTitle}</span>
+          </nav>
+
+          {/* Main Headline (F0 Rule 2: Single h1 per page) */}
+          <h1
+            id="hero-heading"
+            className="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-white leading-[1.08] max-w-3xl"
+          >
+            {t.home.heroTitle}
+          </h1>
+
+          {/* Description */}
+          <p className="text-base sm:text-xl text-slate-200 max-w-2xl leading-relaxed">
+            {t.home.heroDescription}
+          </p>
+
+          {/* Clean CTA Buttons: Navy Blue Background with Bold Orange Text (ALX Savanna Style) */}
+          <div className="pt-4 flex flex-col sm:flex-row items-stretch sm:items-center gap-3.5 max-w-xl">
+            <Link
+              href="/register"
+              id="hero-register-btn"
+              className="min-h-[48px] px-6 py-3.5 rounded-lg bg-[#0B132B] hover:bg-[#131E3D] text-orange-400 hover:text-orange-300 font-bold text-base flex items-center justify-center gap-2 border-2 border-orange-500 shadow-xl transition-all focus:outline-none focus:ring-4 focus:ring-orange-400 cursor-pointer"
+            >
+              <Sparkles className="w-5 h-5 text-orange-400" aria-hidden="true" />
+              <span>{isAmharic ? 'አካውንት ይፍጠሩ (የድምጽ ረዳት)' : 'Create Account (Voice Assistant)'}</span>
+              <ArrowRight className="w-5 h-5 text-orange-400" aria-hidden="true" />
+            </Link>
+
+            <Link
+              href="/login"
+              id="hero-login-btn"
+              className="min-h-[48px] px-6 py-3.5 rounded-lg bg-slate-900/95 hover:bg-slate-800 text-orange-400 hover:text-orange-300 font-bold text-base flex items-center justify-center gap-2 border-2 border-orange-500/70 shadow-lg transition-all focus:outline-none focus:ring-4 focus:ring-orange-400 cursor-pointer"
+            >
+              <User className="w-5 h-5 text-orange-400" aria-hidden="true" />
+              <span>{isAmharic ? 'ወደ መለያዎ ይግቡ' : 'Sign In to Account'}</span>
+            </Link>
+          </div>
+
+          {/* Accessibility badges */}
+          <div className="pt-4 flex flex-wrap items-center gap-3 text-xs text-slate-300">
+            <span className="inline-flex items-center gap-1.5 bg-slate-900/80 px-3 py-1 rounded-full border border-slate-700">
+              <Volume2 className="w-3.5 h-3.5 text-orange-400" aria-hidden="true" />
+              Hands-Free Spoken Assistant
+            </span>
+            <span className="inline-flex items-center gap-1.5 bg-slate-900/80 px-3 py-1 rounded-full border border-slate-700">
+              <Headphones className="w-3.5 h-3.5 text-orange-400" aria-hidden="true" />
+              Audio-First Lessons
+            </span>
+            <span className="inline-flex items-center gap-1.5 bg-slate-900/80 px-3 py-1 rounded-full border border-slate-700">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" aria-hidden="true" />
+              Zero CAPTCHA &amp; WCAG 2.2 AA
+            </span>
+          </div>
         </div>
       </section>
 
-      {/* Learner Journey Section (Rule 1 & 24: semantic ul & li) */}
-      <section aria-labelledby="journey-heading" className="space-y-6">
-        <div className="border-b border-slate-800 pb-3 flex items-center justify-between">
-          <h2 id="journey-heading" className="text-2xl font-bold text-white">
-            The 6-Step Learner Journey
-          </h2>
-          <span className="text-xs text-slate-300 font-mono font-medium">SRS v2.0 Scope</span>
-        </div>
+      {/* 3. FEATURED PROGRAMMES SECTION (Interactive & Usable) */}
+      <section aria-labelledby="programmes-heading" className="py-16 px-4 sm:px-8 bg-white border-b border-slate-200">
+        <div className="max-w-7xl mx-auto space-y-8">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+            <div className="space-y-2">
+              <h2 id="programmes-heading" className="text-3xl sm:text-4xl font-extrabold text-slate-900">
+                {t.home.curriculumTitle || 'Featured Programmes'}
+              </h2>
+              <p className="text-base text-slate-600 max-w-2xl">
+                {t.home.curriculumSubtitle ||
+                  'Every programme includes complete audio narration, screen-reader optimized exercises, keyboard-first navigation, and accessible live quizzes.'}
+              </p>
+            </div>
 
-        <ul className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 list-none p-0 m-0">
-          {learnerJourney.map((item) => {
-            const Icon = item.icon;
-            return (
-              <li key={item.step}>
-                <a
-                  href={item.href}
-                  className="group p-6 bg-slate-900 hover:bg-slate-850 border border-slate-700 hover:border-emerald-500 rounded-3xl transition-all shadow-md flex flex-col justify-between h-full min-h-[220px] focus:outline-none focus:ring-4 focus:ring-emerald-400"
-                >
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">{item.step}</span>
-                      <span className="text-xs bg-slate-800 text-slate-200 px-2.5 py-0.5 rounded-full border border-slate-600 font-semibold">{item.status}</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="p-2.5 bg-emerald-950 border border-emerald-700 rounded-xl text-emerald-400">
-                        <Icon className="w-5 h-5" aria-hidden="true" />
-                      </div>
-                      <h3 className="font-bold text-white text-lg group-hover:text-emerald-300 transition-colors">
-                        {item.title}
-                      </h3>
-                    </div>
-                    <p className="text-sm text-slate-200 leading-relaxed">
-                      {item.description}
-                    </p>
+            {/* Filter Pills */}
+            <div className="flex flex-wrap gap-2" role="group" aria-label="Course tracks filter">
+              <button
+                type="button"
+                onClick={() => setSelectedTrack('all')}
+                className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all focus:outline-none focus:ring-2 focus:ring-orange-400 cursor-pointer ${
+                  selectedTrack === 'all'
+                    ? 'bg-[#0B132B] text-orange-400 border border-orange-500'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                }`}
+              >
+                {t.home.filterAll || 'All Programmes'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedTrack('data')}
+                className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all focus:outline-none focus:ring-2 focus:ring-orange-400 cursor-pointer ${
+                  selectedTrack === 'data'
+                    ? 'bg-[#0B132B] text-orange-400 border border-orange-500'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                }`}
+              >
+                {t.home.filterData || 'Data & AI'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedTrack('communication')}
+                className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all focus:outline-none focus:ring-2 focus:ring-orange-400 cursor-pointer ${
+                  selectedTrack === 'communication'
+                    ? 'bg-[#0B132B] text-orange-400 border border-orange-500'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                }`}
+              >
+                {t.home.filterComm || 'Communication (WR 100)'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedTrack('va')}
+                className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all focus:outline-none focus:ring-2 focus:ring-orange-400 cursor-pointer ${
+                  selectedTrack === 'va'
+                    ? 'bg-[#0B132B] text-orange-400 border border-orange-500'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                }`}
+              >
+                {t.home.filterVA || 'Virtual Assistant (VA-1)'}
+              </button>
+            </div>
+          </div>
+
+          {/* Course Cards Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {filteredCourses.map((c) => (
+              <article
+                key={c.id}
+                className="bg-white border-2 border-slate-300 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between space-y-6"
+              >
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold uppercase tracking-wider bg-orange-100 text-orange-800 border border-orange-200 px-2.5 py-0.5 rounded-full">
+                      {c.badge}
+                    </span>
+                    <span className="text-xs text-slate-500 flex items-center gap-1">
+                      <Clock className="w-3.5 h-3.5" aria-hidden="true" />
+                      {c.duration}
+                    </span>
                   </div>
-                  <div className="pt-4 mt-4 border-t border-slate-800 flex items-center justify-between text-xs font-bold text-emerald-400">
-                    <span>Enter {item.title}</span>
-                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" aria-hidden="true" />
+
+                  <h3 className="text-xl font-bold text-slate-900 leading-snug">
+                    {c.title}
+                  </h3>
+
+                  <p className="text-sm text-slate-600 leading-relaxed">
+                    {c.description}
+                  </p>
+
+                  <div className="space-y-1.5 pt-1">
+                    <span className="text-xs font-semibold text-slate-700 block">Skills gained:</span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {c.skills.map((skill) => (
+                        <span
+                          key={skill}
+                          className="text-[11px] bg-slate-100 text-slate-800 px-2 py-0.5 rounded border border-slate-200 font-medium"
+                        >
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
                   </div>
-                </a>
-              </li>
-            );
-          })}
-        </ul>
+                </div>
+
+                <div className="pt-4 border-t border-slate-200 space-y-3">
+                  <div className="flex items-center gap-1.5 text-xs text-emerald-800 font-semibold">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" aria-hidden="true" />
+                    <span>{c.accessibleBadge}</span>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Link
+                      href={c.link}
+                      className="flex-1 py-2.5 px-3 rounded-lg bg-[#0B132B] hover:bg-[#131E3D] text-orange-400 hover:text-orange-300 font-bold text-xs text-center border-2 border-orange-500 shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-orange-400"
+                    >
+                      {t.home.startCourseBtn || 'Explore Curriculum'}
+                    </Link>
+                    <Link
+                      href="/register"
+                      className="py-2.5 px-3 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold text-xs border border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400"
+                      title="Enroll via Accessible Registration"
+                    >
+                      Enroll Now
+                    </Link>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
       </section>
 
-      {/* Savanna Learning Portal Integration */}
-      <section aria-labelledby="savanna-heading" className="p-6 sm:p-8 bg-slate-900 border border-slate-700 rounded-3xl space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-4">
-          <div>
-            <h2 id="savanna-heading" className="text-xl sm:text-2xl font-bold text-white">
-              Authentic ALX Savanna Portal Pages
+      {/* 4. ABOUT ABLEWAY ACCESSIBILITY SECTION (`#about`) */}
+      <section id="about" aria-labelledby="about-heading" className="py-16 px-4 sm:px-8 bg-slate-50 border-b border-slate-200">
+        <div className="max-w-7xl mx-auto space-y-10">
+          <div className="text-center space-y-3 max-w-2xl mx-auto">
+            <span className="text-xs font-bold text-orange-800 uppercase tracking-widest bg-orange-100 px-3 py-1 rounded-full border border-orange-200">
+              Inclusive Tech Education
+            </span>
+            <h2 id="about-heading" className="text-3xl sm:text-4xl font-extrabold text-slate-900">
+              {t.home.a11yTitle || 'Built for Blind and Visually Impaired Learners'}
             </h2>
-            <p className="text-sm text-slate-200 mt-1">
-              Preserved authentic Savanna design, integrated with the Ableway voice assistant toolbar, audio earcons, and WCAG AA accessibility controls.
+            <p className="text-base text-slate-600 leading-relaxed">
+              {t.home.a11ySubtitle ||
+                'Ableway bridges the gap between digital curricula and assistive technologies, delivering full autonomy through voice, keyboard, and human support.'}
             </p>
           </div>
-          <a
-            href="/savanna?page=homepage-v1-paced.html"
-            className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold px-5 py-3 rounded-xl min-h-[44px] transition-colors shadow-sm self-start md:self-auto"
-          >
-            <span>Launch Savanna Portal</span>
-            <ArrowRight className="w-4 h-4" aria-hidden="true" />
-          </a>
-        </div>
 
-        <ul className="grid grid-cols-1 md:grid-cols-3 gap-4 list-none p-0 m-0">
-          {savannaPages.map((pg) => (
-            <li key={pg.name} className="p-4 bg-slate-950 border border-slate-700 rounded-2xl flex flex-col justify-between space-y-3">
-              <div>
-                <h3 className="font-bold text-white text-base">{pg.name}</h3>
-                <p className="text-xs text-slate-200 mt-1 leading-relaxed">{pg.description}</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="bg-white border border-slate-300 rounded-xl p-6 space-y-3 shadow-sm">
+              <div className="w-10 h-10 rounded-lg bg-[#0B132B] text-orange-400 flex items-center justify-center border border-orange-500/50">
+                <Volume2 className="w-5 h-5 text-orange-400" aria-hidden="true" />
               </div>
-              <div className="flex items-center gap-2 pt-2">
-                <a
-                  href={pg.path}
-                  className="text-xs bg-slate-800 hover:bg-slate-700 text-white px-3 py-2 rounded-lg font-bold min-h-[44px] flex items-center transition-colors border border-slate-600"
-                >
-                  View in Hub
-                </a>
-                <a
-                  href={pg.rawUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-slate-200 hover:text-emerald-400 flex items-center gap-1 px-3 py-2 min-h-[44px]"
-                >
-                  <span>Standalone Tab</span>
-                  <ExternalLink className="w-3.5 h-3.5" aria-hidden="true" />
-                </a>
+              <h3 className="text-lg font-bold text-slate-900">Hands-Free Assistant</h3>
+              <p className="text-sm text-slate-600 leading-relaxed">
+                Start once and speak naturally. The assistant speaks slowly, confirms inputs, supports letter-by-letter spelling, and auto-listens without clicking.
+              </p>
+            </div>
+
+            <div className="bg-white border border-slate-300 rounded-xl p-6 space-y-3 shadow-sm">
+              <div className="w-10 h-10 rounded-lg bg-[#0B132B] text-orange-400 flex items-center justify-center border border-orange-500/50">
+                <Headphones className="w-5 h-5 text-orange-400" aria-hidden="true" />
               </div>
-            </li>
-          ))}
-        </ul>
+              <h3 className="text-lg font-bold text-slate-900">Audio-First Lessons</h3>
+              <p className="text-sm text-slate-600 leading-relaxed">
+                Structured audio narration, plain-language summaries, KaTeX math pronunciation, and earcon sound cues provide rich, non-visual context.
+              </p>
+            </div>
+
+            <div className="bg-white border border-slate-300 rounded-xl p-6 space-y-3 shadow-sm">
+              <div className="w-10 h-10 rounded-lg bg-[#0B132B] text-orange-400 flex items-center justify-center border border-orange-500/50">
+                <PhoneCall className="w-5 h-5 text-orange-400" aria-hidden="true" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-900">Human Helper Queue</h3>
+              <p className="text-sm text-slate-600 leading-relaxed">
+                Stuck on a tricky concept or payment? Request staff assistance with 1-click or voice command for immediate human voice assistance.
+              </p>
+            </div>
+
+            <div className="bg-white border border-slate-300 rounded-xl p-6 space-y-3 shadow-sm">
+              <div className="w-10 h-10 rounded-lg bg-[#0B132B] text-orange-400 flex items-center justify-center border border-orange-500/50">
+                <ShieldCheck className="w-5 h-5 text-orange-400" aria-hidden="true" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-900">Zero Barrier Auth</h3>
+              <p className="text-sm text-slate-600 leading-relaxed">
+                No visual CAPTCHAs, no confusing puzzles. One-time codes sent to email or phone accept simple paste and screen reader autofill.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 5. ACCESSIBILITY STANDARDS & STATISTICS */}
+      <section aria-label="Accessibility Metrics" className="py-12 px-4 sm:px-8 bg-slate-900 text-white border-b border-slate-800">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+          <div className="space-y-1">
+            <div className="text-4xl sm:text-5xl font-black text-orange-400">{t.home.stat1 || '100%'}</div>
+            <p className="text-xs sm:text-sm text-slate-300 font-medium">{t.home.stat1Label || 'Keyboard Navigable with Zero Traps'}</p>
+          </div>
+          <div className="space-y-1">
+            <div className="text-4xl sm:text-5xl font-black text-orange-400">{t.home.stat2 || '0.80x'}</div>
+            <p className="text-xs sm:text-sm text-slate-300 font-medium">{t.home.stat2Label || 'Calm, Clear Audio Assistant Cadence'}</p>
+          </div>
+          <div className="space-y-1">
+            <div className="text-4xl sm:text-5xl font-black text-emerald-400">{t.home.stat3 || 'WCAG AAA'}</div>
+            <p className="text-xs sm:text-sm text-slate-300 font-medium">{t.home.stat3Label || 'High-Contrast Text & Visible Focus Rings'}</p>
+          </div>
+        </div>
+      </section>
+
+      {/* 6. SAVANNA CURRICULUM PORTAL TRACKS */}
+      <section aria-labelledby="savanna-heading" className="py-12 px-4 sm:px-8 bg-white border-b border-slate-200">
+        <div className="max-w-7xl mx-auto space-y-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <span className="text-xs font-bold text-orange-800 uppercase tracking-widest bg-orange-100 px-3 py-0.5 rounded-full border border-orange-200">
+                ALX Savanna Curriculum
+              </span>
+              <h2 id="savanna-heading" className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-2">
+                Paced &amp; Self-Paced Learning Portal
+              </h2>
+            </div>
+            <Link
+              href="/savanna"
+              className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-orange-700 hover:text-orange-900 underline focus:outline-none focus:ring-2 focus:ring-orange-400 rounded"
+            >
+              <span>Explore All Savanna Views</span>
+              <ArrowRight className="w-4 h-4" aria-hidden="true" />
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {savannaPages.map((page) => (
+              <Link
+                key={page.path}
+                href={page.path}
+                className="p-5 rounded-xl border border-slate-300 hover:border-orange-500 bg-slate-50 hover:bg-white transition-all shadow-sm group focus:outline-none focus:ring-2 focus:ring-orange-400"
+              >
+                <div className="flex items-center justify-between">
+                  <h3 className="font-bold text-slate-900 group-hover:text-orange-700 text-sm">
+                    {page.name}
+                  </h3>
+                  <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-orange-600 transition-transform group-hover:translate-x-1" aria-hidden="true" />
+                </div>
+                <p className="text-xs text-slate-600 mt-2 leading-relaxed">
+                  {page.description}
+                </p>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 7. CALL TO ACTION SECTION */}
+      <section aria-labelledby="cta-heading" className="py-16 px-4 sm:px-8 bg-[#0B132B] text-white">
+        <div className="max-w-4xl mx-auto text-center space-y-6">
+          <h2 id="cta-heading" className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight">
+            Ready to begin your accessible learning journey?
+          </h2>
+          <p className="text-base sm:text-lg text-slate-300 max-w-2xl mx-auto leading-relaxed">
+            Create your account in minutes using our spoken assistant or keyboard navigation. Join hundreds of learners preparing for remote tech careers.
+          </p>
+          <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Link
+              href="/register"
+              className="w-full sm:w-auto min-h-[48px] px-8 py-3.5 rounded-lg bg-orange-600 hover:bg-orange-500 text-white font-bold text-base shadow-xl transition-all focus:outline-none focus:ring-4 focus:ring-orange-400 flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <Sparkles className="w-5 h-5 text-white" aria-hidden="true" />
+              <span>Create Your Account</span>
+              <ArrowRight className="w-5 h-5 text-white" aria-hidden="true" />
+            </Link>
+            <Link
+              href="/login"
+              className="w-full sm:w-auto min-h-[48px] px-8 py-3.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-orange-400 hover:text-orange-300 font-bold text-base border-2 border-orange-500 shadow-md transition-all focus:outline-none focus:ring-4 focus:ring-orange-400 flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <User className="w-5 h-5 text-orange-400" aria-hidden="true" />
+              <span>Sign In with Existing Account</span>
+            </Link>
+          </div>
+        </div>
       </section>
     </div>
   );

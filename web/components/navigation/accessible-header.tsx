@@ -14,12 +14,12 @@ export function AccessibleHeader() {
   const settingsTriggerRef = useRef<HTMLButtonElement | null>(null);
 
   const navLinks = [
-    { href: '/', label: 'Hub', icon: Layers },
-    { href: '/register', label: 'Register', icon: Sparkles },
+    { href: '/', label: 'Home', icon: Layers },
     { href: '/courses', label: 'Courses', icon: BookOpen },
-    { href: '/payment', label: 'Payment', icon: CreditCard },
     { href: '/learn', label: 'Learn', icon: GraduationCap },
-    { href: '/profile', label: 'Profile', icon: User },
+    { href: '/payment', label: 'Payment', icon: CreditCard },
+    { href: '/login', label: 'Sign In', icon: User },
+    { href: '/register', label: 'Register', icon: Sparkles },
     { href: '/staff/help-queue', label: 'Staff Queue', icon: ShieldCheck },
   ];
 
@@ -30,11 +30,17 @@ export function AccessibleHeader() {
         <div className="flex items-center gap-3">
           <Link
             href="/"
-            className="flex items-center gap-2 text-lg font-bold text-emerald-400 hover:text-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-400 rounded min-h-[44px] px-2"
+            className="flex items-center gap-2.5 focus:outline-none focus:ring-2 focus:ring-orange-400 rounded px-1 min-h-[44px]"
           >
-            <span className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-black" aria-hidden="true">A</span>
-            <span>Ableway</span>
+            <span className="text-2xl font-black tracking-tight text-white font-sans">
+              al<span className="text-orange-400">x</span>
+            </span>
+            <span className="text-slate-400 font-light text-base">|</span>
+            <span className="font-bold text-white tracking-tight text-base">Ableway</span>
           </Link>
+          <span className="hidden sm:inline-block text-[11px] bg-slate-800 text-orange-300 border border-slate-700 px-2 py-0.5 rounded-full font-medium">
+            Accessible Learning
+          </span>
         </div>
 
         {/* 2. Main Navigation */}
