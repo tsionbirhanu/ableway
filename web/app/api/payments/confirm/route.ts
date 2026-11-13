@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { getDb } from "@/lib/db/client";
-import { auditLog, courses, enrollments, paymentMethod, paymentRecords } from "@/lib/db/schema";
+import { auditLog, conversations, courses, enrollments, messages, paymentMethod, paymentRecords } from "@/lib/db/schema";
 import { BadRequestError, ConflictError, NotFoundError, withErrors } from "@/lib/auth/errors";
 import { readJson } from "@/lib/auth/params";
 import { canConfirmPayment } from "@/lib/auth/policies";
@@ -63,6 +63,23 @@ export const POST = withErrors(async (request: Request) => {
       .update(enrollments)
       .set({ status: "active" })
       .where(and(eq(enrollments.id, enrollment.id), eq(enrollments.status, "pending_payment")));
+    // Notify the learner in their conversation if one exists
+    const [learnerConv] = await tx
+      .select({ id: conversations.id })
+      .from(conversations)
+      .where(eq(conversations.profileId, enrollment.profileId))
+      .limit(1);
+
+    if (learnerConv) {
+      await tx.insert(messages).values({
+        conversationId: learnerConv.id,
+        role: "helper",
+        content: `Payment of ${input.amountMinor / 100} ${input.currency} confirmed. Your course is now unlocked!`,
+        handledBy: "helper",
+        flags: ["payment_confirmed" as any],
+      });
+    }
+
     await tx.insert(auditLog).values({
       actorId: actor.id,
       action: "payment.confirmed",
@@ -71,9 +88,10 @@ export const POST = withErrors(async (request: Request) => {
         paymentId: payment?.id ?? null,
         method: input.method,
         amountMinor: input.amountMinor,
+        notified: true,
       },
     });
-    return { paymentId: payment?.id, enrollmentId: enrollment.id, status: "active" as const };
+    return { paymentId: payment?.id, enrollmentId: enrollment.id, status: "active" as const, notified: true };
   });
 
   return Response.json({ payment: result }, { status: 201 });

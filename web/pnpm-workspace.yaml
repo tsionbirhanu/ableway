@@ -4,3 +4,5 @@ ignoredBuiltDependencies:
 
 onlyBuiltDependencies:
   - esbuild
+  # Downloads the ffmpeg binary used for speech audio conversion.
+  - ffmpeg-static

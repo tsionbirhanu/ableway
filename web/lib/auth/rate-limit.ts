@@ -13,6 +13,10 @@ export const LIMITS = {
   signUpPerEmail: { max: 3, windowSeconds: 60 * 60 },
   signUpPerIp: { max: 10, windowSeconds: 60 * 60 },
   helpRequestPerIp: { max: 10, windowSeconds: 60 * 60 },
+  // Speech: per signed-in learner, or per IP before sign-in (voice registration).
+  // Hands-free registration sends one short clip per answer, so allow a little more.
+  speechTranscribe: { max: 60, windowSeconds: 10 * 60 },
+  speechSynthesize: { max: 120, windowSeconds: 10 * 60 },
   // Passkeys: starting a ceremony is cheap, so allow more; finishing is where guessing would happen.
   passkeyStartPerIp: { max: 30, windowSeconds: 15 * 60 },
   passkeyFinishPerIp: { max: 30, windowSeconds: 15 * 60 },

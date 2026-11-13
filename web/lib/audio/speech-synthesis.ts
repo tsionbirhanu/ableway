@@ -1,4 +1,8 @@
+import { speechPlayer } from "@/lib/speech/client/player";
+
 export interface SpeakOptions {
+  /** Use only the browser voice (for fallbacks after server speech already failed). */
+  browserOnly?: boolean;
   rate?: number;
   pitch?: number;
   volume?: number;
@@ -23,7 +27,19 @@ class SpeechSynthesisManager {
     return this.synth.getVoices();
   }
 
+  /**
+   * Speak through our server first (Gemini/Azure: real Amharic voices), with
+   * the browser voice as fallback. `browserOnly` skips the server.
+   */
   public speak(text: string, options: SpeakOptions = {}): Promise<void> {
+    if (!options.browserOnly) {
+      this.stop();
+      return speechPlayer
+        .speak(text, { lang: options.lang, rate: options.rate, volume: options.volume })
+        .then(() => {
+          options.onEnd?.();
+        });
+    }
     return new Promise((resolve, reject) => {
       if (!this.synth) {
         resolve();
@@ -62,6 +78,7 @@ class SpeechSynthesisManager {
   }
 
   public stop(): void {
+    speechPlayer.cancel();
     if (this.synth) {
       this.synth.cancel();
       this.currentUtterance = null;
@@ -81,9 +98,8 @@ class SpeechSynthesisManager {
   }
 
   public isSpeaking(): boolean {
-    return !!(this.synth && this.synth.speaking);
+    return speechPlayer.isSpeaking() || !!(this.synth && this.synth.speaking);
   }
 }
 
 export const speechSynthesizer = new SpeechSynthesisManager();
-

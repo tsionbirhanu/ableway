@@ -1,117 +1,83 @@
 import { z } from "zod";
 import { withErrors } from "@/lib/auth/errors";
 import { readJson } from "@/lib/auth/params";
-import { replyTo } from "@/lib/assistant/keyword-replies";
+import { getActor } from "@/lib/auth/session";
+import { askAssistant } from "@/lib/assistant";
 
-export interface AssistantAction {
-  name: string;
-  params: Record<string, unknown>;
-}
-
-export interface AssistantApiResponse {
-  reply: string;
-  spokenReply?: string;
-  actions: AssistantAction[];
-  escalate: boolean;
-  escalateReason?: string;
-  language: string;
-}
-
-const bodySchema = z.object({
-  message: z.string().max(2000),
+const assistantRequestSchema = z.object({
+  message: z.string().max(2000).optional(),
+  text: z.string().max(2000).optional(),
+  channel: z.enum(["web", "telegram"]).default("web"),
+  conversationId: z.string().uuid().optional().nullable(),
   currentPage: z.string().max(300).optional(),
+  pageContext: z
+    .object({
+      page: z.string().optional(),
+      allowedActions: z.array(z.string()).optional(),
+    })
+    .passthrough()
+    .optional(),
   language: z.string().min(2).max(10).default("en"),
-  registeredActions: z.array(z.string()).optional().default([]),
+  registeredActions: z.array(z.string()).optional(),
 });
 
 export const POST = withErrors(async (request: Request) => {
-  const { message, currentPage, language, registeredActions } = bodySchema.parse(await readJson(request));
+  const actor = await getActor();
+  const rawBody = await readJson(request);
+  const input = assistantRequestSchema.parse(rawBody);
 
-  const lower = message.toLowerCase().trim();
-
-  // Check for test override or direct escalation
-  const isEscalate =
-    lower.includes("human") ||
-    lower.includes("agent") ||
-    lower.includes("call a person") ||
-    lower.includes("call person") ||
-    lower.includes("call staff") ||
-    lower.includes("help me");
-
-  let replyText = "";
-  let spokenText = "";
-  const actions: AssistantAction[] = [];
-  let escalate = isEscalate;
-  let escalateReason: string | undefined = undefined;
-
-  if (isEscalate) {
-    replyText = "I am connecting you with a human helper. Someone will assist you shortly.";
-    spokenText = "I am connecting you with a human helper now.";
-    escalate = true;
-    escalateReason = "Learner requested a human helper";
-  } else if (lower.includes("select course") || lower.includes("enroll")) {
-    if (registeredActions.includes("selectCourse")) {
-      actions.push({
-        name: "selectCourse",
-        params: { courseId: "course-1", title: "Digital Accessibility Fundamentals" },
-      });
-      replyText = "I will help you enroll in Digital Accessibility Fundamentals.";
-      spokenText = "I will help you enroll in Digital Accessibility Fundamentals.";
-    } else {
-      actions.push({ name: "goToPage", params: { path: "/courses" } });
-      replyText = "I am taking you to the courses page so you can select a course.";
-      spokenText = "Navigating to courses.";
-    }
-  } else if (lower.includes("fill") || lower.includes("email") || lower.includes("name")) {
-    if (registeredActions.includes("fillField")) {
-      actions.push({
-        name: "fillField",
-        params: { field: "email", value: "learner@example.com" },
-      });
-      replyText = "Filling in your email address.";
-      spokenText = "Filling in your email.";
-    } else {
-      replyText = "To fill in fields, please navigate to the registration or profile page.";
-      spokenText = "Please navigate to the registration page to fill fields.";
-    }
-  } else {
-    // Default reply engine
-    const base = replyTo(message, language);
-    replyText = base.reply;
-    spokenText = base.spokenReply || base.reply;
-    escalate = base.escalateToHuman;
-    if (escalate) escalateReason = "Learner requested human assistance";
-    if (base.actions) {
-      for (const a of base.actions) {
-        actions.push({ name: a.name, params: a.params as Record<string, unknown> });
-      }
-    }
+  const userText = input.text || input.message || "";
+  if (!userText.trim()) {
+    return Response.json({ error: "Message text is required" }, { status: 400 });
   }
 
-  const responseData: AssistantApiResponse = {
-    reply: replyText,
-    spokenReply: spokenText,
-    actions,
-    escalate,
-    escalateReason,
-    language,
-  };
+  const page = input.pageContext?.page || input.currentPage || "/";
+  const allowedActions = input.pageContext?.allowedActions || input.registeredActions || [];
 
-  // Check if client requested a stream
+  const result = await askAssistant({
+    channel: input.channel,
+    userId: actor?.id ?? null,
+    conversationId: input.conversationId ?? null,
+    language: input.language,
+    text: userText,
+    pageContext: {
+      page,
+      allowedActions,
+      ...input.pageContext,
+    },
+  });
+
   const acceptHeader = request.headers.get("accept") || "";
-  const shouldStream = acceptHeader.includes("text/event-stream") || request.headers.get("x-stream") === "true";
+  const isStreaming = acceptHeader.includes("text/event-stream") || request.headers.get("x-stream") === "true";
 
-  if (shouldStream) {
+  if (isStreaming) {
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
-      start(controller) {
-        // Send initial chunk
+      async start(controller) {
+        // Stream the reply in natural word chunks
+        const words = result.reply.split(" ");
+        for (let i = 0; i < words.length; i++) {
+          const chunk = i === words.length - 1 ? words[i] : `${words[i]} `;
+          controller.enqueue(
+            encoder.encode(`data: ${JSON.stringify({ chunk, done: false })}\n\n`)
+          );
+        }
+
+        // Send the final packet with actions and escalation metadata at the end
         controller.enqueue(
-          encoder.encode(`data: ${JSON.stringify({ chunk: replyText, done: false })}\n\n`)
-        );
-        // Send final metadata
-        controller.enqueue(
-          encoder.encode(`data: ${JSON.stringify({ ...responseData, done: true })}\n\n`)
+          encoder.encode(
+            `data: ${JSON.stringify({
+              done: true,
+              reply: result.reply,
+              spokenReply: result.reply,
+              actions: result.actions,
+              escalate: !!result.escalate,
+              escalateDetails: result.escalate,
+              escalateReason: result.escalate?.reason,
+              sources: result.sources,
+              conversationId: result.conversationId,
+            })}\n\n`
+          )
         );
         controller.close();
       },
@@ -126,6 +92,15 @@ export const POST = withErrors(async (request: Request) => {
     });
   }
 
-  return Response.json(responseData);
+  return Response.json({
+    reply: result.reply,
+    spokenReply: result.reply,
+    actions: result.actions,
+    escalate: !!result.escalate,
+    escalateReason: result.escalate?.reason,
+    escalateDetails: result.escalate,
+    sources: result.sources,
+    conversationId: result.conversationId,
+    language: input.language,
+  });
 });
-
