@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 
 interface SavannaPage {
   id: string;
@@ -99,10 +100,10 @@ export default function Home() {
                 href={activePage.path}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-xs text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 px-2.5 py-1.5 rounded-md transition-colors flex items-center gap-1"
+                className="text-xs text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-1.5 rounded-md transition-colors flex items-center gap-1.5"
                 title="Open page in a new standalone tab"
               >
-                <span>Open Standalone</span>
+                <span>Standalone Tab</span>
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   className="h-3.5 w-3.5"
