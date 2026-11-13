@@ -5,9 +5,10 @@ import { HelpCircle, PhoneCall, Mic, Keyboard, Volume2 } from 'lucide-react';
 
 export default function HelpPage() {
   const keyboardShortcuts = [
-    { key: 'Alt + Shift + V', action: 'Start or stop voice input' },
     { key: 'Alt + Shift + A', action: 'Open or close the Web Assistant panel' },
-    { key: 'Alt + Shift + S', action: 'Open the Quick Accessibility Settings dialog' },
+    { key: 'Alt + Shift + S', action: 'Speak push-to-talk toggle' },
+    { key: 'Alt + Shift + V', action: 'Voice input toggle' },
+    { key: 'Alt + Shift + Q', action: 'Open the Quick Accessibility Settings dialog' },
     { key: 'Alt + Shift + H', action: 'Open this Help page from any screen' },
     { key: 'Alt + Shift + T', action: 'Call a human helper immediately' },
     { key: 'Escape', action: 'Close any open dialog and return focus to its trigger button' },

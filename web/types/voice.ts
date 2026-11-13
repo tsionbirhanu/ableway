@@ -27,6 +27,9 @@ export interface VoiceCommandDefinition {
 export type EarconType =
   | "listening-start"
   | "listening-stop"
+  | "listening started"
+  | "understood"
+  | "done"
   | "command-recognized"
   | "success"
   | "error"

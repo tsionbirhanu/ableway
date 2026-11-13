@@ -44,6 +44,7 @@ class EarconManager {
       switch (type) {
         case "listening":
         case "listening-start":
+        case "listening started":
           // Ascending two-tone chime (440Hz -> 880Hz)
           osc.type = "sine";
           osc.frequency.setValueAtTime(440, now);
@@ -68,6 +69,7 @@ class EarconManager {
 
         case "command-recognized":
         case "success":
+        case "understood":
           // Bright positive chord (523.25Hz -> 659.25Hz -> 783.99Hz)
           osc.type = "triangle";
           osc.frequency.setValueAtTime(523.25, now);
@@ -77,6 +79,17 @@ class EarconManager {
           gain.gain.exponentialRampToValueAtTime(0.01, now + 0.28);
           osc.start(now);
           osc.stop(now + 0.28);
+          break;
+
+        case "done":
+          // Gentle completion chime (587.33Hz -> 880Hz)
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(587.33, now);
+          osc.frequency.exponentialRampToValueAtTime(880, now + 0.1);
+          gain.gain.setValueAtTime(0.12, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+          osc.start(now);
+          osc.stop(now + 0.2);
           break;
 
         case "error":

@@ -1,15 +1,39 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { BookOpen, Clock, BarChart2, Tag, ArrowRight, Volume2, CheckCircle2, Sparkles } from 'lucide-react';
 import { useA11y } from '@/lib/a11y/a11y-context';
+import { useAssistant } from '@/lib/assistant/assistant-context';
 import { Course } from '@/types';
 
 export default function CoursesPage() {
   const router = useRouter();
   const { announce } = useA11y();
+  const { registerAction, unregisterAction } = useAssistant();
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
+
+  useEffect(() => {
+    registerAction({
+      name: 'selectCourse',
+      description: 'Enroll in a course by title or id',
+      requiresConfirmation: true,
+      confirmationPrompt: (params) => {
+        const title = (params.title as string) || 'Digital Accessibility Fundamentals';
+        return `Are you sure you want to enroll in ${title}? This will register your enrollment and proceed to payment.`;
+      },
+      announcement: (params) => `Enrolling in ${(params.title as string) || 'course'}.`,
+      handler: (params) => {
+        const courseId = (params.courseId as string) || 'course-1';
+        const course = courses.find((c) => c.id === courseId) || courses[0];
+        handleSelectCourse(course);
+      },
+    });
+
+    return () => {
+      unregisterAction('selectCourse');
+    };
+  }, [registerAction, unregisterAction]);
 
   const courses: Course[] = [
     {
