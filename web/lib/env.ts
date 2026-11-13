@@ -49,6 +49,7 @@ export const envSchema = z.object({
     }),
   ),
   SMS_API_KEY: z.preprocess(emptyToUndefined, z.string().optional()),
+  SMS_ENABLED: z.preprocess(emptyToUndefined, z.enum(["true", "false"]).default("false").transform((v) => v === "true")),
   CRON_SECRET: secret(16),
   APP_URL: required(
     z

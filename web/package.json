@@ -18,6 +18,7 @@
     "db:migrate": "tsx --conditions=react-server scripts/migrate.ts",
     "db:seed": "tsx --conditions=react-server scripts/seed.ts",
     "db:studio": "drizzle-kit studio",
+    "telegram:webhook": "tsx --conditions=react-server scripts/telegram-webhook.ts",
     "speech:smoke": "tsx --conditions=react-server scripts/speech-smoke.ts",
     "eval:assistant": "tsx --conditions=react-server scripts/run-assistant-eval.ts"
   },
@@ -28,6 +29,7 @@
     "@simplewebauthn/server": "^14.1.0",
     "@tailwindcss/postcss": "^4.3.3",
     "drizzle-orm": "^0.45.4",
+    "grammy": "^1.46.0",
     "ffmpeg-static": "^5.3.0",
     "lucide-react": "^1.72.0",
     "next": "16.4.6",

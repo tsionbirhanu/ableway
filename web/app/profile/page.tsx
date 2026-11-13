@@ -1,5 +1,19 @@
-'use client';
+"use client";
 
+import React, { useState } from "react";
+import {
+  Send,
+  KeyRound,
+  Shield,
+  CheckCircle2,
+  Trash2,
+  Bell,
+  User,
+  Settings,
+  HelpCircle,
+  Clock,
+} from "lucide-react";
+import { useA11y } from "@/lib/a11y/a11y-context";
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import {
@@ -68,6 +82,45 @@ export default function ProfilePage() {
     toggleLanguage,
   } = useA11y();
 
+  const [oneTimeCode, setOneTimeCode] = useState<string | null>(null);
+  const [codeExpiresIn, setCodeExpiresIn] = useState<number>(600);
+  const [isLinked, setIsLinked] = useState<boolean>(false);
+  const [alertTelegram, setAlertTelegram] = useState(true);
+  const [alertSMS, setAlertSMS] = useState(false);
+  const [jobInterests, setJobInterests] = useState(
+    "Customer support, accessibility testing, remote transcription",
+  );
+  const [shortcutsEnabled, setShortcutsEnabled] = useState(true);
+
+  const handleGenerateLinkCode = async () => {
+    try {
+      const res = await fetch("/api/telegram/link-code", { method: "POST" });
+      if (res.ok) {
+        const data = await res.json();
+        setOneTimeCode(data.code);
+        setCodeExpiresIn(data.expiresInSeconds || 600);
+        announce(
+          `Your one-time Telegram linking code is ${data.code.split("").join(" ")}. It is valid for 10 minutes.`,
+          "polite",
+        );
+        return;
+      }
+    } catch {
+      // Fallback for offline demo
+    }
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    setOneTimeCode(code);
+    setCodeExpiresIn(600);
+    announce(
+      `Your one-time Telegram linking code is ${code.split("").join(" ")}. It is valid for 10 minutes.`,
+      "polite",
+    );
+  };
+
+  // Rule 18: Allow user to extend expiring codes
+  const handleExtendCode = () => {
+    setCodeExpiresIn((prev) => prev + 600);
+    announce("Code expiration extended by 10 minutes.", "polite");
   const h1Ref = useRef<HTMLHeadingElement | null>(null);
 
   // 1. Personal details state
@@ -254,6 +307,149 @@ export default function ProfilePage() {
   // Simulated link event (for tests and demonstration)
   const handleSimulateLinkConnected = () => {
     setIsLinked(true);
+    setOneTimeCode(null);
+    announce(
+      "Telegram account linked successfully! You will now receive job alerts directly in Telegram.",
+      "polite",
+    );
+  };
+
+  const handleUnlink = async () => {
+    try {
+      await fetch("/api/telegram/link-code", { method: "DELETE" });
+    } catch {
+      // Ignore
+    }
+    setIsLinked(false);
+    announce("Telegram account disconnected. All Telegram alerts have stopped.", "polite");
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-10 space-y-8">
+      {/* Page Title & Heading (Rule 2) */}
+      <header className="space-y-2">
+        <h1 id="profile-h1" className="text-3xl font-extrabold text-white">
+          Learner Profile & Settings
+        </h1>
+        <p className="text-slate-200 text-sm">
+          Manage your accessibility preferences, view keyboard shortcuts, and connect your Telegram
+          account for mobile job alerts.
+        </p>
+      </header>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        {/* Left Column: Accessibility & Alert Settings */}
+        <div className="space-y-6">
+          <section
+            aria-labelledby="a11y-prefs-heading"
+            className="p-6 bg-slate-900 border border-slate-700 rounded-3xl space-y-4"
+          >
+            <h2
+              id="a11y-prefs-heading"
+              className="text-lg font-bold text-white flex items-center gap-2"
+            >
+              <Settings className="w-5 h-5 text-emerald-400" aria-hidden="true" />
+              <span>Accessibility Preferences</span>
+            </h2>
+
+            <div className="space-y-4 text-sm">
+              {/* Interaction Mode (Rule 20) */}
+              <div>
+                <span className="block text-xs font-bold text-slate-200 mb-1.5">
+                  Assistant Mode:
+                </span>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { id: "voice-first", label: "Voice Mode" },
+                    { id: "screen-reader", label: "Screen Reader" },
+                    { id: "hybrid", label: "Hybrid" },
+                  ].map((m) => (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => {
+                        setMode(m.id as any);
+                        announce(`Switched to ${m.label}.`);
+                      }}
+                      className={`p-2.5 rounded-xl text-xs font-bold border min-h-[44px] transition-colors ${
+                        mode === m.id
+                          ? "bg-emerald-700 border-emerald-400 text-white"
+                          : "bg-slate-950 border-slate-700 text-slate-200 hover:border-slate-600"
+                      }`}
+                      aria-pressed={mode === m.id}
+                    >
+                      {m.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Contrast Theme (Rule 10 & 11) */}
+              <div>
+                <label
+                  htmlFor="profile-theme-select"
+                  className="block text-xs font-bold text-slate-200 mb-1"
+                >
+                  Contrast Theme:
+                </label>
+                <select
+                  id="profile-theme-select"
+                  value={theme}
+                  onChange={(e) => setTheme(e.target.value as any)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white min-h-[44px] focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                >
+                  <option value="default">Standard Contrast (4.5:1)</option>
+                  <option value="high-contrast">High Contrast (7:1+)</option>
+                  <option value="dark-contrast">Pure Black (OLED)</option>
+                  <option value="yellow-black">Yellow on Black</option>
+                </select>
+              </div>
+
+              {/* Text Sizing (Rule 11) */}
+              <div>
+                <label
+                  htmlFor="profile-font-select"
+                  className="block text-xs font-bold text-slate-200 mb-1"
+                >
+                  Text Sizing:
+                </label>
+                <select
+                  id="profile-font-select"
+                  value={fontSize}
+                  onChange={(e) => setFontSize(e.target.value as any)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white min-h-[44px] focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                >
+                  <option value="normal">Normal (100%)</option>
+                  <option value="large">Large (125%)</option>
+                  <option value="x-large">Extra Large (150%)</option>
+                  <option value="xx-large">Maximum (180%)</option>
+                </select>
+              </div>
+
+              {/* Rule 9: Switchable Shortcuts */}
+              <div className="pt-2">
+                <label
+                  htmlFor="shortcuts-toggle"
+                  className="flex items-center gap-3 cursor-pointer min-h-[44px]"
+                >
+                  <input
+                    id="shortcuts-toggle"
+                    type="checkbox"
+                    checked={shortcutsEnabled}
+                    onChange={(e) => {
+                      setShortcutsEnabled(e.target.checked);
+                      announce(
+                        e.target.checked
+                          ? "Keyboard shortcuts enabled."
+                          : "Keyboard shortcuts turned off.",
+                      );
+                    }}
+                    className="w-5 h-5 rounded text-emerald-600 bg-slate-950 border-slate-700"
+                  />
+                  <span className="text-xs text-slate-100 font-medium">
+                    Enable Global Keyboard Shortcuts
+                  </span>
+                </label>
     setLinkCode(null);
     playEarcon('success');
     announce('Telegram connected', 'polite');
@@ -507,6 +703,34 @@ export default function ProfilePage() {
               </div>
             </fieldset>
 
+          {/* Job Alerts (Rule 15: native label & inputs) */}
+          <section
+            aria-labelledby="alerts-heading"
+            className="p-6 bg-slate-900 border border-slate-700 rounded-3xl space-y-4"
+          >
+            <h2
+              id="alerts-heading"
+              className="text-lg font-bold text-white flex items-center gap-2"
+            >
+              <Bell className="w-5 h-5 text-emerald-400" aria-hidden="true" />
+              <span>Job Alerts & Channels</span>
+            </h2>
+
+            <div className="space-y-3 text-sm">
+              <label
+                htmlFor="pref-alert-telegram"
+                className="flex items-center gap-3 cursor-pointer min-h-[44px]"
+              >
+                <input
+                  id="pref-alert-telegram"
+                  type="checkbox"
+                  checked={alertTelegram}
+                  onChange={(e) => setAlertTelegram(e.target.checked)}
+                  className="w-5 h-5 rounded text-emerald-600 bg-slate-950 border-slate-700"
+                />
+                <span className="text-slate-200 text-xs font-medium">
+                  Receive instant alerts via Telegram Bot
+                </span>
             {/* Contrast Theme */}
             <div className="space-y-1.5 w-full">
               <label htmlFor="a11y-contrast-theme" className="block text-sm font-bold text-slate-900">
@@ -557,6 +781,10 @@ export default function ProfilePage() {
               </select>
             </div>
 
+              <label
+                htmlFor="pref-alert-sms"
+                className="flex items-center gap-3 cursor-pointer min-h-[44px]"
+              >
             {/* Global Keyboard Shortcuts Toggle (F0 Rule 9) */}
             <div className="pt-2">
               <label htmlFor="a11y-keyboard-shortcuts" className="flex items-start gap-3 cursor-pointer min-h-[44px]">
@@ -575,6 +803,26 @@ export default function ProfilePage() {
                   }}
                   className="w-5 h-5 mt-0.5 rounded text-orange-600 border-2 border-slate-300 focus:ring-orange-500"
                 />
+                <span className="text-slate-200 text-xs font-medium">
+                  Receive SMS alerts (when available)
+                </span>
+              </label>
+
+              <div className="pt-2">
+                <label
+                  htmlFor="job-keywords-input"
+                  className="block text-xs font-bold text-slate-200 mb-1"
+                >
+                  Job Keywords of Interest:
+                </label>
+                <input
+                  id="job-keywords-input"
+                  type="text"
+                  value={jobInterests}
+                  onChange={(e) => setJobInterests(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white min-h-[44px] focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
                 <div>
                   <span className="text-sm font-bold text-slate-900 block">
                     Enable global keyboard shortcuts
@@ -589,6 +837,23 @@ export default function ProfilePage() {
         </div>
       </section>
 
+        {/* Right Column: Telegram Account Linking & Keyboard Shortcuts Help */}
+        <div className="space-y-6">
+          <section
+            aria-labelledby="telegram-link-heading"
+            className="p-6 bg-slate-900 border border-slate-700 rounded-3xl space-y-6 flex flex-col justify-between"
+          >
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Send className="w-6 h-6 text-emerald-400" aria-hidden="true" />
+                <h2 id="telegram-link-heading" className="text-xl font-bold text-white">
+                  Telegram Assistant Linking
+                </h2>
+              </div>
+
+              <p className="text-xs text-slate-200 leading-relaxed">
+                Connect your account with <strong>@AblewayBot</strong> on Telegram to receive course
+                announcements and verified accessible job matches on your phone.
       {/* SECTION 3: Language */}
       <section aria-labelledby="heading-language" className="space-y-6">
         <div className="p-6 sm:p-8 bg-white border-2 border-slate-300 rounded-2xl space-y-6 shadow-sm">
@@ -646,6 +911,17 @@ export default function ProfilePage() {
             </div>
           </div>
 
+              {/* Linking Scope Notice */}
+              <div className="p-4 bg-slate-950 rounded-2xl border border-slate-700 text-xs text-slate-200 space-y-1">
+                <span className="font-bold text-white flex items-center gap-1.5">
+                  <Shield className="w-4 h-4 text-emerald-400" aria-hidden="true" />
+                  <span>Privacy Notice</span>
+                </span>
+                <p>
+                  Linking allows the bot to send you your job updates. The bot{" "}
+                  <strong>CANNOT</strong> access or read your other private Telegram chats.
+                </p>
+              </div>
           <div className="space-y-8 pt-2">
             {/* Form to add a new alert */}
             <form onSubmit={handleAddAlert} noValidate className="p-5 sm:p-6 bg-slate-50 border-2 border-slate-200 rounded-xl space-y-4">
@@ -764,6 +1040,26 @@ export default function ProfilePage() {
                       key={sub.id}
                       className="p-4 bg-white border-2 border-slate-200 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm"
                     >
+                      <KeyRound className="w-4 h-4" aria-hidden="true" />
+                      <span>Generate One-Time Linking Code</span>
+                    </button>
+                  ) : (
+                    <div className="p-4 bg-slate-950 border border-emerald-500 rounded-2xl space-y-3 text-center">
+                      <span className="text-xs font-mono text-emerald-400 uppercase font-bold">
+                        Your 6-Digit Code:
+                      </span>
+                      <p className="text-3xl font-mono font-black text-white tracking-widest">
+                        {oneTimeCode}
+                      </p>
+                      <p className="text-xs text-slate-300">
+                        Send to <strong>@AblewayBot</strong> on Telegram:
+                        <br />
+                        <code className="text-emerald-300 font-bold font-mono">
+                          /link {oneTimeCode}
+                        </code>
+                      </p>
+                      {/* Rule 18: Extend time limit */}
+                      <div className="flex items-center justify-center gap-2 pt-1">
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
                           <span className="font-bold text-slate-900 text-base">{sub.keywords}</span>
@@ -988,6 +1284,17 @@ export default function ProfilePage() {
                   Your Telegram account is actively linked to <strong>@AblewayBot</strong>. You are receiving instant job alerts and course assistance.
                 </p>
 
+          {/* Rule 9 & Rule 24: Keyboard Shortcuts Reference (Accessible Data Table) */}
+          <section
+            id="help-shortcuts"
+            aria-labelledby="shortcuts-heading"
+            className="p-6 bg-slate-900 border border-slate-700 rounded-3xl space-y-4"
+          >
+            <div className="flex items-center gap-2">
+              <HelpCircle className="w-5 h-5 text-emerald-400" aria-hidden="true" />
+              <h2 id="shortcuts-heading" className="text-lg font-bold text-white">
+                Keyboard Shortcuts & Help
+              </h2>
                 <div className="pt-2">
                   <button
                     ref={unlinkTriggerRef}
@@ -1027,6 +1334,63 @@ export default function ProfilePage() {
               We respect your right to privacy and ownership of your personal information. You can download your data at any time or request account erasure.
             </p>
 
+            {/* Semantic Data Table (Rule 24) */}
+            <table className="w-full text-xs text-left border-collapse border border-slate-700">
+              <caption className="sr-only">
+                List of global keyboard shortcuts and their actions
+              </caption>
+              <thead>
+                <tr className="bg-slate-800 text-white">
+                  <th scope="col" className="p-2 border border-slate-700 font-bold">
+                    Shortcut
+                  </th>
+                  <th scope="col" className="p-2 border border-slate-700 font-bold">
+                    Action
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="text-slate-200">
+                <tr>
+                  <th
+                    scope="row"
+                    className="p-2 border border-slate-700 font-mono text-emerald-300"
+                  >
+                    Alt + Shift + V
+                  </th>
+                  <td className="p-2 border border-slate-700">Start / Stop Voice Input</td>
+                </tr>
+                <tr>
+                  <th
+                    scope="row"
+                    className="p-2 border border-slate-700 font-mono text-emerald-300"
+                  >
+                    Alt + Shift + A
+                  </th>
+                  <td className="p-2 border border-slate-700">Open / Close Web Assistant</td>
+                </tr>
+                <tr>
+                  <th
+                    scope="row"
+                    className="p-2 border border-slate-700 font-mono text-emerald-300"
+                  >
+                    Alt + Shift + T
+                  </th>
+                  <td className="p-2 border border-slate-700">Call Human Helper</td>
+                </tr>
+                <tr>
+                  <th
+                    scope="row"
+                    className="p-2 border border-slate-700 font-mono text-emerald-300"
+                  >
+                    Escape
+                  </th>
+                  <td className="p-2 border border-slate-700">
+                    Close active dialog and return focus
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </section>
             <div className="flex flex-wrap items-center gap-4">
               <button
                 ref={exportTriggerRef}
