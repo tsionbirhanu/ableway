@@ -1112,7 +1112,7 @@ export default function RegisterPage() {
               }}
               id="reg-lang-switch-btn"
               aria-label={`${language === 'am-ET' ? 'ቋንቋ፡ አማርኛ' : 'Language: English'} - Switch language / ቋንቋ ቀይር`}
-              className="min-h-[44px] px-3.5 py-2 rounded-lg font-bold text-xs border border-orange-500/80 bg-white hover:bg-slate-100 text-slate-800 flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-orange-400 cursor-pointer shadow-sm transition-colors"
+              className="min-h-[44px] px-4 py-2 rounded-xl font-bold text-xs bg-slate-100 hover:bg-slate-200 text-slate-800 flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-orange-400 cursor-pointer shadow-sm transition-colors"
             >
               <Globe className="w-3.5 h-3.5 text-orange-600" aria-hidden="true" />
               <span>{language === 'am-ET' ? 'ቋንቋ፡ አማርኛ' : 'Language: English'}</span>
@@ -1123,9 +1123,9 @@ export default function RegisterPage() {
                 type="button"
                 onClick={startAssistant}
                 id="start-voice-assistant-btn"
-                className="w-full sm:w-auto min-h-[44px] min-w-[44px] px-5 py-2.5 bg-[#0B132B] hover:bg-[#131E3D] text-orange-400 hover:text-orange-300 font-bold text-sm rounded-lg flex items-center justify-center gap-2 border-2 border-orange-500 shadow-md focus:outline-none focus:ring-4 focus:ring-orange-400 cursor-pointer"
+                className="w-full sm:w-auto min-h-[44px] min-w-[44px] px-6 py-2.5 bg-orange-500 hover:bg-orange-400 text-white font-bold text-sm rounded-xl flex items-center justify-center gap-2 shadow-md hover:shadow-orange-500/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 cursor-pointer transition-all"
               >
-                <Mic className="w-4 h-4 text-orange-400" aria-hidden="true" />
+                <Mic className="w-4 h-4 text-white" aria-hidden="true" />
                 <span>{language === 'am-ET' ? 'የድምጽ ረዳቱን ጀምር' : 'Start Voice Assistant'}</span>
               </button>
             ) : (
@@ -1147,7 +1147,7 @@ export default function RegisterPage() {
                     'polite'
                   );
                 }}
-                className="w-full sm:w-auto min-h-[44px] min-w-[44px] px-4 py-2 bg-white hover:bg-slate-100 text-slate-800 text-sm font-semibold rounded-lg flex items-center justify-center gap-2 border border-slate-300 shadow-sm cursor-pointer"
+                className="w-full sm:w-auto min-h-[44px] min-w-[44px] px-5 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 text-sm font-semibold rounded-xl flex items-center justify-center gap-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-400 cursor-pointer transition-colors"
               >
                 <RotateCcw className="w-4 h-4" aria-hidden="true" />
                 <span>{language === 'am-ET' ? 'ረዳቱን አቁም' : 'Pause Assistant'}</span>
@@ -1220,10 +1220,10 @@ export default function RegisterPage() {
                 type="button"
                 onClick={toggleListening}
                 data-testid="assistant-voice-mic"
-                className={`min-h-[44px] min-w-[44px] px-3.5 py-2.5 rounded-lg font-bold flex items-center justify-center transition-colors border ${
+                className={`min-h-[44px] min-w-[44px] px-3.5 py-2.5 rounded-xl font-bold flex items-center justify-center transition-colors shadow-sm ${
                   isListening
-                    ? 'bg-rose-600 text-white border-rose-700'
-                    : 'bg-[#0B132B] hover:bg-[#131E3D] text-orange-400 border-orange-500'
+                    ? 'bg-rose-600 text-white'
+                    : 'bg-[#0B132B] hover:bg-[#152248] text-orange-400'
                 }`}
                 aria-label={isListening ? 'Pause listening' : 'Listen with microphone'}
                 aria-pressed={isListening}
@@ -1235,10 +1235,10 @@ export default function RegisterPage() {
               <button
                 type="submit"
                 data-testid="assistant-voice-send"
-                className="min-h-[44px] min-w-[44px] px-5 py-2.5 bg-[#0B132B] hover:bg-[#131E3D] text-orange-400 hover:text-orange-300 font-bold rounded-lg text-sm flex items-center justify-center gap-1.5 border border-orange-500 shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-400 cursor-pointer"
+                className="min-h-[44px] min-w-[44px] px-5 py-2.5 bg-orange-500 hover:bg-orange-400 text-white font-bold rounded-xl text-sm flex items-center justify-center gap-1.5 shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-400 cursor-pointer transition-colors"
               >
                 <span>Send</span>
-                <Send className="w-4 h-4 text-orange-400" aria-hidden="true" />
+                <Send className="w-4 h-4 text-white" aria-hidden="true" />
               </button>
             </form>
           </div>
@@ -1506,14 +1506,14 @@ export default function RegisterPage() {
             </div>
           </fieldset>
 
-          {/* Submit Action: Navy blue button with bold Orange text */}
+          {/* Submit Action: Solid Vibrant Button without stroke */}
           <div className="pt-4 border-t border-slate-200">
             <button
               type="submit"
-              className="w-full min-h-[48px] bg-[#0B132B] hover:bg-[#131E3D] text-orange-400 hover:text-orange-300 font-bold py-3.5 px-6 rounded-lg flex items-center justify-center gap-2 border-2 border-orange-500 shadow-md hover:shadow-lg transition-all focus:outline-none focus:ring-4 focus:ring-orange-400 cursor-pointer text-base"
+              className="w-full min-h-[48px] bg-orange-500 hover:bg-orange-400 text-white font-bold py-3.5 px-6 rounded-xl flex items-center justify-center gap-2 shadow-md hover:shadow-orange-500/20 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 cursor-pointer text-base"
             >
               <span>Continue to Verification</span>
-              <ArrowRight className="w-5 h-5 text-orange-400" aria-hidden="true" />
+              <ArrowRight className="w-5 h-5 text-white" aria-hidden="true" />
             </button>
           </div>
         </form>
@@ -1581,16 +1581,16 @@ export default function RegisterPage() {
                 setStage('details');
                 setAssistantStep('ask_email');
               }}
-              className="flex-1 min-h-[44px] bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold py-3 px-4 rounded-lg text-sm border border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400 cursor-pointer"
+              className="flex-1 min-h-[44px] bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold py-3 px-4 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-slate-400 cursor-pointer transition-colors"
             >
               Back to details
             </button>
             <button
               type="submit"
-              className="flex-1 min-h-[48px] bg-[#0B132B] hover:bg-[#131E3D] text-orange-400 hover:text-orange-300 font-bold py-3 px-6 rounded-lg text-sm flex items-center justify-center gap-2 border-2 border-orange-500 shadow-md focus:outline-none focus:ring-4 focus:ring-orange-400 cursor-pointer"
+              className="flex-1 min-h-[48px] bg-orange-500 hover:bg-orange-400 text-white font-bold py-3 px-6 rounded-xl text-sm flex items-center justify-center gap-2 shadow-md hover:shadow-orange-500/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 cursor-pointer transition-all"
             >
               <span>Verify & Complete Sign-In</span>
-              <CheckCircle2 className="w-5 h-5 text-orange-400" aria-hidden="true" />
+              <CheckCircle2 className="w-5 h-5 text-white" aria-hidden="true" />
             </button>
           </div>
         </form>

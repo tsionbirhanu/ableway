@@ -15,11 +15,11 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       'inline-flex items-center justify-center font-bold rounded-xl min-h-[44px] min-w-[44px] transition-colors focus:outline-none focus:ring-4 disabled:opacity-50 disabled:cursor-not-allowed';
 
     const variantStyles = {
-      primary: 'bg-emerald-600 hover:bg-emerald-500 text-white focus:ring-emerald-300',
-      secondary: 'bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-600 focus:ring-emerald-400',
-      danger: 'bg-red-700 hover:bg-red-600 text-white focus:ring-red-400',
-      outline: 'bg-transparent border-2 border-slate-600 hover:bg-slate-800 text-slate-100 focus:ring-emerald-400',
-      ghost: 'bg-transparent hover:bg-slate-800 text-slate-100 focus:ring-emerald-400',
+      primary: 'bg-orange-500 hover:bg-orange-400 text-white shadow-sm focus:ring-orange-400',
+      secondary: 'bg-slate-800 hover:bg-slate-700 text-slate-100 shadow-sm focus:ring-orange-400',
+      danger: 'bg-red-700 hover:bg-red-600 text-white shadow-sm focus:ring-red-400',
+      outline: 'bg-white/10 hover:bg-white/20 text-white backdrop-blur-sm focus:ring-orange-400',
+      ghost: 'bg-transparent hover:bg-slate-800/50 text-slate-100 focus:ring-orange-400',
     };
 
     const sizeStyles = {

@@ -40,9 +40,9 @@ export default function HelpPage() {
       </header>
 
       {/* Prominent "Call a Person" Button */}
-      <section aria-labelledby="live-help-heading" className="p-6 bg-slate-900 border-2 border-emerald-500 rounded-3xl space-y-3 shadow-xl">
+      <section aria-labelledby="live-help-heading" className="p-6 bg-slate-900 border border-slate-800 rounded-3xl space-y-3 shadow-xl">
         <h2 id="live-help-heading" className="text-xl font-bold text-white flex items-center gap-2">
-          <PhoneCall className="w-5 h-5 text-emerald-400" aria-hidden="true" />
+          <PhoneCall className="w-5 h-5 text-orange-400" aria-hidden="true" />
           <span>Need Live Human Assistance?</span>
         </h2>
         <p className="text-slate-200 text-sm leading-relaxed">
@@ -51,7 +51,7 @@ export default function HelpPage() {
         <div className="pt-2">
           <a
             href="/payment#human-help"
-            className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3.5 px-6 rounded-2xl min-h-[48px] text-sm shadow-md focus:outline-none focus:ring-4 focus:ring-emerald-300"
+            className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-400 text-white font-bold py-3.5 px-6 rounded-xl min-h-[48px] text-sm shadow-md transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-400"
           >
             <PhoneCall className="w-4 h-4" aria-hidden="true" />
             <span>Call a Person (Human Helper)</span>

@@ -111,7 +111,7 @@ export default function CoursesPage() {
   const assistantActiveRef = useRef(assistantActive);
   assistantActiveRef.current = assistantActive;
 
-  const startListeningRef = useRef<() => void>(() => {});
+  const startListeningRef = useRef<() => void>(() => { });
 
   // Speak assistant message slowly with safety timeout
   const speakAssistant = useCallback(
@@ -123,7 +123,7 @@ export default function CoursesPage() {
       if (recognitionRef.current) {
         try {
           recognitionRef.current.abort();
-        } catch {}
+        } catch { }
       }
       setIsListening(false);
 
@@ -350,7 +350,7 @@ export default function CoursesPage() {
     if (recognitionRef.current) {
       try {
         recognitionRef.current.abort();
-      } catch {}
+      } catch { }
     }
 
     try {
@@ -403,7 +403,7 @@ export default function CoursesPage() {
             if (!isSpeakingRef.current && assistantActiveRef.current) {
               try {
                 rec.start();
-              } catch {}
+              } catch { }
             }
           }, 350);
         }
@@ -411,7 +411,7 @@ export default function CoursesPage() {
 
       recognitionRef.current = rec;
       rec.start();
-    } catch {}
+    } catch { }
   }, [handleVoiceCommand, announce, language]);
 
   useEffect(() => {
@@ -449,7 +449,7 @@ export default function CoursesPage() {
     if (isListening) {
       try {
         recognitionRef.current?.abort();
-      } catch {}
+      } catch { }
       setIsListening(false);
       playEarcon('stop');
       announce('Microphone paused.', 'polite');
@@ -506,8 +506,8 @@ export default function CoursesPage() {
                     ? 'የድምጽ ረዳቱ በአማርኛ እየተናገረ እና የእርስዎን ምርጫ እያዳመጠ ነው።'
                     : 'Speaking slowly and listening automatically for your course choice.'
                   : language === 'am-ET'
-                  ? 'የድምጽ ረዳቱን በማስጀመር ኮርሶችን በአማርኛ ድምጽ ይምረጡ።'
-                  : 'Start the assistant to hear course recommendations and select by voice.'}
+                    ? 'የድምጽ ረዳቱን በማስጀመር ኮርሶችን በአማርኛ ድምጽ ይምረጡ።'
+                    : 'Start the assistant to hear course recommendations and select by voice.'}
               </p>
             </div>
           </div>
@@ -521,12 +521,12 @@ export default function CoursesPage() {
                 if (recognitionRef.current) {
                   try {
                     recognitionRef.current.abort();
-                  } catch {}
+                  } catch { }
                 }
               }}
               id="courses-lang-switch-btn"
               aria-label={`${language === 'am-ET' ? 'ቋንቋ፡ አማርኛ' : 'Language: English'} - Switch language / ቋንቋ ቀይር`}
-              className="min-h-[44px] px-3.5 py-2 rounded-lg font-bold text-xs border border-orange-500/80 bg-white hover:bg-slate-100 text-slate-800 flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-orange-400 cursor-pointer shadow-sm transition-colors"
+              className="min-h-[44px] px-4 py-2 rounded-xl font-bold text-xs bg-slate-100 hover:bg-slate-200 text-slate-800 flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-orange-400 cursor-pointer shadow-sm transition-colors"
             >
               <Globe className="w-3.5 h-3.5 text-orange-600" aria-hidden="true" />
               <span>{language === 'am-ET' ? 'ቋንቋ፡ አማርኛ' : 'Language: English'}</span>
@@ -537,9 +537,9 @@ export default function CoursesPage() {
                 type="button"
                 onClick={startAssistant}
                 id="start-courses-assistant-btn"
-                className="w-full sm:w-auto min-h-[44px] min-w-[44px] px-5 py-2.5 bg-[#0B132B] hover:bg-[#131E3D] text-orange-400 hover:text-orange-300 font-bold text-sm rounded-lg flex items-center justify-center gap-2 border-2 border-orange-500 shadow-md focus:outline-none focus:ring-4 focus:ring-orange-400 cursor-pointer"
+                className="w-full sm:w-auto min-h-[44px] min-w-[44px] px-6 py-2.5 bg-orange-500 hover:bg-orange-400 text-white font-bold text-sm rounded-xl flex items-center justify-center gap-2 shadow-md hover:shadow-orange-500/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 cursor-pointer transition-all"
               >
-                <Mic className="w-4 h-4 text-orange-400" aria-hidden="true" />
+                <Mic className="w-4 h-4 text-white" aria-hidden="true" />
                 <span>{language === 'am-ET' ? 'የድምጽ ረዳቱን ጀምር' : 'Start Voice Assistant'}</span>
               </button>
             ) : (
@@ -550,7 +550,7 @@ export default function CoursesPage() {
                   if (recognitionRef.current) {
                     try {
                       recognitionRef.current.abort();
-                    } catch {}
+                    } catch { }
                   }
                   setIsListening(false);
                   const pauseMsg =
@@ -559,7 +559,7 @@ export default function CoursesPage() {
                       : 'Voice assistant paused. You can use your keyboard to select a course.';
                   announce(pauseMsg, 'polite');
                 }}
-                className="w-full sm:w-auto min-h-[44px] min-w-[44px] px-4 py-2 bg-white hover:bg-slate-100 text-slate-800 text-sm font-semibold rounded-lg flex items-center justify-center gap-2 border border-slate-300 shadow-sm cursor-pointer"
+                className="w-full sm:w-auto min-h-[44px] min-w-[44px] px-5 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 text-sm font-semibold rounded-xl flex items-center justify-center gap-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-400 cursor-pointer transition-colors"
               >
                 <RotateCcw className="w-4 h-4" aria-hidden="true" />
                 <span>{language === 'am-ET' ? 'ረዳቱን አቁም' : 'Pause Assistant'}</span>
@@ -626,11 +626,10 @@ export default function CoursesPage() {
               <button
                 type="button"
                 onClick={toggleListening}
-                className={`min-h-[44px] min-w-[44px] px-3.5 py-2.5 rounded-lg font-bold flex items-center justify-center transition-colors border ${
-                  isListening
-                    ? 'bg-rose-600 text-white border-rose-700'
-                    : 'bg-[#0B132B] hover:bg-[#131E3D] text-orange-400 border-orange-500'
-                }`}
+                className={`min-h-[44px] min-w-[44px] px-3.5 py-2.5 rounded-xl font-bold flex items-center justify-center transition-colors shadow-sm ${isListening
+                    ? 'bg-rose-600 text-white'
+                    : 'bg-[#0B132B] hover:bg-[#152248] text-orange-400'
+                  }`}
                 aria-label={isListening ? 'Pause listening' : 'Listen with microphone'}
                 aria-pressed={isListening}
               >
@@ -639,10 +638,10 @@ export default function CoursesPage() {
 
               <button
                 type="submit"
-                className="min-h-[44px] min-w-[44px] px-5 py-2.5 bg-[#0B132B] hover:bg-[#131E3D] text-orange-400 hover:text-orange-300 font-bold rounded-lg text-sm flex items-center justify-center gap-1.5 border border-orange-500 shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-400 cursor-pointer"
+                className="min-h-[44px] min-w-[44px] px-5 py-2.5 bg-orange-500 hover:bg-orange-400 text-white font-bold rounded-xl text-sm flex items-center justify-center gap-1.5 shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-400 cursor-pointer transition-colors"
               >
                 <span>Send</span>
-                <Send className="w-4 h-4 text-orange-400" aria-hidden="true" />
+                <Send className="w-4 h-4 text-white" aria-hidden="true" />
               </button>
             </form>
           </div>
@@ -660,22 +659,20 @@ export default function CoursesPage() {
             <button
               type="button"
               onClick={() => setFilterLevel('all')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all focus:outline-none focus:ring-2 focus:ring-orange-400 cursor-pointer ${
-                filterLevel === 'all'
-                  ? 'bg-[#0B132B] text-orange-400 border border-orange-500'
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all focus:outline-none focus:ring-2 focus:ring-orange-400 cursor-pointer ${filterLevel === 'all'
+                  ? 'bg-orange-500 text-white shadow-sm'
                   : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-              }`}
+                }`}
             >
               All Courses
             </button>
             <button
               type="button"
               onClick={() => setFilterLevel('comprehensive')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all focus:outline-none focus:ring-2 focus:ring-orange-400 cursor-pointer ${
-                filterLevel === 'comprehensive'
-                  ? 'bg-[#0B132B] text-orange-400 border border-orange-500'
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all focus:outline-none focus:ring-2 focus:ring-orange-400 cursor-pointer ${filterLevel === 'comprehensive'
+                  ? 'bg-orange-500 text-white shadow-sm'
                   : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-              }`}
+                }`}
             >
               Comprehensive
             </button>
@@ -687,11 +684,10 @@ export default function CoursesPage() {
             <article
               key={course.id}
               role="listitem"
-              className={`bg-white border-2 rounded-xl p-6 shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-6 ${
-                selectedCourseId === course.id
+              className={`bg-white border-2 rounded-xl p-6 shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-6 ${selectedCourseId === course.id
                   ? 'border-orange-500 ring-4 ring-orange-400/40'
                   : 'border-slate-300'
-              }`}
+                }`}
             >
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
@@ -733,13 +729,13 @@ export default function CoursesPage() {
                 </div>
               </div>
 
-              {/* Actions: Navy Blue Buttons with Bold Orange Text */}
-              <div className="pt-4 border-t border-slate-200 space-y-2.5">
+              {/* Actions: Clean solid buttons without strokes */}
+              <div className="pt-4 border-t border-slate-100 space-y-2.5">
                 <button
                   type="button"
                   onClick={() => handleSelectCourse(course)}
                   id={`select-${course.id}-btn`}
-                  className="w-full min-h-[48px] bg-[#0B132B] hover:bg-[#131E3D] text-orange-400 hover:text-orange-300 font-bold py-3 px-6 rounded-lg text-sm flex items-center justify-center gap-2 border-2 border-orange-500 shadow-md focus:outline-none focus:ring-4 focus:ring-orange-400 cursor-pointer transition-colors"
+                  className="w-full min-h-[48px] bg-[#0B132B] hover:bg-[#152248] text-orange-400 hover:text-orange-300 font-bold py-3 px-6 rounded-xl text-sm flex items-center justify-center gap-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-400 cursor-pointer transition-colors"
                 >
                   <span>Select &amp; Start Lessons</span>
                   <ArrowRight className="w-4 h-4 text-orange-400" aria-hidden="true" />
@@ -748,7 +744,7 @@ export default function CoursesPage() {
                 <button
                   type="button"
                   onClick={() => handleReadDetails(course)}
-                  className="w-full min-h-[44px] bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold py-2.5 px-4 rounded-lg text-xs flex items-center justify-center gap-1.5 border border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400 cursor-pointer"
+                  className="w-full min-h-[44px] bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-slate-400 cursor-pointer transition-colors"
                   aria-label={`Hear Course Description Aloud for ${course.title}`}
                 >
                   <Volume2 className="w-3.5 h-3.5 text-slate-600" aria-hidden="true" />

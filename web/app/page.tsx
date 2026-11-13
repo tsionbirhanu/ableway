@@ -149,24 +149,21 @@ export default function HomePage() {
             {t.home.heroDescription}
           </p>
 
-          {/* Clean CTA Buttons: Navy Blue Background with Bold Orange Text (ALX Savanna Style) */}
+          {/* Clean CTA Buttons: No harsh strokes, polished surfaces */}
           <div className="pt-4 flex flex-col sm:flex-row items-stretch sm:items-center gap-3.5 max-w-xl">
             <Link
               href="/register"
               id="hero-register-btn"
-              className="min-h-[48px] px-6 py-3.5 rounded-lg bg-[#0B132B] hover:bg-[#131E3D] text-orange-400 hover:text-orange-300 font-bold text-base flex items-center justify-center gap-2 border-2 border-orange-500 shadow-xl transition-all focus:outline-none focus:ring-4 focus:ring-orange-400 cursor-pointer"
+              className="min-h-[48px] px-8 py-3.5 rounded-xl bg-orange-500 hover:bg-orange-400 text-white font-bold text-base flex items-center justify-center shadow-lg hover:shadow-orange-500/25 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 cursor-pointer"
             >
-              <Sparkles className="w-5 h-5 text-orange-400" aria-hidden="true" />
               <span>{isAmharic ? 'አካውንት ይፍጠሩ (የድምጽ ረዳት)' : 'Create Account (Voice Assistant)'}</span>
-              <ArrowRight className="w-5 h-5 text-orange-400" aria-hidden="true" />
             </Link>
 
             <Link
               href="/login"
               id="hero-login-btn"
-              className="min-h-[48px] px-6 py-3.5 rounded-lg bg-slate-900/95 hover:bg-slate-800 text-orange-400 hover:text-orange-300 font-bold text-base flex items-center justify-center gap-2 border-2 border-orange-500/70 shadow-lg transition-all focus:outline-none focus:ring-4 focus:ring-orange-400 cursor-pointer"
+              className="min-h-[48px] px-8 py-3.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold text-base flex items-center justify-center backdrop-blur-sm transition-all focus:outline-none focus:ring-2 focus:ring-white cursor-pointer"
             >
-              <User className="w-5 h-5 text-orange-400" aria-hidden="true" />
               <span>{isAmharic ? 'ወደ መለያዎ ይግቡ' : 'Sign In to Account'}</span>
             </Link>
           </div>
@@ -208,9 +205,9 @@ export default function HomePage() {
               <button
                 type="button"
                 onClick={() => setSelectedTrack('all')}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all focus:outline-none focus:ring-2 focus:ring-orange-400 cursor-pointer ${
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all focus:outline-none focus:ring-2 focus:ring-orange-400 cursor-pointer ${
                   selectedTrack === 'all'
-                    ? 'bg-[#0B132B] text-orange-400 border border-orange-500'
+                    ? 'bg-orange-500 text-white shadow-sm'
                     : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                 }`}
               >
@@ -219,9 +216,9 @@ export default function HomePage() {
               <button
                 type="button"
                 onClick={() => setSelectedTrack('data')}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all focus:outline-none focus:ring-2 focus:ring-orange-400 cursor-pointer ${
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all focus:outline-none focus:ring-2 focus:ring-orange-400 cursor-pointer ${
                   selectedTrack === 'data'
-                    ? 'bg-[#0B132B] text-orange-400 border border-orange-500'
+                    ? 'bg-orange-500 text-white shadow-sm'
                     : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                 }`}
               >
@@ -230,9 +227,9 @@ export default function HomePage() {
               <button
                 type="button"
                 onClick={() => setSelectedTrack('communication')}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all focus:outline-none focus:ring-2 focus:ring-orange-400 cursor-pointer ${
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all focus:outline-none focus:ring-2 focus:ring-orange-400 cursor-pointer ${
                   selectedTrack === 'communication'
-                    ? 'bg-[#0B132B] text-orange-400 border border-orange-500'
+                    ? 'bg-orange-500 text-white shadow-sm'
                     : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                 }`}
               >
@@ -241,9 +238,9 @@ export default function HomePage() {
               <button
                 type="button"
                 onClick={() => setSelectedTrack('va')}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all focus:outline-none focus:ring-2 focus:ring-orange-400 cursor-pointer ${
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all focus:outline-none focus:ring-2 focus:ring-orange-400 cursor-pointer ${
                   selectedTrack === 'va'
-                    ? 'bg-[#0B132B] text-orange-400 border border-orange-500'
+                    ? 'bg-orange-500 text-white shadow-sm'
                     : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                 }`}
               >
@@ -257,11 +254,11 @@ export default function HomePage() {
             {filteredCourses.map((c) => (
               <article
                 key={c.id}
-                className="bg-white border-2 border-slate-300 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between space-y-6"
+                className="bg-white border border-slate-200 hover:border-slate-300 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between space-y-6"
               >
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-bold uppercase tracking-wider bg-orange-100 text-orange-800 border border-orange-200 px-2.5 py-0.5 rounded-full">
+                    <span className="text-[11px] font-bold uppercase tracking-wider bg-orange-100 text-orange-800 px-2.5 py-0.5 rounded-full">
                       {c.badge}
                     </span>
                     <span className="text-xs text-slate-500 flex items-center gap-1">
@@ -284,7 +281,7 @@ export default function HomePage() {
                       {c.skills.map((skill) => (
                         <span
                           key={skill}
-                          className="text-[11px] bg-slate-100 text-slate-800 px-2 py-0.5 rounded border border-slate-200 font-medium"
+                          className="text-[11px] bg-slate-100 text-slate-800 px-2 py-0.5 rounded-lg font-medium"
                         >
                           {skill}
                         </span>
@@ -293,7 +290,7 @@ export default function HomePage() {
                   </div>
                 </div>
 
-                <div className="pt-4 border-t border-slate-200 space-y-3">
+                <div className="pt-4 border-t border-slate-100 space-y-3">
                   <div className="flex items-center gap-1.5 text-xs text-emerald-800 font-semibold">
                     <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" aria-hidden="true" />
                     <span>{c.accessibleBadge}</span>
@@ -302,13 +299,13 @@ export default function HomePage() {
                   <div className="flex gap-2">
                     <Link
                       href={c.link}
-                      className="flex-1 py-2.5 px-3 rounded-lg bg-[#0B132B] hover:bg-[#131E3D] text-orange-400 hover:text-orange-300 font-bold text-xs text-center border-2 border-orange-500 shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-orange-400"
+                      className="flex-1 py-2.5 px-3 rounded-xl bg-[#0B132B] hover:bg-[#152248] text-white font-bold text-xs text-center shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-orange-400"
                     >
                       {t.home.startCourseBtn || 'Explore Curriculum'}
                     </Link>
                     <Link
                       href="/register"
-                      className="py-2.5 px-3 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold text-xs border border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400"
+                      className="py-2.5 px-4 rounded-xl bg-orange-50 hover:bg-orange-100 text-orange-700 font-bold text-xs transition-colors focus:outline-none focus:ring-2 focus:ring-orange-400"
                       title="Enroll via Accessible Registration"
                     >
                       Enroll Now
@@ -454,17 +451,14 @@ export default function HomePage() {
           <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
               href="/register"
-              className="w-full sm:w-auto min-h-[48px] px-8 py-3.5 rounded-lg bg-orange-600 hover:bg-orange-500 text-white font-bold text-base shadow-xl transition-all focus:outline-none focus:ring-4 focus:ring-orange-400 flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full sm:w-auto min-h-[48px] px-8 py-3.5 rounded-xl bg-orange-500 hover:bg-orange-400 text-white font-bold text-base shadow-lg hover:shadow-orange-500/25 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 flex items-center justify-center cursor-pointer"
             >
-              <Sparkles className="w-5 h-5 text-white" aria-hidden="true" />
               <span>Create Your Account</span>
-              <ArrowRight className="w-5 h-5 text-white" aria-hidden="true" />
             </Link>
             <Link
               href="/login"
-              className="w-full sm:w-auto min-h-[48px] px-8 py-3.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-orange-400 hover:text-orange-300 font-bold text-base border-2 border-orange-500 shadow-md transition-all focus:outline-none focus:ring-4 focus:ring-orange-400 flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full sm:w-auto min-h-[48px] px-8 py-3.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold text-base backdrop-blur-sm transition-all focus:outline-none focus:ring-2 focus:ring-white flex items-center justify-center cursor-pointer"
             >
-              <User className="w-5 h-5 text-orange-400" aria-hidden="true" />
               <span>Sign In with Existing Account</span>
             </Link>
           </div>
