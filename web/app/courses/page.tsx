@@ -24,6 +24,8 @@ import {
 } from 'lucide-react';
 import { useA11y } from '@/lib/a11y/a11y-context';
 import { playEarcon } from '@/lib/audio/earcons';
+import { speechPlayer } from '@/lib/speech/client/player';
+import { getSpeechRecognitionConstructor } from '@/lib/speech/client/recognition';
 import { useAssistant } from '@/lib/assistant/assistant-context';
 
 interface CourseItem {
@@ -132,15 +134,14 @@ export default function CoursesPage() {
         speechSafetyTimerRef.current = null;
       }
 
-      if (mode === 'voice-first' && !preferences.suppressInAppTTS && typeof window !== 'undefined' && 'speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-        const utter = new SpeechSynthesisUtterance(text);
-        utter.rate = 0.80; // Slower speech rate for accessibility
-        utter.lang = language === 'am-ET' ? 'am-ET' : 'en-US';
-        activeUtteranceRef.current = utter;
-        (window as any).__activeUtterance = utter;
+      if (mode === 'voice-first' && !preferences.suppressInAppTTS && typeof window !== 'undefined') {
+        // Server speech (Gemini): a real Amharic voice. Falls back to the browser voice by itself.
+        speechPlayer.cancel();
+        let finished = false;
 
         const finishSpeaking = () => {
+          if (finished) return;
+          finished = true;
           if (speechSafetyTimerRef.current) {
             clearTimeout(speechSafetyTimerRef.current);
             speechSafetyTimerRef.current = null;
@@ -154,14 +155,14 @@ export default function CoursesPage() {
           }, 350);
         };
 
-        utter.onend = finishSpeaking;
-        utter.onerror = finishSpeaking;
-
+        // Safety timer: server speech can take a few seconds to start, so allow for that.
         const words = text.split(/\s+/).length;
-        const duration = Math.max(3500, (words / (0.80 * 2.3)) * 1000 + 1500);
+        const duration = Math.max(3500, (words / (0.80 * 2.3)) * 1000 + 1500) + 20000;
         speechSafetyTimerRef.current = setTimeout(finishSpeaking, duration);
 
-        window.speechSynthesis.speak(utter);
+        void speechPlayer
+          .speak(text, { lang: language === 'am-ET' ? 'am-ET' : 'en-US', rate: 0.8 })
+          .then(finishSpeaking);
       } else {
         setTimeout(() => {
           isSpeakingRef.current = false;
@@ -230,10 +231,7 @@ export default function CoursesPage() {
     const text = `${course.title}. Code: ${course.code}. Duration: ${course.duration}. ${course.description} Skills included: ${course.syllabus.join(', ')}.`;
     announce(text, 'polite');
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-      const utter = new SpeechSynthesisUtterance(text);
-      utter.rate = 0.80;
-      window.speechSynthesis.speak(utter);
+      void speechPlayer.speak(text, { lang: language === 'am-ET' ? 'am-ET' : 'en-US', rate: 0.8 });
     }
   };
 
@@ -342,8 +340,8 @@ export default function CoursesPage() {
     if (isSpeakingRef.current) return;
 
     const SpeechRec =
-      (window as unknown as { SpeechRecognition?: any; webkitSpeechRecognition?: any }).SpeechRecognition ||
-      (window as unknown as { SpeechRecognition?: any; webkitSpeechRecognition?: any }).webkitSpeechRecognition;
+      // Server recognition (Gemini): English and Amharic in every browser, browser recognition as fallback.
+      getSpeechRecognitionConstructor();
 
     if (!SpeechRec) return;
 
@@ -429,7 +427,7 @@ export default function CoursesPage() {
   const startAssistant = useCallback(() => {
     isSpeakingRef.current = false;
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
+      speechPlayer.cancel();
     }
     playEarcon('listening');
     setAssistantActive(true);
@@ -444,7 +442,7 @@ export default function CoursesPage() {
   const toggleListening = () => {
     isSpeakingRef.current = false;
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
+      speechPlayer.cancel();
     }
     if (isListening) {
       try {

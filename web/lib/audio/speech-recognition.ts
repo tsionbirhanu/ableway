@@ -1,3 +1,5 @@
+import { getSpeechRecognitionConstructor } from "@/lib/speech/client/recognition";
+
 export interface RecognitionCallbacks {
   onResult: (transcript: string, isFinal: boolean) => void;
   onError: (error: string) => void;
@@ -24,11 +26,10 @@ export class SpeechRecognitionManager {
 
   constructor() {
     if (typeof window !== "undefined") {
-      const SpeechRecognition =
-        (window as unknown as { SpeechRecognition?: new () => WebkitSpeechRecognitionInstance })
-          .SpeechRecognition ||
-        (window as unknown as { webkitSpeechRecognition?: new () => WebkitSpeechRecognitionInstance })
-          .webkitSpeechRecognition;
+      // Server recognition (Gemini/Azure: English and Amharic, every browser),
+      // with the browser's own recognition as fallback.
+      const SpeechRecognition = getSpeechRecognitionConstructor() as
+        (new () => WebkitSpeechRecognitionInstance) | undefined;
 
       if (SpeechRecognition) {
         this.recognition = new SpeechRecognition();
@@ -135,4 +136,3 @@ export class SpeechRecognitionManager {
 }
 
 export const speechRecognizer = new SpeechRecognitionManager();
-

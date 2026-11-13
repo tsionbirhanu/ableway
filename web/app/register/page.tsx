@@ -17,6 +17,8 @@ import {
 } from 'lucide-react';
 import { useA11y } from '@/lib/a11y/a11y-context';
 import { playEarcon } from '@/lib/audio/earcons';
+import { speechPlayer } from '@/lib/speech/client/player';
+import { getSpeechRecognitionConstructor } from '@/lib/speech/client/recognition';
 import { createAccountWithPasskey, saveSignUpPrefill } from '@/lib/passkeys/client';
 
 interface RegisterFormData {
@@ -134,15 +136,14 @@ export default function RegisterPage() {
         speechSafetyTimerRef.current = null;
       }
 
-      if (mode === 'voice-first' && !preferences.suppressInAppTTS && typeof window !== 'undefined' && 'speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-        const utter = new SpeechSynthesisUtterance(text);
-        utter.rate = 0.80; // Slower speech rate for calm, clear accessibility (talk slow)
-        utter.lang = language === 'am-ET' ? 'am-ET' : 'en-US';
-        activeUtteranceRef.current = utter;
-        (window as any).__activeUtterance = utter; // Prevent V8 garbage collection bug in Chromium
+      if (mode === 'voice-first' && !preferences.suppressInAppTTS && typeof window !== 'undefined') {
+        // Server speech (Gemini): a real Amharic voice. Falls back to the browser voice by itself.
+        speechPlayer.cancel();
+        let finished = false;
 
         const finishSpeaking = () => {
+          if (finished) return;
+          finished = true;
           if (speechSafetyTimerRef.current) {
             clearTimeout(speechSafetyTimerRef.current);
             speechSafetyTimerRef.current = null;
@@ -157,15 +158,14 @@ export default function RegisterPage() {
           }, 400);
         };
 
-        utter.onend = finishSpeaking;
-        utter.onerror = finishSpeaking;
-
-        // Safety timer: Chromium SpeechSynthesis occasionally fails to fire onend on Windows
+        // Safety timer: server speech can take a few seconds to start, so allow for that.
         const words = text.split(/\s+/).length;
-        const estimatedDurationMs = Math.max(3500, (words / (0.80 * 2.3)) * 1000 + 1500);
+        const estimatedDurationMs = Math.max(3500, (words / (0.80 * 2.3)) * 1000 + 1500) + 20000;
         speechSafetyTimerRef.current = setTimeout(finishSpeaking, estimatedDurationMs);
 
-        window.speechSynthesis.speak(utter);
+        void speechPlayer
+          .speak(text, { lang: language === 'am-ET' ? 'am-ET' : 'en-US', rate: 0.8 })
+          .then(finishSpeaking);
       } else {
         // In screen reader mode or if speech synthesis is not active, automatically open mic after delay
         setTimeout(() => {
@@ -253,7 +253,7 @@ export default function RegisterPage() {
   const startAssistant = useCallback(() => {
     isSpeakingRef.current = false;
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
+      speechPlayer.cancel();
     }
     playEarcon('listening');
     setAssistantActive(true);
@@ -1033,8 +1033,8 @@ export default function RegisterPage() {
     if (isSpeakingRef.current) return;
 
     const SpeechRec =
-      (window as unknown as { SpeechRecognition?: any; webkitSpeechRecognition?: any }).SpeechRecognition ||
-      (window as unknown as { SpeechRecognition?: any; webkitSpeechRecognition?: any }).webkitSpeechRecognition;
+      // Server recognition (Gemini): English and Amharic in every browser, browser recognition as fallback.
+      getSpeechRecognitionConstructor();
 
     if (!SpeechRec) {
       announce('Speech recognition is not supported in this browser. Please use Chrome or Edge.', 'assertive');
@@ -1124,7 +1124,7 @@ export default function RegisterPage() {
     // Unlock speaking mutex in case user clicks mic to speak
     isSpeakingRef.current = false;
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
+      speechPlayer.cancel();
     }
 
     if (isListening) {

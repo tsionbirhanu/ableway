@@ -33,6 +33,66 @@ function problemsFor(source: Record<string, string | undefined>): string[] {
   return [];
 }
 
+/** Real speech settings, required in production. */
+const azureSpeech = { SPEECH_PROVIDER: "azure", AZURE_SPEECH_REGION: "eastus" };
+
+describe("speech settings", () => {
+  it("default to the mock provider in development, with safe defaults", () => {
+    const env = parseEnv(valid);
+    expect(env.SPEECH_PROVIDER).toBe("mock");
+    expect(env.SPEECH_LOW_CONFIDENCE_THRESHOLD).toBe(0.65);
+    expect(env.SPEECH_RETAIN_AUDIO).toBe(false);
+    expect(env.SPEECH_RETENTION_DAYS).toBe(30);
+  });
+
+  it("parse numbers and the opt-in retention flag", () => {
+    const env = parseEnv({
+      ...valid,
+      SPEECH_LOW_CONFIDENCE_THRESHOLD: "0.8",
+      SPEECH_RETAIN_AUDIO: "true",
+      SPEECH_RETENTION_DAYS: "7",
+    });
+    expect(env.SPEECH_LOW_CONFIDENCE_THRESHOLD).toBe(0.8);
+    expect(env.SPEECH_RETAIN_AUDIO).toBe(true);
+    expect(env.SPEECH_RETENTION_DAYS).toBe(7);
+  });
+
+  it("reject bad values", () => {
+    expect(problemsFor({ ...valid, SPEECH_PROVIDER: "google" })[0]).toMatch(/^SPEECH_PROVIDER /);
+    expect(problemsFor({ ...valid, SPEECH_LOW_CONFIDENCE_THRESHOLD: "2" })[0]).toMatch(
+      /^SPEECH_LOW_CONFIDENCE_THRESHOLD /,
+    );
+    expect(problemsFor({ ...valid, SPEECH_RETAIN_AUDIO: "yes" })[0]).toMatch(
+      /^SPEECH_RETAIN_AUDIO /,
+    );
+  });
+
+  it("require keys and region when the provider is azure, even in development", () => {
+    expect(
+      problemsFor({ ...valid, SPEECH_PROVIDER: "azure", STT_API_KEY: "", AZURE_SPEECH_REGION: "" }),
+    ).toEqual([
+      "STT_API_KEY is missing (needed when SPEECH_PROVIDER=azure)",
+      "AZURE_SPEECH_REGION is missing (needed when SPEECH_PROVIDER=azure)",
+    ]);
+  });
+
+  it("require GEMINI_API_KEY when the provider is gemini", () => {
+    expect(problemsFor({ ...valid, SPEECH_PROVIDER: "gemini", GEMINI_API_KEY: "" })).toEqual([
+      "GEMINI_API_KEY is missing (needed when SPEECH_PROVIDER=gemini)",
+    ]);
+    expect(problemsFor({ ...valid, SPEECH_PROVIDER: "gemini", NODE_ENV: "production" })).toEqual(
+      [],
+    );
+  });
+
+  it("refuse the mock provider in production", () => {
+    expect(problemsFor({ ...valid, NODE_ENV: "production" })).toEqual([
+      'SPEECH_PROVIDER must be "gemini" or "azure" in production (the mock makes no sound).',
+    ]);
+    expect(problemsFor({ ...valid, ...azureSpeech, NODE_ENV: "production" })).toEqual([]);
+  });
+});
+
 describe("parseEnv", () => {
   it("accepts a complete, valid set", () => {
     const env = parseEnv(valid);
@@ -84,12 +144,12 @@ describe("parseEnv", () => {
   });
 
   it("the mock values pass the same rules as real secrets", () => {
-    const prod = { ...valid, NODE_ENV: "production" };
+    const prod = { ...valid, ...azureSpeech, NODE_ENV: "production" };
     expect(() => parseEnv({ ...prod, ...DEV_MOCK_SECRETS })).toThrow(/development mock value/);
   });
 
   it("in production, refuses mock values and empty secrets", () => {
-    const prod = { ...valid, NODE_ENV: "production" };
+    const prod = { ...valid, ...azureSpeech, NODE_ENV: "production" };
     expect(problemsFor({ ...prod, AUTH_SECRET: DEV_MOCK_SECRETS.AUTH_SECRET })).toEqual([
       "AUTH_SECRET is a development mock value. Use a real secret.",
     ]);
