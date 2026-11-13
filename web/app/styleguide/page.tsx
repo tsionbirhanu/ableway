@@ -24,7 +24,7 @@ import {
   ProgressBar,
   AudioPlayer,
 } from '@/components/ui';
-import { useA11y } from '@/core/a11y/a11y-context';
+import { useA11y } from '@/lib/a11y/a11y-context';
 
 export default function StyleguidePage() {
   const { theme, setTheme, fontSize, setTextSize, announce } = useA11y();

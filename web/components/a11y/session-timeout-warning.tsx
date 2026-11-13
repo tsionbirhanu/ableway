@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Clock, ShieldAlert, CheckCircle2 } from 'lucide-react';
-import { useA11y } from '@/core/a11y/a11y-context';
-import { playEarcon } from '@/core/audio/earcons';
+import { useA11y } from '@/lib/a11y/a11y-context';
+import { playEarcon } from '@/lib/audio/earcons';
 
 export function SessionTimeoutWarning() {
   const { announce, speak } = useA11y();

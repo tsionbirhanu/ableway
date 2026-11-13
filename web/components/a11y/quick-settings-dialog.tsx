@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import { X, Settings, Volume2, Moon, Sun, Eye, Sliders, Type, FastForward } from 'lucide-react';
-import { useA11y } from '@/core/a11y/a11y-context';
+import { useA11y } from '@/lib/a11y/a11y-context';
 
 interface QuickSettingsDialogProps {
   isOpen: boolean;
@@ -218,7 +218,7 @@ export function QuickSettingsDialog({ isOpen, onClose, triggerRef }: QuickSettin
                 className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white min-h-[44px] focus:outline-none focus:ring-2 focus:ring-emerald-500"
               >
                 <option value="">Default System Voice</option>
-                {availableVoices.map((v) => (
+                {availableVoices.map((v: SpeechSynthesisVoice) => (
                   <option key={v.name} value={v.name}>
                     {v.name} ({v.lang})
                   </option>

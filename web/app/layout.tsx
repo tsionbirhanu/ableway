@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
-import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import { A11yProvider } from '@/lib/a11y/a11y-context';
 import { LiveAnnouncer } from '@/lib/a11y/live-announcer';
@@ -9,16 +8,6 @@ import { AccessibleHeader } from '@/components/navigation/accessible-header';
 import { WebAssistantPanel } from '@/components/assistant/web-assistant-panel';
 import { SessionTimeoutWarning } from '@/components/a11y/session-timeout-warning';
 import { SkipLink } from '@/components/ui/skip-link';
-
-const geistSans = Geist({
-  variable: '--font-geist-sans',
-  subsets: ['latin'],
-});
-
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
-  subsets: ['latin'],
-});
 
 export const metadata: Metadata = {
   title: 'Ableway | Accessible Learning and Employment Platform',
@@ -35,7 +24,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className="h-full antialiased"
     >
       <body className="min-h-full flex flex-col bg-slate-950 text-slate-100">
         <A11yProvider>

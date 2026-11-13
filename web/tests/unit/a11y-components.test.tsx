@@ -1,10 +1,17 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { axe } from 'vitest-axe';
+import * as matchers from 'vitest-axe/matchers';
 import '@testing-library/jest-dom/vitest';
 import './vitest-axe.d.ts';
+
+expect.extend(matchers);
+
+afterEach(() => {
+  cleanup();
+});
 import {
   Button,
   LinkButton,
