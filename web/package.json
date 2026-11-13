@@ -36,6 +36,9 @@
     "@electric-sql/pglite-pgvector": "^0.0.17",
     "@playwright/test": "^1.65.0",
     "@tailwindcss/turbopack": "4.3.3",
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
     "@types/node": "^24.19.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
@@ -44,11 +47,13 @@
     "eslint-config-next": "16.4.6",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-jsx-a11y": "^6.10.2",
+    "jsdom": "^31.0.1",
     "prettier": "^3.10.1",
     "tailwindcss": "4.3.3",
     "tsx": "^4.23.15",
     "typescript": "^5",
-    "vitest": "^5.1.0"
+    "vitest": "^5.1.0",
+    "vitest-axe": "^0.1.0"
   },
   "packageManager": "pnpm@10.34.9",
   "engines": {
