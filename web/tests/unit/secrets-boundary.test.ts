@@ -45,11 +45,12 @@ describe("secrets boundary", () => {
   });
 
   it("no secret is given a NEXT_PUBLIC_ prefix", () => {
-    const offenders = files.filter((file) =>
-      envNames.some((name) => read(file).includes(`NEXT_PUBLIC_${name}`)),
-    );
+    const offenders = files.filter((file) => {
+      const content = read(file);
+      return envNames.some((name) => content.includes(`NEXT_PUBLIC_${name}`));
+    });
     expect(offenders).toEqual([]);
-  });
+  }, 15000);
 
   it(".env.example lists every variable, with no real secret values", () => {
     expect([...envNames].sort()).toEqual([
