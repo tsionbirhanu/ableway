@@ -57,6 +57,48 @@ export const envSchema = z.object({
       .regex(/^https?:\/\/[^\s/]+/, { error: "must be a full URL such as https://example.org" })
       .transform((url) => url.replace(/\/+$/, "")),
   ),
+
+  // ---------- Speech (lib/speech) ----------
+  /** "gemini" or "azure" for real speech, "mock" for tests and local work without a key. */
+  SPEECH_PROVIDER: z.preprocess(
+    emptyToUndefined,
+    z
+      .enum(["gemini", "azure", "mock"], { error: 'must be "gemini", "azure" or "mock"' })
+      .default("mock"),
+  ),
+  /** Azure region of the Speech resource, for example "eastus" or "westeurope". */
+  AZURE_SPEECH_REGION: optional(
+    z.string().regex(/^[a-z0-9]+$/, { error: 'must be a region name like "eastus"' }),
+  ),
+  /** Below this confidence (0 to 1) the reply is flagged lowConfidence: ask the learner to repeat. */
+  SPEECH_LOW_CONFIDENCE_THRESHOLD: z.preprocess(
+    emptyToUndefined,
+    z.coerce
+      .number({ error: "must be a number from 0 to 1" })
+      .min(0, { error: "must be a number from 0 to 1" })
+      .max(1, { error: "must be a number from 0 to 1" })
+      .default(0.65),
+  ),
+  /** Opt-in. Off by default: uploaded audio is never stored. */
+  SPEECH_RETAIN_AUDIO: z.preprocess(
+    emptyToUndefined,
+    z
+      .enum(["true", "false"], { error: 'must be "true" or "false"' })
+      .default("false")
+      .transform((value) => value === "true"),
+  ),
+  /** Where retained audio goes, if SPEECH_RETAIN_AUDIO=true. */
+  SPEECH_RETENTION_DIR: z.preprocess(
+    emptyToUndefined,
+    z.string().default(".data/speech-retention"),
+  ),
+  /** Days to keep retained audio before deleting it. */
+  /** Optional path to ffmpeg. Read directly by lib/speech/ffmpeg.ts (not a secret). */
+  FFMPEG_PATH: optional(z.string()),
+  SPEECH_RETENTION_DAYS: z.preprocess(
+    emptyToUndefined,
+    z.coerce.number().int().min(1).max(365).default(30),
+  ),
 });
 
 /**
@@ -123,14 +165,27 @@ export function parseEnv(source: Record<string, string | undefined>): Env {
   const production = source.NODE_ENV === "production";
   const result = (production ? envSchema : devEnvSchema).safeParse(source);
   if (result.success) {
+    const problems: string[] = [];
     if (production) {
-      const mocked = usedMockSecrets(result.data);
-      if (mocked.length > 0) {
-        throw new EnvError(
-          mocked.map((key) => `${key} is a development mock value. Use a real secret.`),
+      for (const key of usedMockSecrets(result.data)) {
+        problems.push(`${key} is a development mock value. Use a real secret.`);
+      }
+      if (result.data.SPEECH_PROVIDER === "mock") {
+        problems.push(
+          'SPEECH_PROVIDER must be "gemini" or "azure" in production (the mock makes no sound).',
         );
       }
     }
+    if (result.data.SPEECH_PROVIDER === "gemini" && !result.data.GEMINI_API_KEY) {
+      problems.push("GEMINI_API_KEY is missing (needed when SPEECH_PROVIDER=gemini)");
+    }
+    if (result.data.SPEECH_PROVIDER === "azure") {
+      for (const key of ["STT_API_KEY", "TTS_API_KEY", "AZURE_SPEECH_REGION"] as const) {
+        if (!result.data[key])
+          problems.push(`${key} is missing (needed when SPEECH_PROVIDER=azure)`);
+      }
+    }
+    if (problems.length > 0) throw new EnvError(problems);
     return result.data;
   }
 

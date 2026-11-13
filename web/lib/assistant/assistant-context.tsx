@@ -95,7 +95,7 @@ export function AssistantProvider({
     }
   }, []);
   const router = useRouter();
-  const { mode: a11yMode, speechRate, announce } = useA11y();
+  const { mode: a11yMode, speechRate, announce, language } = useA11y();
 
   const [explicitMode, setExplicitMode] = useState<InteractionModeType | null>(initialMode ?? null);
 
@@ -134,14 +134,25 @@ export function AssistantProvider({
   // Default global actions
   useEffect(() => {
     // Register standard goToPage and fillField actions
+    const navigateHandler = (p: Record<string, unknown>) => {
+      const targetPath = (typeof p.path === "string" ? p.path : "") || (typeof p.url === "string" ? p.url : "");
+      if (targetPath) router.push(targetPath);
+    };
+
     registeredActionsRef.current["goToPage"] = {
       name: "goToPage",
       description: "Navigate to a page",
       requiresConfirmation: false,
-      announcement: (p) => `Navigating to ${p.path || "page"}`,
-      handler: (p) => {
-        if (typeof p.path === "string") router.push(p.path);
-      },
+      announcement: (p) => `Navigating to ${p.path || p.url || "page"}`,
+      handler: navigateHandler,
+    };
+
+    registeredActionsRef.current["go_to_page"] = {
+      name: "go_to_page",
+      description: "Navigate to a page",
+      requiresConfirmation: false,
+      announcement: (p) => `Navigating to ${p.path || p.url || "page"}`,
+      handler: navigateHandler,
     };
 
     registeredActionsRef.current["fillField"] = {
@@ -153,6 +164,9 @@ export function AssistantProvider({
         if (typeof window === "undefined") return;
         const fieldName = String(p.field || "");
         const fieldValue = String(p.value ?? "");
+        if (typeof (window as any).fillField === "function") {
+          (window as any).fillField(fieldName, fieldValue);
+        }
         const input = (document.querySelector(`[name="${fieldName}"]`) ||
           document.getElementById(fieldName)) as HTMLInputElement | null;
         if (input) {
@@ -208,7 +222,8 @@ export function AssistantProvider({
         const res = await fetch("/api/speech/synthesize", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text, rate: speechRate }),
+          // language: the learner's language (en-US or am-ET), so Amharic is spoken with an Amharic voice.
+          body: JSON.stringify({ text, rate: speechRate, language }),
         });
 
         if (res.ok && res.headers.get("content-type")?.includes("audio/")) {
@@ -230,7 +245,7 @@ export function AssistantProvider({
               currentAudioElemRef.current = null;
               // Fallback to browser SpeechSynthesis
               speechSynthesizer
-                .speak(text, { rate: speechRate })
+                .speak(text, { rate: speechRate, browserOnly: true })
                 .then(() => {
                   playEarcon("done");
                   setStatus("idle");
@@ -258,18 +273,18 @@ export function AssistantProvider({
           });
         } else {
           // Fallback to client SpeechSynthesis
-          await speechSynthesizer.speak(text, { rate: speechRate });
+          await speechSynthesizer.speak(text, { rate: speechRate, browserOnly: true });
           playEarcon("done");
           setStatus("idle");
         }
       } catch {
         // Fallback to client SpeechSynthesis
-        await speechSynthesizer.speak(text, { rate: speechRate });
+        await speechSynthesizer.speak(text, { rate: speechRate, browserOnly: true });
         playEarcon("done");
         setStatus("idle");
       }
     },
-    [mode, isMuted, speechRate, stopSpeaking]
+    [mode, isMuted, speechRate, stopSpeaking, language]
   );
 
   // Escalate to human helper
@@ -566,6 +581,7 @@ export function AssistantProvider({
         try {
           const formData = new FormData();
           formData.append("audio", audioBlob, "recording.webm");
+          formData.append("language", language);
 
           const transcribeRes = await fetch("/api/speech/transcribe", {
             method: "POST",
@@ -573,13 +589,22 @@ export function AssistantProvider({
           });
 
           if (!transcribeRes.ok) {
-            throw new Error("Transcription service error");
+            // The server sends a short message the learner can hear (for example "too long").
+            const failure = await transcribeRes.json().catch(() => null);
+            throw Object.assign(new Error("Transcription service error"), {
+              spoken: typeof failure?.error?.message === "string" ? failure.error.message : undefined,
+            });
           }
 
-          const { transcript, confidence } = await transcribeRes.json();
+          const { transcript, confidence, lowConfidence } = await transcribeRes.json();
+          // The server decides (some providers give no confidence score). Older replies only had confidence.
+          const unsure =
+            typeof lowConfidence === "boolean"
+              ? lowConfidence
+              : !(typeof confidence === "number" && confidence >= 0.65);
 
           // Low-confidence check: ask learner to repeat or spell; never act on it!
-          if (!transcript || confidence < 0.65) {
+          if (!transcript || unsure) {
             playEarcon("error");
             setStatus("idle");
             const repeatPrompt =
@@ -603,10 +628,12 @@ export function AssistantProvider({
           // High confidence: play understood earcon and proceed
           playEarcon("understood");
           await sendMessage(transcript);
-        } catch (_err) {
+        } catch (err) {
           setStatus("idle");
           playEarcon("error");
+          const spoken = (err as { spoken?: string }).spoken;
           const errorPrompt =
+            spoken ??
             "The speech recognition service is temporarily unavailable. You can use the keyboard to type your message below, or select 'Call a person'.";
           setErrorMessage(errorPrompt);
           announce(errorPrompt, "assertive");
@@ -626,7 +653,7 @@ export function AssistantProvider({
         "assertive"
       );
     }
-  }, [micPermissionState, requestMicPermission, announce, mode, speakText, sendMessage]);
+  }, [micPermissionState, requestMicPermission, announce, mode, speakText, sendMessage, language]);
 
   const stopListening = useCallback(() => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {

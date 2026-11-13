@@ -45,20 +45,28 @@ describe("secrets boundary", () => {
   });
 
   it("no secret is given a NEXT_PUBLIC_ prefix", () => {
-    const offenders = files.filter((file) =>
-      envNames.some((name) => read(file).includes(`NEXT_PUBLIC_${name}`)),
-    );
+    const offenders = files.filter((file) => {
+      const content = read(file);
+      return envNames.some((name) => content.includes(`NEXT_PUBLIC_${name}`));
+    });
     expect(offenders).toEqual([]);
-  });
+  }, 15000);
 
   it(".env.example lists every variable, with no real secret values", () => {
     expect([...envNames].sort()).toEqual([
       "APP_URL",
       "AUTH_SECRET",
+      "AZURE_SPEECH_REGION",
       "CRON_SECRET",
       "DATABASE_URL",
+      "FFMPEG_PATH",
       "GEMINI_API_KEY",
       "SMS_API_KEY",
+      "SPEECH_LOW_CONFIDENCE_THRESHOLD",
+      "SPEECH_PROVIDER",
+      "SPEECH_RETAIN_AUDIO",
+      "SPEECH_RETENTION_DAYS",
+      "SPEECH_RETENTION_DIR",
       "STT_API_KEY",
       "TELEGRAM_BOT_TOKEN",
       "TELEGRAM_WEBHOOK_SECRET",

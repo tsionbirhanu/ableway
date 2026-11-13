@@ -1,67 +1,60 @@
 import { z } from "zod";
 import { withErrors } from "@/lib/auth/errors";
 import { readJson } from "@/lib/auth/params";
-
-const bodySchema = z.object({
-  text: z.string().min(1).max(5000),
-  language: z.string().optional().default("en"),
-  rate: z.number().optional().default(1.0),
-});
+import { enforce, hashKeyPart, LIMITS } from "@/lib/auth/rate-limit";
+import { clientIp } from "@/lib/auth/request-ip";
+import { getActor } from "@/lib/auth/session";
+import { getDb } from "@/lib/db/client";
+import { getSpeechDeps } from "@/lib/speech";
+import { MAX_RATE, MAX_TTS_CHARS, MIN_RATE, synthesizeSpeech } from "@/lib/speech/service";
+import { SpeechError } from "@/lib/speech/types";
 
 /**
- * Creates a valid minimal PCM WAV buffer (0.1s silence)
- * ensuring browser audio playback decodes cleanly without network external dependencies.
+ * POST /api/speech/synthesize
+ *
+ * Body: { text, language?, voice?, rate? }. Text up to 1,500 characters.
+ * Returns audio (audio/mpeg from Azure, audio/wav from the mock).
+ * Repeated phrases come from a cache (header X-Speech-Cache: hit or miss).
+ * Errors: { error: { code, message } }, where message can be read aloud.
  */
-function createMinimalWav(): Uint8Array {
-  const sampleRate = 8000;
-  const numChannels = 1;
-  const bitsPerSample = 8;
-  const dataSize = 800;
-  const buffer = new Uint8Array(44 + dataSize);
-  const view = new DataView(buffer.buffer);
 
-  // "RIFF"
-  buffer.set([0x52, 0x49, 0x46, 0x46], 0);
-  view.setUint32(4, 36 + dataSize, true);
-  // "WAVE"
-  buffer.set([0x57, 0x41, 0x56, 0x45], 8);
-  // "fmt "
-  buffer.set([0x66, 0x6d, 0x74, 0x20], 12);
-  view.setUint32(16, 16, true);
-  view.setUint16(20, 1, true); // PCM format
-  view.setUint16(22, numChannels, true);
-  view.setUint32(24, sampleRate, true);
-  view.setUint32(28, sampleRate * numChannels * (bitsPerSample / 8), true);
-  view.setUint16(32, numChannels * (bitsPerSample / 8), true);
-  view.setUint16(34, bitsPerSample, true);
-  // "data"
-  buffer.set([0x64, 0x61, 0x74, 0x61], 36);
-  view.setUint32(40, dataSize, true);
-  buffer.fill(128, 44); // 8-bit unsigned midpoint
-
-  return buffer;
-}
+const body = z.object({
+  text: z.string().max(MAX_TTS_CHARS * 2),
+  language: z.string().trim().max(10).optional(),
+  voice: z.string().trim().max(64).optional(),
+  rate: z.number().min(MIN_RATE).max(MAX_RATE).optional(),
+});
 
 export const POST = withErrors(async (request: Request) => {
-  const { text } = bodySchema.parse(await readJson(request));
-
-  const accept = request.headers.get("accept") || "";
-  if (accept.includes("application/json")) {
-    return Response.json({
-      success: true,
-      text,
-      format: "audio/wav",
-    });
+  const parsed = body.safeParse(await readJson(request));
+  if (!parsed.success) {
+    const tooLong = parsed.error.issues.some((i) => i.path[0] === "text" && i.code === "too_big");
+    throw tooLong
+      ? new SpeechError("text_too_long")
+      : new SpeechError("no_audio", "Please send the text to read, as { text }.");
   }
 
-  const wavData = createMinimalWav();
-  return new Response(wavData.buffer as ArrayBuffer, {
-    status: 200,
+  const actor = await getActor();
+  await enforce(getDb(), [
+    {
+      key: actor
+        ? `speech-tts:user:${actor.id}`
+        : `speech-tts:ip:${hashKeyPart(clientIp(request.headers))}`,
+      limit: LIMITS.speechSynthesize,
+    },
+  ]);
+
+  const deps = getSpeechDeps();
+  const result = await synthesizeSpeech(deps, parsed.data);
+  return new Response(Buffer.from(result.audio), {
     headers: {
-      "Content-Type": "audio/wav",
-      "Content-Length": wavData.byteLength.toString(),
-      "Cache-Control": "no-cache",
+      "Content-Type": result.contentType,
+      "Content-Length": String(result.audio.length),
+      // Private: the text may be personal (for example, a name being read back).
+      "Cache-Control": "private, max-age=3600",
+      "X-Speech-Cache": result.cached ? "hit" : "miss",
+      // "mock" audio is silent: the browser player then uses its own voice instead.
+      "X-Speech-Provider": deps.providerName,
     },
   });
 });
-

@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Play, Pause, RotateCcw, FastForward, CheckCircle2, BookOpen, Volume2, HelpCircle, ArrowRight } from 'lucide-react';
 import { useA11y } from '@/lib/a11y/a11y-context';
+import { speechPlayer } from '@/lib/speech/client/player';
 
 export default function LearnPage() {
   const { announce } = useA11y();
@@ -60,31 +61,33 @@ By pressing the "D" key in NVDA, you can jump between landmarks effortlessly wit
     if (typeof window === 'undefined') return;
 
     if (isPlaying) {
-      window.speechSynthesis.cancel();
+      speechPlayer.cancel();
       setIsPlaying(false);
       announce('Audio playback paused.', 'polite');
     } else {
       setIsPlaying(true);
       announce('Starting audio lesson playback.', 'polite');
-      const utter = new SpeechSynthesisUtterance(currentLesson.transcript);
-      utter.rate = playbackSpeed;
-      utter.volume = volume;
-      utter.onend = () => setIsPlaying(false);
-      window.speechSynthesis.speak(utter);
+      // Server speech (Gemini), read in parts; the language is taken from the lesson text.
+      void speechPlayer
+        .speak(currentLesson.transcript, { rate: playbackSpeed, volume })
+        .then((completed) => {
+          if (completed) setIsPlaying(false);
+        });
     }
   };
 
   // Rule 21: Rewind 10 seconds / restart
   const handleRewind10 = () => {
     if (typeof window !== 'undefined') {
-      window.speechSynthesis.cancel();
+      speechPlayer.cancel();
       setIsPlaying(true);
       announce('Rewound audio by 10 seconds.', 'polite');
-      const utter = new SpeechSynthesisUtterance(currentLesson.transcript);
-      utter.rate = playbackSpeed;
-      utter.volume = volume;
-      utter.onend = () => setIsPlaying(false);
-      window.speechSynthesis.speak(utter);
+      // Server speech (Gemini), read in parts; the language is taken from the lesson text.
+      void speechPlayer
+        .speak(currentLesson.transcript, { rate: playbackSpeed, volume })
+        .then((completed) => {
+          if (completed) setIsPlaying(false);
+        });
     }
   };
 
