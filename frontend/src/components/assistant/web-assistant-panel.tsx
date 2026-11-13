@@ -218,14 +218,16 @@ export function WebAssistantPanel() {
 
   const executeActions = (actions: AllowedAction[]) => {
     for (const action of actions) {
-      if (action.name === 'go_to_page' && action.params.path) {
+      if (action.name === 'go_to_page' && typeof action.params.path === 'string') {
         router.push(action.params.path);
       } else if (action.name === 'fill_field') {
-        const inputElem = document.querySelector(`[name="${action.params.field}"]`) as HTMLInputElement;
+        const fieldName = String(action.params.field || '');
+        const fieldValue = String(action.params.value ?? '');
+        const inputElem = document.querySelector(`[name="${fieldName}"]`) as HTMLInputElement;
         if (inputElem) {
-          inputElem.value = action.params.value;
+          inputElem.value = fieldValue;
           inputElem.dispatchEvent(new Event('input', { bubbles: true }));
-          announce(`Entered ${action.params.value} into ${action.params.field}`);
+          announce(`Entered ${fieldValue} into ${fieldName}`);
         }
       } else if (action.name === 'request_human') {
         router.push('/payment#human-help');

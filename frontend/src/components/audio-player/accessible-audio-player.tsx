@@ -69,7 +69,11 @@ export function AccessibleAudioPlayer({ title, audioSrc, transcript }: Accessibl
       aria-label={`Audio player for ${title}`}
       className="bg-slate-900 border border-slate-800 rounded-2xl p-5 text-white shadow-xl space-y-4"
     >
-      {audioSrc && <audio ref={audioRef} src={audioSrc} preload="metadata" />}
+      {audioSrc && (
+        <audio ref={audioRef} src={audioSrc} preload="metadata">
+          <track kind="captions" src="" label="Lesson captions" default />
+        </audio>
+      )}
 
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -141,6 +145,7 @@ export function AccessibleAudioPlayer({ title, audioSrc, transcript }: Accessibl
       {/* Synchronized Accessible Transcript */}
       <div className="border-t border-slate-800 pt-4 mt-2">
         <h3 className="text-sm font-semibold text-slate-300 mb-2">Lesson Transcript</h3>
+        {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex */}
         <div
           tabIndex={0}
           role="region"

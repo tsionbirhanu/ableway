@@ -33,6 +33,14 @@ const PAGE_METADATA: Record<string, { title: string; announcement: string }> = {
     title: "Staff Help Queue - Ableway",
     announcement: "Staff Help Queue loaded. Live assistance requests.",
   },
+  "/settings": {
+    title: "Accessibility Settings - Ableway",
+    announcement: "Settings page loaded. Configure interaction mode, speech rate, voice, language, and theme.",
+  },
+  "/help": {
+    title: "Help and Accessibility Guide - Ableway",
+    announcement: "Help page loaded. List of keyboard shortcuts and voice commands.",
+  },
   "/savanna": {
     title: "Savanna Learning Portal - Ableway",
     announcement: "Savanna Learning Portal loaded.",

@@ -128,7 +128,7 @@ export type AllowedActionName =
 
 export interface AllowedAction {
   name: AllowedActionName;
-  params: Record<string, any>;
+  params: Record<string, unknown>;
   requiresConfirmation?: boolean;
 }
 

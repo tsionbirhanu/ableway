@@ -7,6 +7,8 @@ import { LiveAnnouncer } from '@/core/a11y/live-announcer';
 import { RouteFocusAnnouncer } from '@/core/a11y/route-focus-announcer';
 import { AccessibleHeader } from '@/components/navigation/accessible-header';
 import { WebAssistantPanel } from '@/components/assistant/web-assistant-panel';
+import { SessionTimeoutWarning } from '@/components/a11y/session-timeout-warning';
+import { SkipLink } from '@/components/ui/skip-link';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -37,13 +39,8 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-slate-950 text-slate-100">
         <A11yProvider>
-          {/* Rule 2: Accessible Skip Link (First focusable element, never hidden when focused) */}
-          <a
-            href="#main-content"
-            className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:px-4 focus:py-2.5 focus:bg-emerald-600 focus:text-white focus:font-bold focus:rounded-xl focus:shadow-2xl focus:outline-none focus:ring-4 focus:ring-emerald-300"
-          >
-            Skip to main content
-          </a>
+          {/* Rule 2: Skip link to main as the first focusable element */}
+          <SkipLink />
 
           {/* Rule 19: Shared ARIA Live Region */}
           <LiveAnnouncer />
@@ -53,7 +50,7 @@ export default function RootLayout({
             <RouteFocusAnnouncer />
           </Suspense>
 
-          {/* Rule 2 & 3: Landmark Header with Consistent Navigation */}
+          {/* Rule 2 & 3: Header (Logo, Main Navigation, Language Switcher, Settings, "Get help" Link) */}
           <Suspense fallback={<div className="h-16 bg-slate-900 border-b border-slate-800" />}>
             <AccessibleHeader />
           </Suspense>
@@ -63,28 +60,37 @@ export default function RootLayout({
             {children}
           </main>
 
-          {/* Rule 2 & 3: Landmark Footer with Consistent Help Link */}
+          {/* Rule 2 & 3: Landmark Footer */}
           <footer className="bg-slate-900 border-t border-slate-800 text-slate-300 py-6 px-4 sm:px-6 lg:px-8 mt-auto" role="contentinfo">
             <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">
-              <p>© 2026 Ableway Platform. Built to WCAG 2.2 AA / AAA standards.</p>
-              <nav aria-label="Footer Accessibility & Help" className="flex items-center gap-6">
+              <p>© 2026 Ableway Platform. Standard: WCAG 2.2 AA / AAA.</p>
+              <nav aria-label="Footer Accessibility & Help" className="flex flex-wrap items-center gap-6">
                 <a
-                  href="/profile#help-shortcuts"
+                  href="/help"
                   className="text-slate-200 hover:text-white underline focus:outline-none focus:ring-2 focus:ring-emerald-400 rounded px-1 min-h-[44px] flex items-center"
                 >
-                  Keyboard Shortcuts & Help (Alt+Shift+H)
+                  Get Help & Shortcuts
+                </a>
+                <a
+                  href="/settings"
+                  className="text-slate-200 hover:text-white underline focus:outline-none focus:ring-2 focus:ring-emerald-400 rounded px-1 min-h-[44px] flex items-center"
+                >
+                  Accessibility Settings
                 </a>
                 <a
                   href="/payment#human-help"
                   className="text-emerald-400 hover:text-emerald-300 underline focus:outline-none focus:ring-2 focus:ring-emerald-400 rounded px-1 min-h-[44px] flex items-center"
                 >
-                  Call Human Helper (Alt+Shift+T)
+                  Call a Person (Human Helper)
                 </a>
               </nav>
             </div>
           </footer>
 
-          {/* Rule 8 & 20: Web Assistant Panel */}
+          {/* Rule 18: Session Timeout Warning Dialog */}
+          <SessionTimeoutWarning />
+
+          {/* Rule 8 & 20: Persistent Web Assistant Control */}
           <Suspense fallback={null}>
             <WebAssistantPanel />
           </Suspense>

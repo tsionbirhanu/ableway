@@ -10,7 +10,7 @@ import { useA11y } from "./a11y-context";
  * Messages are short and never repeated.
  */
 export function LiveAnnouncer() {
-  const { lastAnnouncement } = useA11y();
+  const { lastAnnouncement, assertiveAnnouncement } = useA11y();
 
   return (
     <>
@@ -27,7 +27,9 @@ export function LiveAnnouncer() {
         aria-live="assertive"
         aria-atomic="true"
         id="ableway-live-assertive"
-      />
+      >
+        {assertiveAnnouncement}
+      </div>
     </>
   );
 }
