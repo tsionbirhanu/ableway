@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import Link from 'next/link';
 import {
   User,
   Sliders,
@@ -17,6 +18,10 @@ import {
   Play,
   Download,
   AlertTriangle,
+  Globe,
+  HelpCircle,
+  Clock,
+  Sparkles,
 } from 'lucide-react';
 import { useA11y } from '@/lib/a11y/a11y-context';
 import { playEarcon } from '@/lib/audio/earcons';
@@ -26,11 +31,6 @@ import {
   SelectField,
   Checkbox,
   Dialog,
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
 } from '@/components/ui';
 
 interface AlertSubscription {
@@ -73,7 +73,10 @@ export default function ProfilePage() {
     setFontSize,
     language,
     setLanguage,
+    toggleLanguage,
   } = useA11y();
+
+  const h1Ref = useRef<HTMLHeadingElement | null>(null);
 
   // 1. Personal details state
   const [fullName, setFullName] = useState('Abebe Bikila');
@@ -104,11 +107,23 @@ export default function ProfilePage() {
   const [isExportDialogOpen, setIsExportDialogOpen] = useState<boolean>(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState<boolean>(false);
 
-  // Trigger refs for returning focus after dialog close (Rule 8)
+  // Trigger refs for returning focus after dialog close (F0 Rule 8)
   const unlinkTriggerRef = useRef<HTMLButtonElement | null>(null);
   const exportTriggerRef = useRef<HTMLButtonElement | null>(null);
   const deleteTriggerRef = useRef<HTMLButtonElement | null>(null);
   const alertKeywordsInputRef = useRef<HTMLInputElement | null>(null);
+
+  const isAmharic = language === 'am-ET' || language === 'am';
+
+  // Move focus to h1 on mount (F0 Rule 7)
+  useEffect(() => {
+    document.title = isAmharic
+      ? 'የተጠቃሚ መገለጫ እና ምርጫዎች - Ableway'
+      : 'Learner profile and settings - Ableway';
+    if (h1Ref.current) {
+      h1Ref.current.focus();
+    }
+  }, [isAmharic]);
 
   // Countdown timer for link code
   useEffect(() => {
@@ -244,7 +259,7 @@ export default function ProfilePage() {
     }
   };
 
-  // Simulated link event (for tests and quick demonstration)
+  // Simulated link event (for tests and demonstration)
   const handleSimulateLinkConnected = () => {
     setIsLinked(true);
     setLinkCode(null);
@@ -307,97 +322,130 @@ export default function ProfilePage() {
     <main
       id="main-content"
       tabIndex={-1}
-      className="max-w-4xl mx-auto px-4 sm:px-6 py-10 space-y-10"
+      className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-10 min-h-screen text-slate-100"
       aria-labelledby="profile-page-title"
     >
-      {/* Page Header (Rule 2: single H1 with sequential headings) */}
-      <header className="space-y-3 border-b border-slate-800 pb-6">
-        <h1 id="profile-page-title" className="text-3xl sm:text-4xl font-extrabold text-white">
-          Learner profile and settings
-        </h1>
-        <p className="text-slate-300 text-base leading-relaxed">
+      {/* Page Header (F0 Rule 2, 7: Single h1 with focusable ref & top actions) */}
+      <header className="space-y-4 border-b border-slate-800 pb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <h1
+            ref={h1Ref}
+            id="profile-page-title"
+            tabIndex={-1}
+            className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 rounded"
+          >
+            Learner profile and settings
+          </h1>
+
+          {/* Top Actions: Language Switch & Quick Help Link */}
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={toggleLanguage}
+              id="profile-lang-toggle-btn"
+              className="min-h-[44px] px-3.5 py-2 rounded-xl font-bold text-xs border border-orange-500/80 bg-slate-900 hover:bg-slate-800 text-slate-100 flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-orange-400 cursor-pointer shadow-sm transition-colors"
+            >
+              <Globe className="w-3.5 h-3.5 text-orange-400" aria-hidden="true" />
+              <span>{isAmharic ? 'ቋንቋ፡ አማርኛ' : 'Language: English'}</span>
+            </button>
+
+            <Link
+              href="/help"
+              className="min-h-[44px] px-3.5 py-2 rounded-xl font-bold text-xs border border-slate-700 bg-slate-900 hover:bg-slate-800 text-slate-200 flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-orange-400 cursor-pointer shadow-sm transition-colors"
+            >
+              <HelpCircle className="w-3.5 h-3.5 text-slate-400" aria-hidden="true" />
+              <span>Accessibility Help</span>
+            </Link>
+          </div>
+        </div>
+
+        <p className="text-base text-slate-300 max-w-3xl leading-relaxed">
           Manage your personal details, accessibility settings, preferred language, job alerts,
-          Telegram connection, and privacy.
+          Telegram connection, and privacy. Everything works with keyboard, screen reader, and speech.
         </p>
       </header>
 
       {/* SECTION 1: Personal details */}
       <section aria-labelledby="heading-personal-details" className="space-y-6">
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <User className="w-6 h-6 text-emerald-400" aria-hidden="true" />
-              <h2 id="heading-personal-details" className="text-2xl font-bold text-white">
+        <div className="p-6 sm:p-8 bg-slate-900 border border-slate-800 rounded-3xl space-y-6 shadow-xl">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-slate-800 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0 shadow-sm">
+              <User className="w-5 h-5 text-emerald-400" aria-hidden="true" />
+            </div>
+            <div>
+              <h2 id="heading-personal-details" className="text-xl sm:text-2xl font-bold text-white tracking-tight">
                 Personal details
               </h2>
+              <p className="text-xs sm:text-sm text-slate-300 mt-0.5">
+                Update your contact details so helpers and employers can reach you.
+              </p>
             </div>
-            <CardDescription>
-              Update your contact details so helpers and employers can reach you.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSavePersonalDetails} className="space-y-5">
-              <TextField
-                id="personal-full-name"
-                label="Full name"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                autoComplete="name"
-                required
-              />
+          </div>
 
-              <TextField
-                id="personal-email-address"
-                type="email"
-                label="Email address"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                autoComplete="email"
-                hint="Used for course notifications and secure sign-in."
-                required
-              />
+          <form onSubmit={handleSavePersonalDetails} className="space-y-5 pt-2">
+            <TextField
+              id="personal-full-name"
+              label="Full name"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              autoComplete="name"
+              required
+            />
 
-              <TextField
-                id="personal-phone-number"
-                type="tel"
-                label="Phone number"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                autoComplete="tel"
-                hint="Format: +251 91 123 4567"
-              />
+            <TextField
+              id="personal-email-address"
+              type="email"
+              label="Email address"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
+              hint="Used for course notifications and secure sign-in."
+              required
+            />
 
-              <div className="flex items-center gap-4 pt-2">
-                <Button type="submit" variant="primary">
-                  Save personal details
-                </Button>
-                {personalDetailsSaved && (
-                  <span className="text-sm font-semibold text-emerald-400 flex items-center gap-1.5" role="status">
-                    <CheckCircle2 className="w-4 h-4" aria-hidden="true" />
-                    <span>Saved</span>
-                  </span>
-                )}
-              </div>
-            </form>
-          </CardContent>
-        </Card>
+            <TextField
+              id="personal-phone-number"
+              type="tel"
+              label="Phone number"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              autoComplete="tel"
+              hint="Format: +251 91 123 4567"
+            />
+
+            <div className="flex items-center gap-4 pt-2">
+              <Button type="submit" variant="primary">
+                Save personal details
+              </Button>
+              {personalDetailsSaved && (
+                <span className="text-sm font-semibold text-emerald-400 flex items-center gap-1.5" role="status">
+                  <CheckCircle2 className="w-4 h-4" aria-hidden="true" />
+                  <span>Saved</span>
+                </span>
+              )}
+            </div>
+          </form>
+        </div>
       </section>
 
       {/* SECTION 2: Accessibility settings */}
       <section aria-labelledby="heading-a11y-settings" className="space-y-6">
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <Sliders className="w-6 h-6 text-emerald-400" aria-hidden="true" />
-              <h2 id="heading-a11y-settings" className="text-2xl font-bold text-white">
+        <div className="p-6 sm:p-8 bg-slate-900 border border-slate-800 rounded-3xl space-y-6 shadow-xl">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-slate-800 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0 shadow-sm">
+              <Sliders className="w-5 h-5 text-emerald-400" aria-hidden="true" />
+            </div>
+            <div>
+              <h2 id="heading-a11y-settings" className="text-xl sm:text-2xl font-bold text-white tracking-tight">
                 Accessibility settings
               </h2>
+              <p className="text-xs sm:text-sm text-slate-300 mt-0.5">
+                Customize how Ableway looks, sounds, and interacts with your assistive technology.
+              </p>
             </div>
-            <CardDescription>
-              Customize how Ableway looks, sounds, and interacts with your assistive technology.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
+          </div>
+
+          <div className="space-y-6 pt-2">
             {/* Assistant interaction mode */}
             <fieldset className="space-y-3">
               <legend className="text-sm font-bold text-slate-100">
@@ -430,8 +478,8 @@ export default function ProfilePage() {
                     }}
                     className={`p-4 rounded-xl text-left border min-h-[44px] transition-all flex flex-col justify-between ${
                       mode === item.id
-                        ? 'bg-emerald-950/80 border-emerald-400 text-white ring-2 ring-emerald-500'
-                        : 'bg-slate-950 border-slate-700 text-slate-200 hover:border-slate-500'
+                        ? 'bg-emerald-950/80 border-2 border-emerald-500 text-white shadow-sm ring-1 ring-emerald-400'
+                        : 'bg-slate-950 border border-slate-800 text-slate-300 hover:border-slate-700'
                     }`}
                     aria-pressed={mode === item.id}
                   >
@@ -478,7 +526,7 @@ export default function ProfilePage() {
               hint="Scales all text across the interface up to 200% without layout breakage."
             />
 
-            {/* Global Keyboard Shortcuts Toggle (Rule 9) */}
+            {/* Global Keyboard Shortcuts Toggle (F0 Rule 9) */}
             <div className="pt-2">
               <Checkbox
                 id="a11y-keyboard-shortcuts"
@@ -496,25 +544,28 @@ export default function ProfilePage() {
                 }}
               />
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </section>
 
       {/* SECTION 3: Language */}
       <section aria-labelledby="heading-language" className="space-y-6">
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <Languages className="w-6 h-6 text-emerald-400" aria-hidden="true" />
-              <h2 id="heading-language" className="text-2xl font-bold text-white">
+        <div className="p-6 sm:p-8 bg-slate-900 border border-slate-800 rounded-3xl space-y-6 shadow-xl">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-slate-800 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0 shadow-sm">
+              <Languages className="w-5 h-5 text-emerald-400" aria-hidden="true" />
+            </div>
+            <div>
+              <h2 id="heading-language" className="text-xl sm:text-2xl font-bold text-white tracking-tight">
                 Language
               </h2>
+              <p className="text-xs sm:text-sm text-slate-300 mt-0.5">
+                Select your primary language for courses, voice assistant, and Telegram notifications.
+              </p>
             </div>
-            <CardDescription>
-              Select your primary language for courses, voice assistant, and Telegram notifications.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+          </div>
+
+          <div className="pt-2">
             <SelectField
               id="profile-language-select"
               label="Preferred language"
@@ -528,27 +579,30 @@ export default function ProfilePage() {
               ]}
               hint="Changing language updates screen reader pronunciation and interface text."
             />
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </section>
 
       {/* SECTION 4: Alerts */}
       <section aria-labelledby="heading-alerts" className="space-y-6">
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <Bell className="w-6 h-6 text-emerald-400" aria-hidden="true" />
-              <h2 id="heading-alerts" className="text-2xl font-bold text-white">
+        <div className="p-6 sm:p-8 bg-slate-900 border border-slate-800 rounded-3xl space-y-6 shadow-xl">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-slate-800 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0 shadow-sm">
+              <Bell className="w-5 h-5 text-emerald-400" aria-hidden="true" />
+            </div>
+            <div>
+              <h2 id="heading-alerts" className="text-xl sm:text-2xl font-bold text-white tracking-tight">
                 Alerts
               </h2>
+              <p className="text-xs sm:text-sm text-slate-300 mt-0.5">
+                Set up job search alerts to receive notifications when verified accessible jobs match your interests.
+              </p>
             </div>
-            <CardDescription>
-              Set up job search alerts to receive notifications when verified accessible jobs match your interests.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-8">
+          </div>
+
+          <div className="space-y-8 pt-2">
             {/* Form to add a new alert */}
-            <form onSubmit={handleAddAlert} noValidate className="p-5 bg-slate-950/70 border border-slate-800 rounded-2xl space-y-4">
+            <form onSubmit={handleAddAlert} noValidate className="p-5 sm:p-6 bg-slate-950/80 border border-slate-800 rounded-2xl space-y-4">
               <h3 id="heading-add-alert" className="text-lg font-bold text-white">
                 Add a job alert
               </h3>
@@ -628,7 +682,7 @@ export default function ProfilePage() {
                   {subscriptions.map((sub) => (
                     <li
                       key={sub.id}
-                      className="p-4 bg-slate-950 border border-slate-800 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+                      className="p-4 bg-slate-950 border border-slate-800 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 hover:border-slate-700 transition-colors"
                     >
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
@@ -691,25 +745,28 @@ export default function ProfilePage() {
                 </ul>
               )}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </section>
 
       {/* SECTION 5: Telegram */}
       <section aria-labelledby="heading-telegram" className="space-y-6">
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <Send className="w-6 h-6 text-emerald-400" aria-hidden="true" />
-              <h2 id="heading-telegram" className="text-2xl font-bold text-white">
+        <div className="p-6 sm:p-8 bg-slate-900 border border-slate-800 rounded-3xl space-y-6 shadow-xl">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-slate-800 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0 shadow-sm">
+              <Send className="w-5 h-5 text-emerald-400" aria-hidden="true" />
+            </div>
+            <div>
+              <h2 id="heading-telegram" className="text-xl sm:text-2xl font-bold text-white tracking-tight">
                 Telegram
               </h2>
+              <p className="text-xs sm:text-sm text-slate-300 mt-0.5">
+                Connect your account to the Ableway Telegram bot for mobile job alerts and learning support.
+              </p>
             </div>
-            <CardDescription>
-              Connect your account to the Ableway Telegram bot for mobile job alerts and learning support.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
+          </div>
+
+          <div className="space-y-6 pt-2">
             {/* Plain language explanation: what it allows and what it does not */}
             <div className="p-5 bg-slate-950/80 border border-slate-800 rounded-2xl space-y-4 text-sm leading-relaxed">
               <div className="space-y-2">
@@ -776,7 +833,7 @@ export default function ProfilePage() {
                     </div>
 
                     {/* Large text code display */}
-                    <div className="p-6 bg-slate-900 border border-slate-700 rounded-2xl text-center space-y-3">
+                    <div className="p-6 bg-slate-900 border border-slate-700 rounded-2xl text-center space-y-3 shadow-inner">
                       <span className="block text-xs uppercase tracking-widest font-bold text-emerald-400">
                         Your one-time linking code:
                       </span>
@@ -833,7 +890,7 @@ export default function ProfilePage() {
                         <span>Make a new code</span>
                       </Button>
 
-                      {/* Hidden simulator button for automated tests & demos */}
+                      {/* Simulator button for automated tests & demos */}
                       <button
                         type="button"
                         onClick={handleSimulateLinkConnected}
@@ -848,7 +905,7 @@ export default function ProfilePage() {
               </div>
             ) : (
               /* LINKED STATE */
-              <div className="p-6 bg-emerald-950/60 border border-emerald-600 rounded-3xl space-y-4">
+              <div className="p-6 bg-emerald-950/60 border-2 border-emerald-600 rounded-3xl space-y-4 shadow-sm">
                 <div className="flex items-center gap-3 text-emerald-300 font-bold text-lg">
                   <CheckCircle2 className="w-6 h-6 text-emerald-400" aria-hidden="true" />
                   <span>Status: Connected</span>
@@ -871,25 +928,28 @@ export default function ProfilePage() {
                 </div>
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </section>
 
       {/* SECTION 6: Privacy and data */}
       <section aria-labelledby="heading-privacy-data" className="space-y-6">
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <Shield className="w-6 h-6 text-emerald-400" aria-hidden="true" />
-              <h2 id="heading-privacy-data" className="text-2xl font-bold text-white">
+        <div className="p-6 sm:p-8 bg-slate-900 border border-slate-800 rounded-3xl space-y-6 shadow-xl">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-slate-800 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0 shadow-sm">
+              <Shield className="w-5 h-5 text-emerald-400" aria-hidden="true" />
+            </div>
+            <div>
+              <h2 id="heading-privacy-data" className="text-xl sm:text-2xl font-bold text-white tracking-tight">
                 Privacy and data
               </h2>
+              <p className="text-xs sm:text-sm text-slate-300 mt-0.5">
+                Export a complete copy of your personal data or permanently remove your account from our platform.
+              </p>
             </div>
-            <CardDescription>
-              Export a complete copy of your personal data or permanently remove your account from our platform.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
+          </div>
+
+          <div className="space-y-6 pt-2">
             <p className="text-sm text-slate-300 leading-relaxed">
               We respect your right to privacy and ownership of your personal information. You can download your data at any time or request account erasure.
             </p>
@@ -917,8 +977,8 @@ export default function ProfilePage() {
                 <span>Delete my account</span>
               </Button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </section>
 
       {/* CONFIRMATION DIALOG: Unlink Telegram */}
