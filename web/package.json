@@ -18,7 +18,8 @@
     "db:migrate": "tsx --conditions=react-server scripts/migrate.ts",
     "db:seed": "tsx --conditions=react-server scripts/seed.ts",
     "db:studio": "drizzle-kit studio",
-    "speech:smoke": "tsx --conditions=react-server scripts/speech-smoke.ts"
+    "speech:smoke": "tsx --conditions=react-server scripts/speech-smoke.ts",
+    "eval:assistant": "tsx --conditions=react-server scripts/run-assistant-eval.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.2.0",
