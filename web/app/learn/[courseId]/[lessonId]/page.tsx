@@ -131,7 +131,7 @@ export default function LessonDetailPage() {
           <div className="space-y-1">
             <h3 className="font-semibold text-white">Unclear about any concept?</h3>
             <p className="text-slate-300 text-sm">
-              The AI tutor is grounded in this lesson's transcript and ready to explain by voice.
+              The AI tutor is grounded in this lesson&apos;s transcript and ready to explain by voice.
             </p>
           </div>
           <Link

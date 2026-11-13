@@ -8,7 +8,7 @@ import { speechSynthesizer } from "../audio/speech-synthesis";
 const DEFAULT_PREFERENCES: AccessibilityPreferences = {
   interactionMode: "voice-first",
   suppressInAppTTS: false,
-  speechRate: 1.0,
+  speechRate: 0.82, // Slower, clearer speech rate for accessibility
   speechPitch: 1.0,
   speechVolume: 1.0,
   selectedVoice: null,
@@ -36,6 +36,7 @@ interface A11yContextType {
   decreaseSpeechRate: () => void;
   language: string;
   setLanguage: (lang: string) => void;
+  toggleLanguage: () => void;
   reducedMotion: boolean;
   setReducedMotion: (reduced: boolean) => void;
   selectedVoice: string | null;
@@ -53,23 +54,20 @@ const A11yContext = createContext<A11yContextType | undefined>(undefined);
 
 export function A11yProvider({ children }: { children: React.ReactNode }) {
   const [preferences, setPreferences] = useState<AccessibilityPreferences>(DEFAULT_PREFERENCES);
+  const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [lastAnnouncement, setLastAnnouncement] = useState<string | null>(null);
   const [assertiveAnnouncement, setAssertiveAnnouncement] = useState<string | null>(null);
-  const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
 
-  // Load available speech voices in browser
+  // Load available speech synthesis voices
   useEffect(() => {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
-
-    const loadVoices = () => {
-      const voices = window.speechSynthesis.getVoices();
-      if (voices.length > 0) {
-        setAvailableVoices(voices);
-      }
+    const updateVoices = () => {
+      const voices = speechSynthesizer.getVoices();
+      setAvailableVoices(voices);
     };
-
-    loadVoices();
-    window.speechSynthesis.onvoiceschanged = loadVoices;
+    updateVoices();
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.onvoiceschanged = updateVoices;
+    }
   }, []);
 
   // Load stored preferences after hydration
@@ -77,7 +75,6 @@ export function A11yProvider({ children }: { children: React.ReactNode }) {
     try {
       const stored = localStorage.getItem("ableway_a11y_preferences");
       if (stored) {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         setPreferences((prev) => ({ ...prev, ...JSON.parse(stored) }));
       }
     } catch {
@@ -155,10 +152,6 @@ export function A11yProvider({ children }: { children: React.ReactNode }) {
     saveSettings({ speechRate: clamped });
   }, [saveSettings]);
 
-  const setLanguage = useCallback((lang: string) => {
-    saveSettings({ language: lang });
-  }, [saveSettings]);
-
   const setReducedMotion = useCallback((reduced: boolean) => {
     saveSettings({ reducedMotion: reduced });
   }, [saveSettings]);
@@ -190,6 +183,28 @@ export function A11yProvider({ children }: { children: React.ReactNode }) {
       setLastAnnouncement(message);
     }
   }, []);
+
+  const setLanguage = useCallback((lang: string) => {
+    saveSettings({ language: lang });
+    if (typeof document !== "undefined") {
+      document.documentElement.lang = lang === 'am-ET' ? 'am' : 'en';
+    }
+    const msg = lang === 'am-ET' ? 'ቋንቋ ወደ አማርኛ ተቀይሯል።' : 'Language set to English.';
+    setLastAnnouncement(msg);
+  }, [saveSettings]);
+
+  const toggleLanguage = useCallback(() => {
+    setPreferences((prev) => {
+      const nextLang = prev.language === 'am-ET' ? 'en-US' : 'am-ET';
+      if (typeof document !== "undefined") {
+        document.documentElement.lang = nextLang === 'am-ET' ? 'am' : 'en';
+      }
+      const msg = nextLang === 'am-ET' ? 'ቋንቋ ወደ አማርኛ ተቀይሯል።' : 'Language set to English.';
+      setLastAnnouncement(msg);
+      saveSettings({ language: nextLang });
+      return { ...prev, language: nextLang };
+    });
+  }, [saveSettings]);
 
   const speak = useCallback(
     async (text: string, force: boolean = false) => {
@@ -232,6 +247,7 @@ export function A11yProvider({ children }: { children: React.ReactNode }) {
         decreaseSpeechRate,
         language: preferences.language,
         setLanguage,
+        toggleLanguage,
         reducedMotion: preferences.reducedMotion,
         setReducedMotion,
         selectedVoice: preferences.selectedVoice,

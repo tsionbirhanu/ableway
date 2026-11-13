@@ -33,7 +33,7 @@ class SpeechSynthesisManager {
       this.stop();
 
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = options.rate ?? 1.0;
+      utterance.rate = options.rate ?? 0.82;
       utterance.pitch = options.pitch ?? 1.0;
       utterance.volume = options.volume ?? 1.0;
       utterance.lang = options.lang ?? "en-US";

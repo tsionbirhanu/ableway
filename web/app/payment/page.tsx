@@ -108,14 +108,14 @@ function PaymentContent() {
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {[
-                { id: 'phone', label: '1. Direct Phone Call' },
-                { id: 'telegram', label: '2. Telegram Message' },
-                { id: 'web', label: '3. In-Page Web Chat' },
+                { id: 'phone' as const, label: '1. Direct Phone Call' },
+                { id: 'telegram' as const, label: '2. Telegram Message' },
+                { id: 'web' as const, label: '3. In-Page Web Chat' },
               ].map((opt) => (
                 <button
                   key={opt.id}
                   type="button"
-                  onClick={() => setChannelPreference(opt.id as any)}
+                  onClick={() => setChannelPreference(opt.id)}
                   className={`p-3 rounded-xl border text-sm font-bold min-h-[44px] transition-all ${
                     channelPreference === opt.id
                       ? 'bg-emerald-700 border-emerald-400 text-white'
