@@ -129,6 +129,38 @@ export const profiles = pgTable(
   ],
 );
 
+/**
+ * Password hashes live in their own table, so no query on profiles can
+ * ever return one by accident. One row per profile.
+ */
+export const passwordCredentials = pgTable("password_credentials", {
+  ...baseColumns,
+  profileId: uuid("profile_id")
+    .notNull()
+    .unique()
+    .references(() => profiles.id, { onDelete: "cascade" }),
+  /** Self-describing scrypt hash: scrypt$N$r$p$salt$hash (base64url). */
+  passwordHash: text("password_hash").notNull(),
+});
+
+/**
+ * Fixed-window counters for rate limiting (sign-in, sign-up, help requests).
+ * Keys hold a hash of the email, never the email itself.
+ */
+export const rateLimits = pgTable(
+  "rate_limits",
+  {
+    ...baseColumns,
+    key: text("key").notNull(),
+    windowStart: timestamp("window_start", { withTimezone: true }).notNull(),
+    count: integer("count").notNull().default(0),
+  },
+  (t) => [
+    uniqueIndex("rate_limits_key_window_key").on(t.key, t.windowStart),
+    index("rate_limits_window_start_idx").on(t.windowStart),
+  ],
+);
+
 // =====================================================================
 // Courses and content
 // =====================================================================
@@ -546,6 +578,8 @@ export const auditLog = pgTable(
 /** Every table, in dependency order. Used by tests and the updated_at trigger check. */
 export const allTables = {
   profiles,
+  passwordCredentials,
+  rateLimits,
   courses,
   modules,
   lessons,

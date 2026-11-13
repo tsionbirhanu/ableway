@@ -17,7 +17,9 @@ if (file && !existsSync(file)) {
   process.exit(1);
 }
 const loaded = loadEnvFiles(file ? [file] : undefined);
-console.log(loaded.length ? `Read: ${loaded.join(", ")}` : "No env file found. Using shell variables.");
+console.log(
+  loaded.length ? `Read: ${loaded.join(", ")}` : "No env file found. Using shell variables.",
+);
 
 try {
   parseEnv(process.env);

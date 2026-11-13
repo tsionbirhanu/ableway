@@ -2,6 +2,7 @@
   --background: #ffffff;
   --foreground: #111111;
   --focus: #1a56db;
+  --error: #b00020;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -9,6 +10,7 @@
     --background: #0a0a0a;
     --foreground: #f2f2f2;
     --focus: #8ab4ff;
+    --error: #ff8a8a;
   }
 }
 
@@ -58,4 +60,84 @@ main {
     animation: none !important;
     transition: none !important;
   }
+}
+
+/* ---------- Forms ---------- */
+
+.field {
+  margin: 0 0 1.25rem;
+}
+
+.field label {
+  display: block;
+  font-weight: 600;
+}
+
+.field input:not([type="checkbox"]) {
+  display: block;
+  width: 100%;
+  max-width: 28rem;
+  padding: 0.6rem 0.75rem;
+  font: inherit;
+  color: var(--foreground);
+  background: var(--background);
+  border: 2px solid currentColor;
+  border-radius: 4px;
+}
+
+.field input[aria-invalid="true"] {
+  border-color: var(--error);
+  border-width: 3px;
+}
+
+.field-checkbox {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.field-checkbox input {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.field-hint {
+  margin: 0.25rem 0;
+}
+
+.field-error {
+  margin: 0.25rem 0;
+  color: var(--error);
+  font-weight: 600;
+}
+
+.error-summary {
+  margin: 0 0 1.5rem;
+  padding: 1rem;
+  border: 3px solid var(--error);
+}
+
+.error-summary h2 {
+  margin-top: 0;
+  font-size: 1.25rem;
+}
+
+.error-summary a {
+  color: var(--error);
+}
+
+button {
+  min-height: 2.75rem;
+  padding: 0.6rem 1.25rem;
+  font: inherit;
+  font-weight: 600;
+  color: var(--background);
+  background: var(--foreground);
+  border: 2px solid var(--foreground);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+button[aria-disabled="true"] {
+  opacity: 0.7;
 }

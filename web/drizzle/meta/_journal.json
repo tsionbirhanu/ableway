@@ -22,6 +22,20 @@
       "when": 1794570787664,
       "tag": "0002_updated_at_triggers",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1794573011473,
+      "tag": "0003_auth_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794573021579,
+      "tag": "0004_auth_tables_triggers",
+      "breakpoints": true
     }
   ]
 }

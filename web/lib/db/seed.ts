@@ -1,5 +1,5 @@
 import { and, eq } from "drizzle-orm";
-import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
+import type { Db, Tx } from "./types";
 import {
   emptyProgress,
   enrollmentProgressSchema,
@@ -10,8 +10,7 @@ import * as schema from "./schema";
 import { SEED_CURRENCY, seedCourses, seedJobs, seedProfiles, type SeedCourse } from "./seed-data";
 
 /** Any Drizzle Postgres database built with our schema (Neon, PGlite, node-postgres). */
-export type SeedDb = PgDatabase<PgQueryResultHKT, typeof schema>;
-type Tx = Parameters<Parameters<SeedDb["transaction"]>[0]>[0];
+export type SeedDb = Db;
 
 export type SeedSummary = {
   profilesCreated: number;

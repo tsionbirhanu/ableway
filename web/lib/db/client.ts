@@ -4,14 +4,15 @@ import { drizzle, type NeonDatabase } from "drizzle-orm/neon-serverless";
 import { getEnv } from "@/lib/env";
 import * as schema from "./schema";
 
-export type Db = NeonDatabase<typeof schema>;
+export type { Db } from "./types";
+import type { Db } from "./types";
 
 /**
  * Neon over WebSockets. Unlike the HTTP driver, this supports interactive
  * transactions, which payments and enrollments need.
  * Node 22+ has a global WebSocket, so no extra setup is needed.
  */
-export function createDb(databaseUrl: string): { db: Db; pool: Pool } {
+export function createDb(databaseUrl: string): { db: NeonDatabase<typeof schema>; pool: Pool } {
   const pool = new Pool({ connectionString: databaseUrl });
   return { db: drizzle({ client: pool, schema }), pool };
 }
