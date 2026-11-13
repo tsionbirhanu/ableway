@@ -1,117 +1,95 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Sparkles, BookOpen, GraduationCap, CreditCard, User, HelpCircle, Layers, ShieldCheck, Settings, Globe } from 'lucide-react';
 import { useA11y } from '@/lib/a11y/a11y-context';
-import { QuickSettingsDialog } from '@/components/a11y/quick-settings-dialog';
+import { getTranslation } from '@/lib/i18n/translations';
 
 export function AccessibleHeader() {
   const pathname = usePathname();
-  const { language, setLanguage, announce } = useA11y();
-  const [isQuickSettingsOpen, setIsQuickSettingsOpen] = useState(false);
-  const settingsTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const { language } = useA11y();
 
-  const navLinks = [
-    { href: '/', label: 'Hub', icon: Layers },
-    { href: '/register', label: 'Register', icon: Sparkles },
-    { href: '/courses', label: 'Courses', icon: BookOpen },
-    { href: '/payment', label: 'Payment', icon: CreditCard },
-    { href: '/learn', label: 'Learn', icon: GraduationCap },
-    { href: '/profile', label: 'Profile', icon: User },
-    { href: '/staff/help-queue', label: 'Staff Queue', icon: ShieldCheck },
-  ];
+  const t = getTranslation(language);
+
+  const isHomeActive = pathname === '/';
+  const isCoursesActive = pathname === '/courses';
+  const isLoginActive = pathname === '/login' || pathname === '/sign-in';
 
   return (
-    <header className="sticky top-0 z-40 bg-slate-900 border-b border-slate-800 text-slate-100 shadow-sm" role="banner">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
-        {/* 1. Logo */}
+    <header
+      className="sticky top-0 z-50 bg-[#0B132B]/80 backdrop-blur-md border-b border-white/10 shadow-sm transition-all"
+      role="banner"
+    >
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        {/* Brand: alx | Ableway */}
         <div className="flex items-center gap-3">
           <Link
             href="/"
-            className="flex items-center gap-2 text-lg font-bold text-emerald-400 hover:text-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-400 rounded min-h-[44px] px-2"
+            className="flex items-center gap-2.5 focus:outline-none focus:ring-2 focus:ring-orange-400 rounded-lg px-1.5 py-1 min-h-[44px]"
+            aria-label="Ableway homepage"
           >
-            <span className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-black" aria-hidden="true">A</span>
-            <span>Ableway</span>
+            <span className="text-2xl font-black tracking-tight text-white font-sans">
+              al<span className="text-orange-400">x</span>
+            </span>
+            <span className="text-slate-400 font-light text-base" aria-hidden="true">|</span>
+            <span className="font-bold text-white tracking-tight text-base">Ableway</span>
           </Link>
+          <span className="hidden sm:inline-block text-[11px] bg-white/10 text-orange-300 px-2.5 py-0.5 rounded-full font-medium backdrop-blur-sm">
+            {t.nav?.accessibleLearning || 'Accessible Learning'}
+          </span>
         </div>
 
-        {/* 2. Main Navigation */}
-        <nav aria-label="Main Navigation" className="hidden lg:flex items-center space-x-1">
-          {navLinks.map((link) => {
-            const isActive = pathname === link.href;
-            const Icon = link.icon;
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold min-h-[44px] transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-400 ${
-                  isActive
-                    ? 'bg-emerald-700 text-white'
-                    : 'text-slate-200 hover:text-white hover:bg-slate-800'
-                }`}
-                aria-current={isActive ? 'page' : undefined}
-              >
-                <Icon className="w-4 h-4 shrink-0" aria-hidden="true" />
-                <span>{link.label}</span>
-              </Link>
-            );
-          })}
+        {/* Navigation Links: Home, Courses, About, Support */}
+        <nav aria-label="Main Navigation" className="hidden md:flex items-center space-x-6 text-sm font-semibold">
+          <Link
+            href="/"
+            className={`${
+              isHomeActive ? 'text-orange-400' : 'text-slate-200 hover:text-white'
+            } transition-colors min-h-[44px] flex items-center focus:outline-none focus:ring-2 focus:ring-orange-400 rounded-lg px-2`}
+            aria-current={isHomeActive ? 'page' : undefined}
+          >
+            {t.nav?.home || 'Home'}
+          </Link>
+          <Link
+            href="/courses"
+            className={`${
+              isCoursesActive ? 'text-orange-400' : 'text-slate-200 hover:text-white'
+            } transition-colors min-h-[44px] flex items-center focus:outline-none focus:ring-2 focus:ring-orange-400 rounded-lg px-2`}
+            aria-current={isCoursesActive ? 'page' : undefined}
+          >
+            {t.nav?.courses || 'Courses'}
+          </Link>
+          <Link
+            href="/#about"
+            className="text-slate-200 hover:text-white transition-colors min-h-[44px] flex items-center focus:outline-none focus:ring-2 focus:ring-orange-400 rounded-lg px-2"
+          >
+            {t.nav?.about || 'About'}
+          </Link>
+          <Link
+            href="/payment#human-help"
+            className="text-slate-200 hover:text-white transition-colors min-h-[44px] flex items-center focus:outline-none focus:ring-2 focus:ring-orange-400 rounded-lg px-2"
+          >
+            {t.nav?.support || 'Support'}
+          </Link>
         </nav>
 
-        {/* Controls: Language Switcher, Settings, and "Get Help" Link */}
-        <div className="flex items-center gap-2">
-          {/* 3. Language Switcher */}
-          <div className="flex items-center gap-1">
-            <Globe className="w-4 h-4 text-slate-400 hidden sm:inline" aria-hidden="true" />
-            <label htmlFor="header-language-select" className="sr-only">Switch Language</label>
-            <select
-              id="header-language-select"
-              value={language}
-              onChange={(e) => {
-                setLanguage(e.target.value);
-                announce(`Language changed to ${e.target.value}`);
-              }}
-              className="bg-slate-800 border border-slate-700 text-xs text-slate-100 rounded-lg px-2 py-1.5 min-h-[44px] focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            >
-              <option value="en">English (EN)</option>
-              <option value="am">አማርኛ (AM)</option>
-              <option value="om">Afaan Oromoo (OM)</option>
-            </select>
-          </div>
-
-          {/* 4. Settings Trigger */}
-          <button
-            ref={settingsTriggerRef}
-            type="button"
-            onClick={() => setIsQuickSettingsOpen(true)}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-lg text-xs font-semibold min-h-[44px] border border-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-400"
-            aria-label="Open Quick Accessibility Settings Dialog (Alt+Shift+S)"
-            aria-haspopup="dialog"
-          >
-            <Settings className="w-4 h-4 text-emerald-400" aria-hidden="true" />
-            <span className="hidden sm:inline">Settings</span>
-          </button>
-
-          {/* 5. "Get Help" Link (Rule 3: Same place on every page) */}
+        {/* Right Side: ONLY the Login Button (no stroke, polished glass aesthetic) */}
+        <div className="flex items-center">
           <Link
-            href="/help"
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold min-h-[44px] shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
-            title="Get Help & Keyboard Shortcuts"
+            href="/login"
+            id="top-nav-login"
+            className={`min-h-[44px] px-5 py-2 rounded-xl font-bold text-sm transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-400 flex items-center justify-center cursor-pointer ${
+              isLoginActive
+                ? 'bg-orange-500 text-white shadow-orange-500/20'
+                : 'bg-orange-500 hover:bg-orange-400 text-white hover:shadow-md'
+            }`}
+            aria-current={isLoginActive ? 'page' : undefined}
           >
-            <HelpCircle className="w-4 h-4" aria-hidden="true" />
-            <span>Get help</span>
+            <span>{t.nav?.login || 'Login'}</span>
           </Link>
         </div>
       </div>
-
-      {/* Quick Settings Dialog */}
-      <QuickSettingsDialog
-        isOpen={isQuickSettingsOpen}
-        onClose={() => setIsQuickSettingsOpen(false)}
-        triggerRef={settingsTriggerRef}
-      />
     </header>
   );
 }

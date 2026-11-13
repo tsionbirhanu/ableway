@@ -130,10 +130,10 @@ export function QuickSettingsDialog({ isOpen, onClose, triggerRef }: QuickSettin
                     setMode(m.id as any);
                     announce(`Mode switched to ${m.label}.`);
                   }}
-                  className={`p-3 rounded-xl text-xs font-bold border min-h-[44px] transition-colors ${
+                  className={`p-3 rounded-xl text-xs font-bold min-h-[44px] transition-colors ${
                     mode === m.id
-                      ? 'bg-emerald-700 border-emerald-400 text-white'
-                      : 'bg-slate-950 border-slate-700 text-slate-200 hover:border-slate-600'
+                      ? 'bg-orange-500 text-white shadow-sm'
+                      : 'bg-slate-800 text-slate-200 hover:bg-slate-700'
                   }`}
                   aria-pressed={mode === m.id}
                 >
@@ -270,7 +270,7 @@ export function QuickSettingsDialog({ isOpen, onClose, triggerRef }: QuickSettin
           <button
             type="button"
             onClick={onClose}
-            className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-2xl min-h-[48px] flex items-center justify-center text-sm shadow-md"
+            className="w-full py-3.5 bg-orange-500 hover:bg-orange-400 text-white font-bold rounded-xl min-h-[48px] flex items-center justify-center text-sm shadow-md transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
           >
             Done & Apply Settings
           </button>

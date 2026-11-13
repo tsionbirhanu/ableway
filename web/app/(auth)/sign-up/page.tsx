@@ -1,15 +1,5 @@
-import type { Metadata } from "next";
-import { signUpAction } from "../actions";
-import { PasswordForm } from "../password-form";
-
-export const metadata: Metadata = { title: "Create an account - Ableway" };
+import { redirect } from 'next/navigation';
 
 export default function SignUpPage() {
-  return (
-    <div className="page">
-      <h1>Create an account</h1>
-      <p>It takes about one minute. You need an email address.</p>
-      <PasswordForm mode="sign-up" action={signUpAction} />
-    </div>
-  );
+  redirect('/register');
 }
