@@ -3,30 +3,32 @@
 import React, { useState, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Sparkles, BookOpen, GraduationCap, CreditCard, User, HelpCircle, Layers, ShieldCheck, Settings, Globe } from 'lucide-react';
+import { User, Sparkles, Globe, Settings } from 'lucide-react';
 import { useA11y } from '@/lib/a11y/a11y-context';
+import { getTranslation } from '@/lib/i18n/translations';
 import { QuickSettingsDialog } from '@/components/a11y/quick-settings-dialog';
 
 export function AccessibleHeader() {
   const pathname = usePathname();
-  const { language, setLanguage, announce } = useA11y();
+  const { language, toggleLanguage } = useA11y();
   const [isQuickSettingsOpen, setIsQuickSettingsOpen] = useState(false);
   const settingsTriggerRef = useRef<HTMLButtonElement | null>(null);
 
-  const navLinks = [
-    { href: '/', label: 'Home', icon: Layers },
-    { href: '/courses', label: 'Courses', icon: BookOpen },
-    { href: '/learn', label: 'Learn', icon: GraduationCap },
-    { href: '/payment', label: 'Payment', icon: CreditCard },
-    { href: '/login', label: 'Sign In', icon: User },
-    { href: '/register', label: 'Register', icon: Sparkles },
-    { href: '/staff/help-queue', label: 'Staff Queue', icon: ShieldCheck },
-  ];
+  const t = getTranslation(language);
+  const isAmharic = language === 'am-ET' || language === 'am';
+
+  const isHomeActive = pathname === '/';
+  const isCoursesActive = pathname === '/courses';
+  const isLoginActive = pathname === '/login';
+  const isRegisterActive = pathname === '/register';
 
   return (
-    <header className="sticky top-0 z-40 bg-slate-900 border-b border-slate-800 text-slate-100 shadow-sm" role="banner">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
-        {/* 1. Logo */}
+    <header
+      className="sticky top-0 z-40 bg-[#0B132B] text-white border-b border-slate-800 shadow-md"
+      role="banner"
+    >
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        {/* Brand: alx | Ableway */}
         <div className="flex items-center gap-3">
           <Link
             href="/"
@@ -39,75 +41,99 @@ export function AccessibleHeader() {
             <span className="font-bold text-white tracking-tight text-base">Ableway</span>
           </Link>
           <span className="hidden sm:inline-block text-[11px] bg-slate-800 text-orange-300 border border-slate-700 px-2 py-0.5 rounded-full font-medium">
-            Accessible Learning
+            {t.nav?.accessibleLearning || 'Accessible Learning'}
           </span>
         </div>
 
-        {/* 2. Main Navigation */}
-        <nav aria-label="Main Navigation" className="hidden lg:flex items-center space-x-1">
-          {navLinks.map((link) => {
-            const isActive = pathname === link.href;
-            const Icon = link.icon;
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold min-h-[44px] transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-400 ${
-                  isActive
-                    ? 'bg-emerald-700 text-white'
-                    : 'text-slate-200 hover:text-white hover:bg-slate-800'
-                }`}
-                aria-current={isActive ? 'page' : undefined}
-              >
-                <Icon className="w-4 h-4 shrink-0" aria-hidden="true" />
-                <span>{link.label}</span>
-              </Link>
-            );
-          })}
+        {/* Necessary Links Only: Home, Courses, About, Support */}
+        <nav aria-label="Main Navigation" className="hidden md:flex items-center space-x-6 text-sm font-semibold">
+          <Link
+            href="/"
+            className={`${
+              isHomeActive ? 'text-orange-400' : 'text-slate-200 hover:text-white'
+            } transition-colors min-h-[44px] flex items-center focus:outline-none focus:ring-2 focus:ring-orange-400 rounded px-1`}
+            aria-current={isHomeActive ? 'page' : undefined}
+          >
+            {t.nav?.home || 'Home'}
+          </Link>
+          <Link
+            href="/courses"
+            className={`${
+              isCoursesActive ? 'text-orange-400' : 'text-slate-200 hover:text-white'
+            } transition-colors min-h-[44px] flex items-center focus:outline-none focus:ring-2 focus:ring-orange-400 rounded px-1`}
+            aria-current={isCoursesActive ? 'page' : undefined}
+          >
+            {t.nav?.courses || 'Courses'}
+          </Link>
+          <Link
+            href="/#about"
+            className="text-slate-200 hover:text-white transition-colors min-h-[44px] flex items-center focus:outline-none focus:ring-2 focus:ring-orange-400 rounded px-1"
+          >
+            {t.nav?.about || 'About'}
+          </Link>
+          <Link
+            href="/payment#human-help"
+            className="text-slate-200 hover:text-white transition-colors min-h-[44px] flex items-center focus:outline-none focus:ring-2 focus:ring-orange-400 rounded px-1"
+          >
+            {t.nav?.support || 'Support'}
+          </Link>
         </nav>
 
-        {/* Controls: Language Switcher, Settings, and "Get Help" Link */}
-        <div className="flex items-center gap-2">
-          {/* 3. Language Switcher */}
-          <div className="flex items-center gap-1">
-            <Globe className="w-4 h-4 text-slate-400 hidden sm:inline" aria-hidden="true" />
-            <label htmlFor="header-language-select" className="sr-only">Switch Language</label>
-            <select
-              id="header-language-select"
-              value={language}
-              onChange={(e) => {
-                setLanguage(e.target.value);
-                announce(`Language changed to ${e.target.value}`);
-              }}
-              className="bg-slate-800 border border-slate-700 text-xs text-slate-100 rounded-lg px-2 py-1.5 min-h-[44px] focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            >
-              <option value="en">English (EN)</option>
-              <option value="am">አማርኛ (AM)</option>
-              <option value="om">Afaan Oromoo (OM)</option>
-            </select>
-          </div>
-
-          {/* 4. Settings Trigger */}
+        {/* Action Buttons: Quick Settings + Language Switch + Login + Register */}
+        <div className="flex items-center gap-2 sm:gap-2.5">
+          {/* Quick Settings Dialog Trigger */}
           <button
             ref={settingsTriggerRef}
             type="button"
             onClick={() => setIsQuickSettingsOpen(true)}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-lg text-xs font-semibold min-h-[44px] border border-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+            className="p-2 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white rounded-lg text-xs font-semibold min-h-[44px] min-w-[44px] flex items-center justify-center border border-slate-700 focus:outline-none focus:ring-2 focus:ring-orange-400 cursor-pointer"
             aria-label="Open Quick Accessibility Settings Dialog (Alt+Shift+S)"
             aria-haspopup="dialog"
           >
-            <Settings className="w-4 h-4 text-emerald-400" aria-hidden="true" />
-            <span className="hidden sm:inline">Settings</span>
+            <Settings className="w-4 h-4 text-orange-400" aria-hidden="true" />
           </button>
 
-          {/* 5. "Get Help" Link (Rule 3: Same place on every page) */}
-          <Link
-            href="/help"
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold min-h-[44px] shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
-            title="Get Help & Keyboard Shortcuts"
+          {/* Language Switch Button */}
+          <button
+            type="button"
+            onClick={toggleLanguage}
+            id="top-nav-lang-toggle"
+            aria-label={`${isAmharic ? 'አማ (AM)' : 'EN (US)'}: Switch language / ቋንቋ ቀይር`}
+            title={isAmharic ? 'Switch to English' : 'ወደ አማርኛ ቀይር'}
+            className="px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg font-bold text-xs border border-orange-500/80 bg-slate-900 hover:bg-slate-800 text-orange-400 hover:text-orange-300 flex items-center gap-1.5 min-h-[44px] focus:outline-none focus:ring-2 focus:ring-orange-400 transition-colors cursor-pointer"
           >
-            <HelpCircle className="w-4 h-4" aria-hidden="true" />
-            <span>Get help</span>
+            <Globe className="w-3.5 h-3.5 text-orange-400" aria-hidden="true" />
+            <span>{isAmharic ? 'አማ (AM)' : 'EN (US)'}</span>
+          </button>
+
+          {/* Login Button */}
+          <Link
+            href="/login"
+            id="top-nav-login"
+            className={`px-3 sm:px-4 py-2 rounded-lg font-bold text-xs sm:text-sm border transition-all min-h-[44px] focus:outline-none focus:ring-2 focus:ring-orange-400 flex items-center gap-1.5 ${
+              isLoginActive
+                ? 'bg-[#0B132B] text-orange-400 border-2 border-orange-500 shadow-md ring-1 ring-orange-400/40'
+                : 'bg-slate-900 hover:bg-slate-800 text-orange-400 hover:text-orange-300 border border-orange-500/70 shadow-sm'
+            }`}
+            aria-current={isLoginActive ? 'page' : undefined}
+          >
+            <User className="w-3.5 h-3.5 text-orange-400" aria-hidden="true" />
+            <span>{t.nav?.login || 'Login'}</span>
+          </Link>
+
+          {/* Register Button */}
+          <Link
+            href="/register"
+            id="top-nav-register"
+            className={`px-3 sm:px-4 py-2 rounded-lg font-bold text-xs sm:text-sm border transition-all min-h-[44px] focus:outline-none focus:ring-2 focus:ring-orange-400 flex items-center gap-1.5 ${
+              isRegisterActive
+                ? 'bg-[#0B132B] text-orange-400 border-2 border-orange-500 shadow-md ring-1 ring-orange-400/40'
+                : 'bg-[#0B132B] hover:bg-[#131E3D] text-orange-400 hover:text-orange-300 border-2 border-orange-500 shadow-md'
+            }`}
+            aria-current={isRegisterActive ? 'page' : undefined}
+          >
+            <Sparkles className="w-3.5 h-3.5 text-orange-400" aria-hidden="true" />
+            <span>{t.nav?.register || 'Register'}</span>
           </Link>
         </div>
       </div>
