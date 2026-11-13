@@ -3,6 +3,7 @@
 :root {
   --background: #020617;
   --foreground: #f8fafc;
+  --focus-ring-color: #10b981;
 }
 
 @theme inline {
@@ -12,39 +13,91 @@
   --font-mono: var(--font-geist-mono);
 }
 
-/* WCAG 2.2 AA / AAA Contrast Themes (IR-1.5) */
+/* Rule 6: Visible Focus Indicator (3px outline with 2px offset, never removed) */
+*:focus-visible {
+  outline: 3px solid var(--focus-ring-color) !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 2px #020617 !important;
+}
+
+/* Ensure sticky navigation bar does not obscure focused elements (Rule 6) */
+html {
+  scroll-padding-top: 5.5rem;
+}
+
+/* Rule 10 & 11: Themes (Default, High Contrast, Pure Black, Yellow on Black) */
 html.theme-high-contrast {
-  filter: contrast(1.4) brightness(1.1);
+  --background: #000000;
+  --foreground: #ffffff;
+  --focus-ring-color: #00ff66;
+  background-color: #000000 !important;
+  color: #ffffff !important;
+  filter: contrast(1.5);
 }
 
 html.theme-dark-contrast {
   --background: #000000;
   --foreground: #ffffff;
+  --focus-ring-color: #38bdf8;
   background-color: #000000 !important;
+  color: #ffffff !important;
 }
 
 html.theme-yellow-black {
   --background: #000000;
   --foreground: #ffff00;
+  --focus-ring-color: #ffff00;
   background-color: #000000 !important;
   color: #ffff00 !important;
 }
 
-html.theme-yellow-black * {
-  border-color: #ffff00 !important;
+html.theme-yellow-black *:focus-visible {
+  outline: 3px solid #ffff00 !important;
+  outline-offset: 2px !important;
 }
 
-/* Text Size Scaling (IR-1.5: 400% zoom & large text reflow) */
+/* Rule 11: Text Scaling (up to 200%) */
 html.text-large {
-  font-size: 120%;
+  font-size: 125%;
 }
 
 html.text-x-large {
-  font-size: 140%;
+  font-size: 150%;
 }
 
 html.text-xx-large {
-  font-size: 170%;
+  font-size: 180%;
+}
+
+/* Rule 12: Minimum touch/click target size (44x44px) for interactive controls */
+button,
+a,
+input,
+select,
+textarea {
+  min-height: 44px;
+}
+
+/* Inline links in text content can be inline height */
+p a,
+li a,
+dt a,
+dd a {
+  min-height: auto;
+  display: inline-block;
+  padding: 2px 4px;
+}
+
+/* Rule 13: Respect prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 body {

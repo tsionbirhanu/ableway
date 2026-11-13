@@ -69,8 +69,9 @@ export function A11yProvider({ children }: { children: React.ReactNode }) {
 
     earcons.setEnabled(preferences.earconsEnabled);
 
-    // Apply classes to root element for styling
+    // Apply classes to root element for styling and sync HTML lang (Rule 25)
     const root = document.documentElement;
+    root.setAttribute("lang", preferences.language ? preferences.language.slice(0, 2) : "en");
     root.classList.remove(
       "theme-high-contrast",
       "theme-dark-contrast",
