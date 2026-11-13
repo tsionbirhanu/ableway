@@ -279,3 +279,4 @@ export function QuickSettingsDialog({ isOpen, onClose, triggerRef }: QuickSettin
     </div>
   );
 }
+

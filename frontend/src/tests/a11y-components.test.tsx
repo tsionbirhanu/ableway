@@ -2,8 +2,8 @@ import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { axe } from 'vitest-axe';
-import 'vitest-axe/extend-expect';
-import '@testing-library/jest-dom';
+import '@testing-library/jest-dom/vitest';
+import './vitest-axe.d.ts';
 import {
   Button,
   LinkButton,
@@ -372,7 +372,7 @@ describe('WCAG 2.2 Accessibility & Keyboard Tests for UI Components', () => {
       <Table
         caption="Keyboard Shortcuts Table"
         data={tableData}
-        keyExtractor={row => row.id}
+        keyExtractor={(row: { id: string; key: string; action: string }) => row.id}
         columns={[
           { header: 'Action', accessor: 'action', isRowHeader: true },
           { header: 'Shortcut', accessor: 'key' },
@@ -385,7 +385,7 @@ describe('WCAG 2.2 Accessibility & Keyboard Tests for UI Components', () => {
         <Table
           caption="Shortcuts Summary"
           data={tableData}
-          keyExtractor={row => row.id}
+          keyExtractor={(row: { id: string; key: string; action: string }) => row.id}
           columns={[
             { header: 'Action', accessor: 'action', isRowHeader: true },
             { header: 'Shortcut', accessor: 'key' },
