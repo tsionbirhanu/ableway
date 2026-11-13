@@ -8,7 +8,7 @@ import { speechSynthesizer } from "../audio/speech-synthesis";
 const DEFAULT_PREFERENCES: AccessibilityPreferences = {
   interactionMode: "voice-first",
   suppressInAppTTS: false,
-  speechRate: 1.0,
+  speechRate: 0.82, // Slower, clearer speech rate for accessibility
   speechPitch: 1.0,
   speechVolume: 1.0,
   selectedVoice: null,
@@ -34,6 +34,9 @@ interface A11yContextType {
   setSpeechRate: (rate: number) => void;
   increaseSpeechRate: () => void;
   decreaseSpeechRate: () => void;
+  language: string;
+  setLanguage: (lang: string) => void;
+  toggleLanguage: () => void;
   speak: (text: string, force?: boolean) => Promise<void>;
   stopSpeaking: () => void;
   announce: (message: string, politeness?: "polite" | "assertive") => void;
@@ -43,20 +46,18 @@ interface A11yContextType {
 const A11yContext = createContext<A11yContextType | undefined>(undefined);
 
 export function A11yProvider({ children }: { children: React.ReactNode }) {
-  const [preferences, setPreferences] = useState<AccessibilityPreferences>(DEFAULT_PREFERENCES);
-  const [lastAnnouncement, setLastAnnouncement] = useState<string | null>(null);
-
-  // Load stored preferences after initial hydration
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem("ableway_a11y_preferences");
-      if (stored) {
-        setPreferences((prev) => ({ ...prev, ...JSON.parse(stored) }));
+  const [preferences, setPreferences] = useState<AccessibilityPreferences>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem("ableway_a11y_preferences");
+        if (stored) return { ...DEFAULT_PREFERENCES, ...JSON.parse(stored) };
+      } catch {
+        // Storage unavailable
       }
-    } catch {
-      // Storage unavailable
     }
-  }, []);
+    return DEFAULT_PREFERENCES;
+  });
+  const [lastAnnouncement, setLastAnnouncement] = useState<string | null>(null);
 
   // Sync state to localStorage & document classes
   useEffect(() => {
@@ -128,6 +129,27 @@ export function A11yProvider({ children }: { children: React.ReactNode }) {
     setLastAnnouncement(message);
   }, []);
 
+  const setLanguage = useCallback((lang: string) => {
+    setPreferences((prev) => ({ ...prev, language: lang }));
+    if (typeof document !== "undefined") {
+      document.documentElement.lang = lang === 'am-ET' ? 'am' : 'en';
+    }
+    const msg = lang === 'am-ET' ? 'ቋንቋ ወደ አማርኛ ተቀይሯል።' : 'Language set to English.';
+    setLastAnnouncement(msg);
+  }, []);
+
+  const toggleLanguage = useCallback(() => {
+    setPreferences((prev) => {
+      const nextLang = prev.language === 'am-ET' ? 'en-US' : 'am-ET';
+      if (typeof document !== "undefined") {
+        document.documentElement.lang = nextLang === 'am-ET' ? 'am' : 'en';
+      }
+      const msg = nextLang === 'am-ET' ? 'ቋንቋ ወደ አማርኛ ተቀይሯል።' : 'Language set to English.';
+      setLastAnnouncement(msg);
+      return { ...prev, language: nextLang };
+    });
+  }, []);
+
   const speak = useCallback(
     async (text: string, force: boolean = false) => {
       // If user selected screen reader mode, suppress in-app speech unless forced
@@ -168,6 +190,9 @@ export function A11yProvider({ children }: { children: React.ReactNode }) {
         setSpeechRate,
         increaseSpeechRate,
         decreaseSpeechRate,
+        language: preferences.language,
+        setLanguage,
+        toggleLanguage,
         speak,
         stopSpeaking,
         announce,

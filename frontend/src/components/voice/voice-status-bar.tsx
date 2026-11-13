@@ -34,12 +34,12 @@ export function VoiceStatusBar({ isListening, transcript, error }: VoiceStatusBa
           <span className="text-rose-400 font-medium">{error}</span>
         ) : isListening ? (
           transcript ? (
-            <span className="text-emerald-300 font-medium">"{transcript}"</span>
+            <span className="text-emerald-300 font-medium">&ldquo;{transcript}&rdquo;</span>
           ) : (
-            <span className="text-slate-300">Listening for commands... (e.g. "Help", "Home")</span>
+            <span className="text-slate-300">Listening for commands... (e.g. &ldquo;Help&rdquo;, &ldquo;Home&rdquo;)</span>
           )
         ) : (
-          <span className="text-slate-300">"{transcript}"</span>
+          <span className="text-slate-300">&ldquo;{transcript}&rdquo;</span>
         )}
       </div>
 

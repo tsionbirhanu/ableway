@@ -1,95 +1,113 @@
 'use client';
 
 import React from 'react';
-import Link from 'next/navigation';
+import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Sparkles, BookOpen, GraduationCap, CreditCard, User, HelpCircle, Layers, ShieldCheck } from 'lucide-react';
+import { User, Sparkles, Globe } from 'lucide-react';
 import { useA11y } from '@/core/a11y/a11y-context';
 
 export function AccessibleHeader() {
   const pathname = usePathname();
-  const { mode, theme, setTheme, fontSize, setFontSize } = useA11y();
+  const { language, toggleLanguage } = useA11y();
 
-  const navLinks = [
-    { href: '/', label: 'Savanna Hub', icon: Layers },
-    { href: '/register', label: 'Register', icon: Sparkles },
-    { href: '/courses', label: 'Courses', icon: BookOpen },
-    { href: '/payment', label: 'Payment', icon: CreditCard },
-    { href: '/learn', label: 'Learning Platform', icon: GraduationCap },
-    { href: '/profile', label: 'Profile & Telegram', icon: User },
-    { href: '/staff/help-queue', label: 'Staff Console', icon: ShieldCheck },
-  ];
+  // If on the home page, home page renders its own hero navigation
+  if (pathname === '/') {
+    return null;
+  }
+
+  const isLoginActive = pathname === '/login';
+  const isRegisterActive = pathname === '/register';
+  const isCoursesActive = pathname === '/courses';
 
   return (
-    <header className="sticky top-0 z-40 bg-slate-900 border-b border-slate-800 text-slate-100 shadow-sm" role="banner">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
-        {/* Brand */}
+    <header
+      className="sticky top-0 z-40 bg-[#0B132B] text-white border-b border-slate-800 shadow-md"
+      role="banner"
+    >
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        {/* Brand: alx | Ableway */}
         <div className="flex items-center gap-3">
-          <a
+          <Link
             href="/"
-            className="flex items-center gap-2 text-lg font-bold text-emerald-400 hover:text-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-400 rounded px-1"
+            className="flex items-center gap-2.5 focus:outline-none focus:ring-2 focus:ring-orange-400 rounded px-1"
           >
-            <span className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-black">A</span>
-            <span>Ableway</span>
-          </a>
-          <span className="hidden md:inline-block text-xs bg-slate-800 text-slate-300 border border-slate-700 px-2 py-0.5 rounded-full font-mono">
-            SRS v2.0
+            <span className="text-2xl font-black tracking-tight text-white font-sans">
+              al<span className="text-orange-400">x</span>
+            </span>
+            <span className="text-slate-400 font-light text-base">|</span>
+            <span className="font-bold text-white tracking-tight text-base">Ableway</span>
+          </Link>
+          <span className="hidden sm:inline-block text-[11px] bg-slate-800 text-orange-300 border border-slate-700 px-2 py-0.5 rounded-full font-medium">
+            Accessible Learning
           </span>
         </div>
 
-        {/* Primary Accessible Navigation */}
-        <nav aria-label="Main Navigation" className="hidden lg:flex items-center space-x-1">
-          {navLinks.map((link) => {
-            const isActive = pathname === link.href;
-            const Icon = link.icon;
-            return (
-              <a
-                key={link.href}
-                href={link.href}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-400 ${
-                  isActive
-                    ? 'bg-emerald-700 text-white'
-                    : 'text-slate-300 hover:text-white hover:bg-slate-800'
-                }`}
-                aria-current={isActive ? 'page' : undefined}
-              >
-                <Icon className="w-4 h-4" aria-hidden="true" />
-                <span>{link.label}</span>
-              </a>
-            );
-          })}
+        {/* Necessary Links Only */}
+        <nav aria-label="Main Navigation" className="hidden md:flex items-center space-x-6 text-sm font-semibold">
+          <Link
+            href="/"
+            className="text-slate-200 hover:text-white transition-colors"
+          >
+            Home
+          </Link>
+          <Link
+            href="/courses"
+            className={`${isCoursesActive
+                ? 'text-orange-400'
+                : 'text-slate-200 hover:text-white'
+              } transition-colors`}
+          >
+            Courses
+          </Link>
+          <Link
+            href="/payment#human-help"
+            className="text-slate-200 hover:text-white transition-colors"
+          >
+            Support
+          </Link>
         </nav>
 
-        {/* Accessibility Quick Toggles */}
-        <div className="flex items-center gap-2">
-          {/* Contrast Mode Selector */}
-          <select
-            value={theme}
-            onChange={(e) => setTheme(e.target.value as any)}
-            className="bg-slate-800 border border-slate-700 text-xs text-slate-200 rounded-md px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            aria-label="Color Contrast Theme"
+        {/* Simple Action Buttons: Language Switch + Navy Blue with Bold Orange Text */}
+        <div className="flex items-center gap-2 sm:gap-2.5">
+          {/* Language Switch Button */}
+          <button
+            type="button"
+            onClick={toggleLanguage}
+            id="nav-lang-toggle"
+            aria-label={`${language === 'am-ET' ? 'አማ (AM)' : 'EN (US)'}: Switch language / ቋንቋ ቀይር`}
+            title={language === 'am-ET' ? 'Switch to English' : 'ወደ አማርኛ ቀይር'}
+            className="px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg font-bold text-xs border border-orange-500/80 bg-slate-900 hover:bg-slate-800 text-orange-400 hover:text-orange-300 flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-orange-400 transition-colors cursor-pointer"
           >
-            <option value="default">Standard Contrast</option>
-            <option value="high-contrast">High Contrast</option>
-            <option value="dark-contrast">Pure Black (OLED)</option>
-            <option value="yellow-black">Yellow on Black</option>
-          </select>
+            <Globe className="w-3.5 h-3.5 text-orange-400" aria-hidden="true" />
+            <span>{language === 'am-ET' ? 'አማ (AM)' : 'EN (US)'}</span>
+          </button>
 
-          {/* Text Size Selector */}
-          <select
-            value={fontSize}
-            onChange={(e) => setFontSize(e.target.value as any)}
-            className="bg-slate-800 border border-slate-700 text-xs text-slate-200 rounded-md px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            aria-label="Text Scaling"
+          <Link
+            href="/login"
+            id="nav-login-btn"
+            className={`px-3 sm:px-4 py-2 rounded-lg font-bold text-xs sm:text-sm border transition-all focus:outline-none focus:ring-2 focus:ring-orange-400 flex items-center gap-1.5 ${isLoginActive
+                ? 'bg-[#0B132B] text-orange-400 border-2 border-orange-500 shadow-md ring-1 ring-orange-400/40'
+                : 'bg-slate-900 hover:bg-slate-800 text-orange-400 hover:text-orange-300 border-orange-500/70 shadow-sm'
+              }`}
+            aria-current={isLoginActive ? 'page' : undefined}
           >
-            <option value="normal">Normal Text (100%)</option>
-            <option value="large">Large Text (125%)</option>
-            <option value="x-large">Extra Large (150%)</option>
-            <option value="xx-large">Maximum (170%)</option>
-          </select>
+            <User className="w-3.5 h-3.5 text-orange-400" aria-hidden="true" />
+            <span>Login</span>
+          </Link>
+          <Link
+            href="/register"
+            id="nav-register-btn"
+            className={`px-3 sm:px-4 py-2 rounded-lg font-bold text-xs sm:text-sm border transition-all focus:outline-none focus:ring-2 focus:ring-orange-400 flex items-center gap-1.5 ${isRegisterActive
+                ? 'bg-[#0B132B] text-orange-400 border-2 border-orange-500 shadow-md ring-1 ring-orange-400/40'
+                : 'bg-slate-900 hover:bg-slate-800 text-orange-400 hover:text-orange-300 border-orange-500/70 shadow-sm'
+              }`}
+            aria-current={isRegisterActive ? 'page' : undefined}
+          >
+            <Sparkles className="w-3.5 h-3.5 text-orange-400" aria-hidden="true" />
+            <span>Register</span>
+          </Link>
         </div>
       </div>
     </header>
   );
 }
-

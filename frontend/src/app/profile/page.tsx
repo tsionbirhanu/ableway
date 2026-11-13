@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Send, KeyRound, Shield, CheckCircle2, Trash2, Bell, User, Settings } from 'lucide-react';
+import { Send, KeyRound, Shield, CheckCircle2, Trash2, Bell, Settings } from 'lucide-react';
 import { useA11y } from '@/core/a11y/a11y-context';
+import { ContrastTheme, InteractionMode, TextSize } from '@/types/a11y';
 
 export default function ProfilePage() {
   const { announce, mode, setMode, theme, setTheme, fontSize, setFontSize } = useA11y();
@@ -60,13 +61,13 @@ export default function ProfilePage() {
                 <label className="block text-xs font-semibold text-slate-400 mb-1">Interaction Mode:</label>
                 <div className="grid grid-cols-3 gap-2">
                   {[
-                    { id: 'voice-first', label: 'Voice-First' },
-                    { id: 'screen-reader', label: 'Screen Reader' },
-                    { id: 'hybrid', label: 'Hybrid' },
+                    { id: 'voice-first' as InteractionMode, label: 'Voice-First' },
+                    { id: 'screen-reader' as InteractionMode, label: 'Screen Reader' },
+                    { id: 'hybrid' as InteractionMode, label: 'Hybrid' },
                   ].map((m) => (
                     <button
                       key={m.id}
-                      onClick={() => setMode(m.id as any)}
+                      onClick={() => setMode(m.id)}
                       className={`p-2 rounded-xl text-xs font-semibold border ${
                         mode === m.id
                           ? 'bg-emerald-700 border-emerald-400 text-white'
@@ -83,7 +84,7 @@ export default function ProfilePage() {
                 <label className="block text-xs font-semibold text-slate-400 mb-1">Contrast Theme:</label>
                 <select
                   value={theme}
-                  onChange={(e) => setTheme(e.target.value as any)}
+                  onChange={(e) => setTheme(e.target.value as ContrastTheme)}
                   className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white"
                 >
                   <option value="default">Standard Contrast</option>
@@ -97,7 +98,7 @@ export default function ProfilePage() {
                 <label className="block text-xs font-semibold text-slate-400 mb-1">Text Sizing:</label>
                 <select
                   value={fontSize}
-                  onChange={(e) => setFontSize(e.target.value as any)}
+                  onChange={(e) => setFontSize(e.target.value as TextSize)}
                   className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white"
                 >
                   <option value="normal">Normal (100%)</option>

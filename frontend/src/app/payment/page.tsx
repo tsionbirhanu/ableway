@@ -100,7 +100,7 @@ function PaymentContent() {
               <span>Request a Human Helper</span>
             </h2>
             <p className="text-xs text-slate-300">
-              Click the button below or say <strong className="text-emerald-300">"Call human"</strong> to place a request in the staff queue.
+              Click the button below or say <strong className="text-emerald-300">&ldquo;Call human&rdquo;</strong> to place a request in the staff queue.
             </p>
           </div>
 
@@ -110,14 +110,14 @@ function PaymentContent() {
             </label>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {[
-                { id: 'phone', label: 'Direct Phone Call' },
-                { id: 'telegram', label: 'Telegram Message' },
-                { id: 'web', label: 'In-Page Web Chat' },
+                { id: 'phone' as const, label: 'Direct Phone Call' },
+                { id: 'telegram' as const, label: 'Telegram Message' },
+                { id: 'web' as const, label: 'In-Page Web Chat' },
               ].map((opt) => (
                 <button
                   key={opt.id}
                   type="button"
-                  onClick={() => setChannelPreference(opt.id as any)}
+                  onClick={() => setChannelPreference(opt.id)}
                   className={`p-3 rounded-xl border text-sm font-semibold transition-all ${
                     channelPreference === opt.id
                       ? 'bg-emerald-700 border-emerald-400 text-white'

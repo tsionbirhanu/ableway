@@ -1,8 +1,11 @@
 @import "tailwindcss";
 
 :root {
-  --background: #020617;
-  --foreground: #f8fafc;
+  --background: #ffffff;
+  --foreground: #0f172a;
+  --navy-navbar: #0b132b;
+  --button-text-orange: #ea580c;
+  --button-text-orange-bright: #fb923c;
 }
 
 @theme inline {
@@ -50,4 +53,19 @@ html.text-xx-large {
 body {
   background: var(--background);
   color: var(--foreground);
+}
+
+/* WCAG 2.2 AA Focus Indicator (F0 Rule 6) with High-Visibility Orange Outline */
+:focus-visible {
+  outline: 3px solid #f97316 !important;
+  outline-offset: 2px !important;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid #f97316 !important;
+  outline-offset: 2px !important;
 }

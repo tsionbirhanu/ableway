@@ -34,12 +34,12 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-slate-950 text-slate-100">
+      <body className="min-h-full flex flex-col bg-white text-slate-900 antialiased">
         <A11yProvider>
           {/* Accessible Skip Link (WCAG 2.2 AA) */}
           <a
             href="#main-content"
-            className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:px-4 focus:py-2 focus:bg-emerald-600 focus:text-white focus:rounded-md focus:shadow-lg focus:outline-none"
+            className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:px-4 focus:py-2 focus:bg-[#0B132B] focus:text-orange-400 focus:font-bold focus:border focus:border-orange-500 focus:rounded-md focus:shadow-lg focus:outline-none"
           >
             Skip to main content
           </a>

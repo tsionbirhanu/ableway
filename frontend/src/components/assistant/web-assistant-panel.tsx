@@ -2,9 +2,10 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Mic, MicOff, Send, PhoneCall, Volume2, VolumeX, X, HelpCircle, MessageSquare } from 'lucide-react';
+import { Mic, MicOff, Send, PhoneCall, Volume2, VolumeX, X, HelpCircle, MessageSquare, Globe } from 'lucide-react';
 import { useA11y } from '@/core/a11y/a11y-context';
 import { playEarcon } from '@/core/audio/earcons';
+import { getTranslation } from '@/core/i18n/translations';
 import { AllowedAction } from '@/types';
 
 interface Message {
@@ -15,7 +16,10 @@ interface Message {
 export function WebAssistantPanel() {
   const pathname = usePathname();
   const router = useRouter();
-  const { mode, speechRate, setSpeechRate, announce } = useA11y();
+  const { mode, speechRate, setSpeechRate, announce, language, toggleLanguage } = useA11y();
+
+  const isAmharic = language === 'am-ET';
+  const t = getTranslation(language);
 
   const [isOpen, setIsOpen] = useState(false);
   const [isListening, setIsListening] = useState(false);
@@ -23,34 +27,35 @@ export function WebAssistantPanel() {
   const [messages, setMessages] = useState<Message[]>([
     {
       sender: 'assistant',
-      text: 'Hello! I am your Ableway Assistant. Press Alt+V to speak or type your question. Say "Help" for options or "Call human" for live support.',
+      text: t.assistant.welcome,
     },
   ]);
   const [isMuted, setIsMuted] = useState(false);
-  const recognitionRef = useRef<any>(null);
+  const recognitionRef = useRef<unknown>(null);
+
+  // Update initial message on language change
+  useEffect(() => {
+    setMessages((prev) => {
+      if (prev.length === 1 && prev[0].sender === 'assistant') {
+        return [{ sender: 'assistant', text: t.assistant.welcome }];
+      }
+      return prev;
+    });
+  }, [language, t.assistant.welcome]);
 
   // Announce page arrival on route change (FR-1.3)
   useEffect(() => {
-    const pageDescriptions: Record<string, string> = {
-      '/': 'You are on the Ableway Home and Savanna Hub. You can register, choose a course, or open Savanna.',
-      '/register': 'You are on the Registration page. I can fill the form as you speak your details.',
-      '/courses': 'You are on the Course Choice page. Ask me to describe or compare courses.',
-      '/payment': 'You are on the Payment page. We use human-assisted payments with staff guidance.',
-      '/learn': 'You are on the Learning Platform. You can explore course modules, audio lessons, and quizzes.',
-      '/profile': 'You are on your Profile page. You can manage settings or link your Telegram account.',
-      '/staff/help-queue': 'Staff Console: Accessible Human Helper Queue.',
-      '/savanna': 'Savanna Learning Portal view.',
-    };
-
-    const desc = pageDescriptions[pathname] || `You are on ${pathname}.`;
+    const pageDescriptions = t.assistant.pageArrival;
+    const desc = pageDescriptions[pathname] || (isAmharic ? `${pathname} ገጽ ላይ ይገኛሉ።` : `You are on ${pathname}.`);
     announce(desc);
     if (mode === 'voice-first' && !isMuted && typeof window !== 'undefined' && 'speechSynthesis' in window) {
       window.speechSynthesis.cancel();
       const utter = new SpeechSynthesisUtterance(desc);
       utter.rate = speechRate;
+      utter.lang = isAmharic ? 'am-ET' : 'en-US';
       window.speechSynthesis.speak(utter);
     }
-  }, [pathname, mode, speechRate, isMuted, announce]);
+  }, [pathname, mode, speechRate, isMuted, announce, isAmharic, t.assistant.pageArrival]);
 
   // Global hotkeys (Alt+A or Alt+V to toggle assistant/mic)
   useEffect(() => {
@@ -72,7 +77,9 @@ export function WebAssistantPanel() {
   // Web Speech API STT setup
   const toggleListening = () => {
     if (typeof window === 'undefined') return;
-    const SpeechRec = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const SpeechRec =
+      (window as unknown as { SpeechRecognition?: any; webkitSpeechRecognition?: any }).SpeechRecognition ||
+      (window as unknown as { SpeechRecognition?: any; webkitSpeechRecognition?: any }).webkitSpeechRecognition;
 
     if (!SpeechRec) {
       announce('Speech recognition is not supported in this browser. Please use Chrome or Edge.');
@@ -80,24 +87,24 @@ export function WebAssistantPanel() {
     }
 
     if (isListening) {
-      recognitionRef.current?.stop();
+      (recognitionRef.current as any)?.stop();
       setIsListening(false);
       playEarcon('stop');
       return;
     }
 
     const recognition = new SpeechRec();
-    recognition.lang = 'en-US';
+    recognition.lang = isAmharic ? 'am-ET' : 'en-US';
     recognition.interimResults = false;
-    recognition.continuous = false;
+    recognition.continuous = true;
 
     recognition.onstart = () => {
       setIsListening(true);
       playEarcon('listening');
-      announce('Listening for your command or answers.');
+      announce(t.assistant.listening);
     };
 
-    recognition.onresult = (event: any) => {
+    recognition.onresult = (event: { results: Array<Array<{ transcript: string }>> }) => {
       const transcript = event.results[0][0].transcript;
       playEarcon('success');
       handleSendMessage(transcript);
@@ -106,7 +113,11 @@ export function WebAssistantPanel() {
     recognition.onerror = () => {
       setIsListening(false);
       playEarcon('error');
-      announce('I could not hear you clearly. Please try speaking again or type your message.');
+      announce(
+        isAmharic
+          ? 'ድምጽዎን በግልጽ መስማት አልቻልኩም። እባክዎ እንደገና ይናገሩ ወይም ይተይቡ።'
+          : 'I could not hear you clearly. Please try speaking again or type your message.'
+      );
     };
 
     recognition.onend = () => {
@@ -123,38 +134,86 @@ export function WebAssistantPanel() {
     }
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = speechRate;
+    // Slower, calmer speech rate
+    utterance.rate = Math.min(speechRate, 0.82);
+    utterance.lang = isAmharic ? 'am-ET' : 'en-US';
+    utterance.onend = () => {
+      // Automatically resume hands-free listening after speaking
+      try {
+        if (!isListening && recognitionRef.current) {
+          (recognitionRef.current as any).start();
+        }
+      } catch {}
+    };
     window.speechSynthesis.speak(utterance);
   };
 
   const handleSendMessage = async (text: string) => {
     if (!text.trim()) return;
 
-    // Check built-in voice commands (FR-1.4)
+    // Check built-in voice commands (FR-1.4) (English & Amharic)
     const lower = text.toLowerCase().trim();
-    if (lower === 'stop') {
+    if (lower === 'stop' || lower === 'አቁም' || lower === 'ዝም በል') {
       if (typeof window !== 'undefined') window.speechSynthesis.cancel();
-      announce('Speech stopped.');
+      announce(isAmharic ? 'ድምጽ ቆሟል።' : 'Speech stopped.');
       return;
     }
-    if (lower === 'slower') {
+    if (lower === 'slower' || lower === 'ቀንስ' || lower === 'አዝግም') {
       const newRate = Math.max(0.75, speechRate - 0.25);
       setSpeechRate(newRate);
-      announce(`Speech rate set to ${newRate}x`);
-      speakText(`Speaking slower now.`);
+      const msg = isAmharic ? `የንግግር ፍጥነት ወደ ${newRate} ተቀይሯል።` : `Speech rate set to ${newRate}x`;
+      announce(msg);
+      speakText(isAmharic ? 'በዝግታ እየተናገርኩ ነው።' : 'Speaking slower now.');
       return;
     }
-    if (lower === 'faster') {
+    if (lower === 'faster' || lower === 'ጨምር' || lower === 'አፍጥን') {
       const newRate = Math.min(2.0, speechRate + 0.25);
       setSpeechRate(newRate);
-      announce(`Speech rate set to ${newRate}x`);
-      speakText(`Speaking faster now.`);
+      const msg = isAmharic ? `የንግግር ፍጥነት ወደ ${newRate} ተቀይሯል።` : `Speech rate set to ${newRate}x`;
+      announce(msg);
+      speakText(isAmharic ? 'በፍጥነት እየተናገርኩ ነው።' : 'Speaking faster now.');
       return;
     }
-    if (lower === 'where am i') {
-      const loc = `You are on the ${pathname} page.`;
+    if (lower === 'where am i' || lower === 'የት ነኝ' || lower === 'የት ገጽ ነኝ') {
+      const loc = isAmharic ? `አሁን ${pathname} ገጽ ላይ ይገኛሉ።` : `You are on the ${pathname} page.`;
       announce(loc);
       speakText(loc);
+      return;
+    }
+    if (lower === 'call human' || lower === 'human help' || lower === 'ሰው ጥራልኝ' || lower === 'የሰው እርዳታ' || lower === 'ሰው አገናኘኝ') {
+      const msg = isAmharic ? 'ከቀጥታ የሰው አጋዥ ጋር በማገናኘት ላይ...' : 'Connecting you to a live human helper...';
+      announce(msg);
+      speakText(msg);
+      router.push('/payment#human-help');
+      return;
+    }
+    if (lower === 'courses' || lower === 'ኮርሶች' || lower === 'ኮርስ') {
+      const msg = isAmharic ? 'ወደ ኮርስ መምረጫ ገጽ እየወሰድኩዎ ነው።' : 'Going to course choice.';
+      announce(msg);
+      speakText(msg);
+      router.push('/courses');
+      return;
+    }
+    if (lower === 'register' || lower === 'ተመዝገብ' || lower === 'ምዝገባ') {
+      const msg = isAmharic ? 'ወደ ምዝገባ ገጽ እየወሰድኩዎ ነው።' : 'Going to registration.';
+      announce(msg);
+      speakText(msg);
+      router.push('/register');
+      return;
+    }
+    if (lower === 'home' || lower === 'መነሻ') {
+      const msg = isAmharic ? 'ወደ መነሻ ገጽ እየወሰድኩዎ ነው።' : 'Going home.';
+      announce(msg);
+      speakText(msg);
+      router.push('/');
+      return;
+    }
+    if (lower === 'help' || lower === 'እገዛ' || lower === 'እርዳታ') {
+      const msg = isAmharic
+        ? 'የሚከተሉትን ማለት ይችላሉ፦ «ኮርሶች»፣ «ተመዝገብ»፣ «ሰው ጥራልኝ»፣ «የት ነኝ» ወይም «አቁም»።'
+        : 'You can say "courses", "register", "call human", "where am i", or "stop".';
+      announce(msg);
+      speakText(msg);
       return;
     }
 
@@ -166,7 +225,7 @@ export function WebAssistantPanel() {
       const res = await fetch('/api/assistant/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, currentPage: pathname }),
+        body: JSON.stringify({ message: text, currentPage: pathname, language }),
       });
 
       if (!res.ok) throw new Error('Assistant API error');
@@ -180,8 +239,10 @@ export function WebAssistantPanel() {
       if (data.actions && data.actions.length > 0) {
         executeActions(data.actions);
       }
-    } catch (err) {
-      const fallback = 'I am currently processing your request locally. You can say "help" or request human assistance.';
+    } catch (_err) {
+      const fallback = isAmharic
+        ? 'ጥያቄዎ በስርዓቱ እየተስተናገደ ነው። «እገዛ» ወይም «ሰው ጥራልኝ» ማለት ይችላሉ።'
+        : 'I am currently processing your request locally. You can say "help" or request human assistance.';
       setMessages((prev) => [...prev, { sender: 'assistant', text: fallback }]);
       announce(fallback);
       speakText(fallback);
@@ -191,14 +252,25 @@ export function WebAssistantPanel() {
   const executeActions = (actions: AllowedAction[]) => {
     for (const action of actions) {
       if (action.name === 'go_to_page' && action.params.path) {
-        router.push(action.params.path);
+        router.push(String(action.params.path));
       } else if (action.name === 'fill_field') {
-        const inputElem = document.querySelector(`[name="${action.params.field}"]`) as HTMLInputElement;
-        if (inputElem) {
-          inputElem.value = action.params.value;
-          inputElem.dispatchEvent(new Event('input', { bubbles: true }));
-          announce(`Entered ${action.params.value} into ${action.params.field}`);
+        const fieldName = String(action.params.field || '');
+        const fieldValue = action.params.value as string | boolean;
+        if (typeof window !== 'undefined' && window.fillField) {
+          window.fillField(fieldName as any, fieldValue);
+        } else {
+          const inputElem = document.querySelector(`[name="${fieldName}"]`) as HTMLInputElement;
+          if (inputElem) {
+            if (inputElem.type === 'checkbox') {
+              inputElem.checked = Boolean(fieldValue);
+            } else {
+              inputElem.value = String(fieldValue);
+            }
+            inputElem.dispatchEvent(new Event('input', { bubbles: true }));
+            inputElem.dispatchEvent(new Event('change', { bubbles: true }));
+          }
         }
+        announce(`Entered ${String(fieldValue)} into ${fieldName}`);
       } else if (action.name === 'request_human') {
         router.push('/payment#human-help');
       }
@@ -207,16 +279,32 @@ export function WebAssistantPanel() {
 
   return (
     <>
-      {/* Persistent Floating Trigger Button (FR-1.1) */}
-      <button
-        onClick={() => setIsOpen((prev) => !prev)}
-        className="fixed bottom-6 right-6 z-50 flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-4 py-3 rounded-full shadow-2xl focus:outline-none focus:ring-4 focus:ring-emerald-300 transition-transform active:scale-95"
-        aria-label="Ableway Web Assistant (Press Alt+A)"
-        aria-expanded={isOpen}
-      >
-        <MessageSquare className="w-5 h-5" aria-hidden="true" />
-        <span className="hidden sm:inline">Ableway Assistant</span>
-      </button>
+      {/* Persistent Floating Trigger Widget Matching Screenshot (FR-1.1) with Orange Accents */}
+      <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setIsOpen((prev) => !prev)}
+          className="bg-[#0B132B]/95 hover:bg-slate-900 text-slate-100 border border-orange-500/40 px-3.5 py-2 rounded-full flex items-center gap-2 text-xs font-semibold shadow-2xl backdrop-blur-sm focus:outline-none focus:ring-4 focus:ring-orange-400 cursor-pointer"
+          aria-expanded={isOpen}
+        >
+          <span className="text-orange-400 font-bold" aria-hidden="true">⍟</span>
+          <span>Voice & A11y</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={toggleListening}
+          className={`h-12 w-12 sm:h-14 sm:w-14 rounded-full flex items-center justify-center text-white shadow-2xl transition-all focus:outline-none focus:ring-4 focus:ring-orange-400 cursor-pointer ${
+            isListening
+              ? 'bg-rose-600 animate-pulse'
+              : 'bg-orange-600 hover:bg-orange-500 shadow-orange-950/40'
+          }`}
+          aria-label={isListening ? 'Stop microphone' : 'Activate microphone'}
+          aria-pressed={isListening}
+        >
+          {isListening ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
+        </button>
+      </div>
 
       {/* Accessible Assistant Slide-over / Modal Panel */}
       {isOpen && (
@@ -229,9 +317,21 @@ export function WebAssistantPanel() {
           <header className="p-4 bg-slate-800 border-b border-slate-700 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="w-3 h-3 rounded-full bg-emerald-400 animate-pulse" aria-hidden="true" />
-              <h2 className="font-bold text-base text-white">Ableway Web Assistant</h2>
+              <h2 className="font-bold text-base text-white">
+                {isAmharic ? 'የኤብልዌይ ድምጽ ረዳት' : 'Ableway Web Assistant'}
+              </h2>
             </div>
             <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={toggleLanguage}
+                className="px-2.5 py-1 text-xs font-bold text-orange-400 bg-slate-900 border border-orange-500/60 rounded-md hover:bg-slate-700 flex items-center gap-1 focus:outline-none focus:ring-2 focus:ring-orange-400 cursor-pointer"
+                aria-label={isAmharic ? 'ወደ እንግሊዝኛ ቀይር' : 'Switch to Amharic'}
+                title={isAmharic ? 'ወደ እንግሊዝኛ ቀይር' : 'Switch to Amharic'}
+              >
+                <Globe className="w-3.5 h-3.5 text-orange-400" aria-hidden="true" />
+                <span>{isAmharic ? 'አማ (AM)' : 'EN (US)'}</span>
+              </button>
               <button
                 onClick={() => setIsMuted((m) => !m)}
                 className="p-1.5 text-slate-300 hover:text-white rounded hover:bg-slate-700"
@@ -263,7 +363,11 @@ export function WebAssistantPanel() {
                 }`}
               >
                 <div className="font-semibold text-xs mb-1 opacity-75 uppercase tracking-wide">
-                  {msg.sender === 'learner' ? 'You' : msg.sender === 'helper' ? 'Human Helper' : 'Assistant'}
+                  {msg.sender === 'learner'
+                    ? isAmharic ? 'እርስዎ' : 'You'
+                    : msg.sender === 'helper'
+                    ? isAmharic ? 'የሰው አጋዥ' : 'Human Helper'
+                    : isAmharic ? 'ረዳት' : 'Assistant'}
                 </div>
                 <p className="leading-relaxed">{msg.text}</p>
               </div>
@@ -273,22 +377,29 @@ export function WebAssistantPanel() {
           {/* Quick Actions Bar */}
           <div className="px-4 py-2 bg-slate-800/60 border-t border-slate-700 flex flex-wrap gap-2 text-xs">
             <button
-              onClick={() => handleSendMessage('Help')}
+              onClick={() => handleSendMessage(isAmharic ? 'እገዛ' : 'Help')}
               className="px-2.5 py-1 bg-slate-700 hover:bg-slate-600 rounded-md text-slate-200"
             >
-              Help Options
+              {isAmharic ? 'የእገዛ አማራጮች' : 'Help Options'}
             </button>
             <button
-              onClick={() => handleSendMessage('Where am I')}
+              onClick={() => handleSendMessage(isAmharic ? 'የት ነኝ' : 'Where am I')}
               className="px-2.5 py-1 bg-slate-700 hover:bg-slate-600 rounded-md text-slate-200"
             >
-              Where am I?
+              {isAmharic ? 'የት ነኝ?' : 'Where am I?'}
             </button>
             <button
-              onClick={() => handleSendMessage('Call human')}
+              onClick={() => handleSendMessage(isAmharic ? 'ሰው ጥራልኝ' : 'Call human')}
               className="px-2.5 py-1 bg-amber-700 hover:bg-amber-600 rounded-md text-white font-medium flex items-center gap-1"
             >
-              <PhoneCall className="w-3.5 h-3.5" /> Call Human
+              <PhoneCall className="w-3.5 h-3.5" />
+              <span>{isAmharic ? 'ሰው ጥራልኝ' : 'Call Human'}</span>
+            </button>
+            <button
+              onClick={() => handleSendMessage(isAmharic ? 'ኮርሶች' : 'Courses')}
+              className="px-2.5 py-1 bg-slate-700 hover:bg-slate-600 rounded-md text-slate-200"
+            >
+              {isAmharic ? 'ኮርሶች' : 'Courses'}
             </button>
           </div>
 
