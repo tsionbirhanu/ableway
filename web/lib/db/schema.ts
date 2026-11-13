@@ -511,6 +511,9 @@ export const jobs = pgTable(
     /** What the employer offers, for example screen reader support. */
     accessibilityNotes: text("accessibility_notes"),
     status: jobStatus("status").notNull().default("draft"),
+    publishedAt: timestamp("published_at", { withTimezone: true }),
+    suspicious: boolean("suspicious").notNull().default(false),
+    reviewReason: text("review_reason"),
   },
   (t) => [
     index("jobs_status_deadline_idx").on(t.status, t.deadline),
@@ -552,6 +555,7 @@ export const alertDeliveries = pgTable(
       .references(() => jobs.id, { onDelete: "cascade" }),
     channel: alertChannel("channel").notNull(),
     status: deliveryStatus("status").notNull().default("pending"),
+    attempts: integer("attempts").notNull().default(0),
     sentAt: timestamp("sent_at", { withTimezone: true }),
   },
   (t) => [
@@ -561,6 +565,12 @@ export const alertDeliveries = pgTable(
     index("alert_deliveries_status_idx").on(t.status),
   ],
 );
+
+export const alertCronState = pgTable("alert_cron_state", {
+  ...baseColumns,
+  key: text("key").notNull().unique(),
+  lastRunAt: timestamp("last_run_at", { withTimezone: true }).notNull(),
+});
 
 // =====================================================================
 // Knowledge base (retrieval)
@@ -647,6 +657,7 @@ export const allTables = {
   jobs,
   alertSubscriptions,
   alertDeliveries,
+  alertCronState,
   knowledgeChunks,
   unansweredQuestions,
   auditLog,
