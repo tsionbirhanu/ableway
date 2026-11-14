@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useA11y } from '@/lib/a11y/a11y-context';
 import { getTranslation } from '@/lib/i18n/translations';
+import { LanguageSelectorDropdown } from './language-selector-dropdown';
 
 export function AccessibleHeader() {
   const pathname = usePathname();
@@ -74,8 +75,9 @@ export function AccessibleHeader() {
           </Link>
         </nav>
 
-        {/* Right Side: ONLY the Login Button (no stroke, polished glass aesthetic) */}
-        <div className="flex items-center">
+        {/* Right Side: Language Dropdown ("ENG ▾") + Login Button */}
+        <div className="flex items-center gap-3">
+          <LanguageSelectorDropdown />
           <Link
             href="/login"
             id="top-nav-login"

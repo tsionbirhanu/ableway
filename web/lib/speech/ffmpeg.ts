@@ -1,6 +1,15 @@
 import "server-only";
 import { spawn } from "node:child_process";
-import ffmpegStatic from "ffmpeg-static";
+
+function getBundledFfmpeg(): string | null {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const mod = require("ffmpeg-static");
+    return typeof mod === "string" ? mod : mod?.default || null;
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Run ffmpeg with audio in and audio out through pipes. Nothing touches the
@@ -9,7 +18,7 @@ import ffmpegStatic from "ffmpeg-static";
  * Binary: FFMPEG_PATH if set, else the one bundled by ffmpeg-static.
  */
 export function ffmpegPath(): string {
-  const path = process.env.FFMPEG_PATH || ffmpegStatic;
+  const path = process.env.FFMPEG_PATH || getBundledFfmpeg();
   if (!path) throw new Error("ffmpeg not found. Set FFMPEG_PATH or reinstall ffmpeg-static.");
   return path;
 }

@@ -1,14 +1,27 @@
 // @vitest-environment jsdom
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, cleanup, act } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { axe } from 'vitest-axe';
 import * as matchers from 'vitest-axe/matchers';
 import '@testing-library/jest-dom/vitest';
 import './vitest-axe.d.ts';
 import HomePage from '@/app/page';
+import { LanguageSelectorDropdown } from '@/components/navigation/language-selector-dropdown';
 
 expect.extend(matchers);
+
+// Mock Next.js navigation
+const mockPush = vi.fn();
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: mockPush,
+    replace: vi.fn(),
+    back: vi.fn(),
+    prefetch: vi.fn(),
+  }),
+  usePathname: () => '/',
+}));
 
 // Mock A11y Context
 const mockAnnounce = vi.fn();
@@ -30,127 +43,50 @@ vi.mock('@/lib/audio/earcons', () => ({
   playEarcon: vi.fn(),
 }));
 
-const mockSpeak = vi.fn().mockResolvedValue(undefined);
-const mockStop = vi.fn();
-
-vi.mock('@/lib/audio/speech-synthesis', () => ({
-  speechSynthesizer: {
-    speak: (...args: any[]) => mockSpeak(...args),
-    stop: () => mockStop(),
-    getVoices: () => [],
-    isSpeaking: () => false,
-  },
-}));
-
-describe('Welcome Page Multilingual Options & Voice Assistance (F0 Compliance)', () => {
+describe('Welcome Page & Language Selector (F0 Compliance)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.useFakeTimers();
     currentLanguage = 'en-US';
   });
 
   afterEach(() => {
     cleanup();
-    vi.useRealTimers();
   });
 
-  it('renders the dedicated multilingual section and all 4 language options', () => {
+  it('verifies the old "choose your language" section space is deleted from the page', () => {
     render(<HomePage />);
-
-    const langHeading = screen.getByRole('heading', {
-      name: /choose your language/i,
-    });
-    expect(langHeading).toBeInTheDocument();
-
-    // 4 Language Buttons
-    expect(screen.getByRole('button', { name: /english/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /አማርኛ/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /afaan oromoo/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /ትግርኛ/i })).toBeInTheDocument();
+    expect(document.getElementById('welcome-multilingual-section')).toBeNull();
   });
 
-  it('speaks and announces language options automatically when website pops out', async () => {
+  it('verifies the voice assistance part is removed from the page', () => {
     render(<HomePage />);
-
-    // Fast-forward mount timer and flush async speech steps
-    await act(async () => {
-      vi.advanceTimersByTime(500);
-      await Promise.resolve();
-      await Promise.resolve();
-      await Promise.resolve();
-    });
-
-    // Polite live region announcement
-    expect(mockAnnounce).toHaveBeenCalledWith(
-      expect.stringContaining('Welcome to Ableway! Please choose your preferred language'),
-      'polite'
-    );
-
-    // Spoken voice guidance
-    expect(mockSpeak).toHaveBeenCalledWith(
-      expect.stringContaining('Welcome to Ableway! Please choose your language'),
-      expect.objectContaining({ lang: 'en-US' })
-    );
-
-    // Spoken Amharic prompt
-    expect(mockSpeak).toHaveBeenCalledWith(
-      expect.stringContaining('ወይም አማርኛ ለመምረጥ 2ን ይጫኑ።'),
-      expect.objectContaining({ lang: 'am-ET' })
-    );
+    expect(document.getElementById('voice-assistant-status-widget')).toBeNull();
   });
 
-  it('switches to Amharic when clicking the Amharic button', () => {
-    render(<HomePage />);
+  it('renders the language option in "ENG" form with dropdown arrow and selects language on click', () => {
+    render(<LanguageSelectorDropdown />);
 
-    const amharicBtn = screen.getByRole('button', { name: /አማርኛ/i });
-    fireEvent.click(amharicBtn);
+    // Renders "ENG" button with dropdown arrow
+    const dropdownBtn = screen.getByRole('button', { name: /select language/i });
+    expect(dropdownBtn).toBeInTheDocument();
+    expect(dropdownBtn).toHaveTextContent('ENG');
 
+    // Click to open dropdown
+    fireEvent.click(dropdownBtn);
+    expect(dropdownBtn).toHaveAttribute('aria-expanded', 'true');
+
+    // Listbox with options appears
+    expect(screen.getByRole('listbox', { name: /language selection/i })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /አማርኛ/i })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /afaan oromoo/i })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /ትግርኛ/i })).toBeInTheDocument();
+
+    // Select Amharic
+    fireEvent.click(screen.getByRole('option', { name: /አማርኛ/i }));
     expect(mockSetLanguage).toHaveBeenCalledWith('am-ET');
-    expect(mockAnnounce).toHaveBeenCalledWith(
-      expect.stringContaining('ቋንቋ ወደ አማርኛ ተቀይሯል።'),
-      'polite'
-    );
-    expect(mockSpeak).toHaveBeenCalledWith(
-      expect.stringContaining('ወደ ኤብልዌይ በደህና መጡ'),
-      expect.objectContaining({ lang: 'am-ET' })
-    );
-  });
-
-  it('supports single-key number shortcuts (1, 2, 3, 4) to switch language', () => {
-    render(<HomePage />);
-
-    // Press key 2 for Amharic
-    fireEvent.keyDown(window, { key: '2' });
-    expect(mockSetLanguage).toHaveBeenCalledWith('am-ET');
-
-    // Press key 1 for English
-    fireEvent.keyDown(window, { key: '1' });
-    expect(mockSetLanguage).toHaveBeenCalledWith('en-US');
-
-    // Press key 3 for Afaan Oromoo
-    fireEvent.keyDown(window, { key: '3' });
-    expect(mockSetLanguage).toHaveBeenCalledWith('om-ET');
-
-    // Press key 4 for Tigrinya
-    fireEvent.keyDown(window, { key: '4' });
-    expect(mockSetLanguage).toHaveBeenCalledWith('ti-ET');
-  });
-
-  it('re-plays speech when "Hear Options Aloud" button is clicked', () => {
-    render(<HomePage />);
-
-    const hearBtn = screen.getByRole('button', { name: /hear language options spoken aloud/i });
-    fireEvent.click(hearBtn);
-
-    expect(mockAnnounce).toHaveBeenCalledWith(
-      expect.stringContaining('Welcome to Ableway! Please choose your preferred language'),
-      'polite'
-    );
-    expect(mockSpeak).toHaveBeenCalled();
   });
 
   it('passes axe accessibility audit across all 3 themes', async () => {
-    vi.useRealTimers();
     const themes = ['theme-default', 'theme-high-contrast', 'text-large'];
 
     for (const themeClass of themes) {
