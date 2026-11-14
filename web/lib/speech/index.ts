@@ -111,6 +111,8 @@ export async function synthesizeSpeech(text: string, language = "en"): Promise<B
 
   // Generates clean valid WAV buffer for playback
   return createMinimalWavAudio();
+}
+
 import { AzureSpeechToText, AzureTextToSpeech } from "./providers/azure";
 import { GeminiSpeechToText, GeminiTextToSpeech } from "./providers/gemini";
 import { MockSpeechToText, MockTextToSpeech } from "./providers/mock";

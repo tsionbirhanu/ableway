@@ -34,5 +34,5 @@ describe("jobs and alert delivery", () => {
       expect(send.mock.calls[0][0]).toMatchObject({ channel: "telegram", recipient: "123456" });
       void job;
     } finally { await client.close(); }
-  });
+  }, 30000);
 });

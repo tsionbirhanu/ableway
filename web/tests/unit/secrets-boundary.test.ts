@@ -62,6 +62,7 @@ describe("secrets boundary", () => {
       "FFMPEG_PATH",
       "GEMINI_API_KEY",
       "SMS_API_KEY",
+      "SMS_ENABLED",
       "SPEECH_LOW_CONFIDENCE_THRESHOLD",
       "SPEECH_PROVIDER",
       "SPEECH_RETAIN_AUDIO",
