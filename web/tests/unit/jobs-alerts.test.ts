@@ -88,5 +88,5 @@ describe("jobs and alert delivery", () => {
     } finally {
       await client.close();
     }
-  });
+  }, 60_000); // Creates and migrates its own database.
 });
