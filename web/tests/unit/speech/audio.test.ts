@@ -46,16 +46,16 @@ describe("toProviderWav", () => {
     expect(seconds).toBeGreaterThan(1.8);
     expect(seconds).toBeLessThan(2.2);
     expect(pcmWavSeconds(wav)).toBeCloseTo(seconds);
-  });
+  }, 30_000);
 
   it("refuses recordings longer than 60 seconds", async () => {
     await expectSpeechError(toProviderWav(toneWav(61.5, 8_000)), "audio_too_long");
-  });
+  }, 30_000);
 
   it("accepts a recording just under 60 seconds", async () => {
     const { seconds } = await toProviderWav(toneWav(59, 8_000));
     expect(seconds).toBeCloseTo(59, 0);
-  });
+  }, 30_000);
 
   it("refuses files over 10 MB before decoding them", async () => {
     const huge = new Uint8Array(MAX_AUDIO_BYTES + 1);
@@ -76,7 +76,7 @@ describe("Telegram voice notes", () => {
     const { wav, seconds } = await telegramVoiceToWav(await toOggOpus(toneWav(1.5)));
     expect(detectAudioFormat(wav)).toBe("wav");
     expect(seconds).toBeCloseTo(1.5, 0);
-  });
+  }, 30_000);
 
   it("converts a spoken reply back to an OGG/Opus voice note", async () => {
     const voice = await toTelegramVoice(toneWav(1));

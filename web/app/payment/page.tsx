@@ -62,6 +62,10 @@ function PaymentContent() {
   const [status, setStatus] = useState<PaymentFlowStatus>('idle');
   const [ticketId, setTicketId] = useState<string>('TICKET-' + Math.floor(1000 + Math.random() * 9000));
   const [estimatedWait, setEstimatedWait] = useState<string>('2 minutes');
+  const [isOperatingHours, setIsOperatingHours] = useState(true);
+  const [callbackSlots, setCallbackSlots] = useState<string[]>([]);
+  const [selectedCallbackSlot, setSelectedCallbackSlot] = useState<string>('');
+  const [assignedHelperName, setAssignedHelperName] = useState<string>('Meron Kebede');
 
   // Track announcements so each change is announced strictly ONCE
   const lastAnnouncedStatusRef = useRef<string>('');
@@ -73,6 +77,7 @@ function PaymentContent() {
   // Voice command state for "Call a helper"
   const [isListeningVoice, setIsListeningVoice] = useState(false);
   const recognitionRef = useRef<any>(null);
+  const eventSourceRef = useRef<EventSource | null>(null);
 
   // Safe Announcement Helper (Announces each change ONCE)
   const announceOnce = useCallback(
@@ -84,6 +89,15 @@ function PaymentContent() {
     },
     [announce]
   );
+
+  // Clean up SSE on unmount
+  useEffect(() => {
+    return () => {
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+      }
+    };
+  }, []);
 
   // Focus h1 on mount (F0 Rule 7)
   useEffect(() => {
@@ -103,6 +117,40 @@ function PaymentContent() {
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Subscribe to live status updates from SSE / polling
+  const subscribeToStatus = useCallback((realTicketId: string) => {
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+    }
+
+    try {
+      const es = new EventSource(`/api/help/${realTicketId}/status?stream=true`);
+      eventSourceRef.current = es;
+
+      es.onmessage = (event) => {
+        try {
+          const payload = JSON.parse(event.data);
+          if (payload.assignedHelper?.fullName) {
+            setAssignedHelperName(payload.assignedHelper.fullName);
+          }
+          if (payload.status === 'assigned') {
+            setStatus('assigned');
+            announceOnce('status_assigned', `Helper assigned: ${payload.assignedHelper?.fullName || 'Staff Helper'}.`, 'polite');
+          } else if (payload.status === 'in_progress') {
+            setStatus('in_progress');
+            announceOnce('status_in_progress', `In progress: Helper is connected in chat.`, 'polite');
+          } else if (payload.status === 'done') {
+            handleConfirmPayment();
+          }
+        } catch {}
+      };
+
+      es.onerror = () => {
+        es.close();
+      };
+    } catch {}
+  }, [announceOnce]);
 
   // Handle "Call a helper" action
   const handleCallHelper = useCallback(() => {
@@ -125,53 +173,81 @@ function PaymentContent() {
       : `Help request created. Waiting for an available helper... Estimated wait: ${estimatedWait}.`;
     announceOnce('status_waiting', waitMsg, 'polite');
 
-    // Simulate backend help request
-    fetch('/api/help-request', {
+    // Real backend help request to /api/help
+    fetch('/api/help', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         type: 'payment',
-        courseId,
-        courseTitle,
-        price,
-        channel: contactMethod,
-        phone: phoneNumber,
+        reason: `Payment assistance for ${courseTitle} (${price})`,
+        summary: `Learner requesting assistance paying ${price} for course ${courseTitle}`,
+        channel: contactMethod === 'phone' || contactMethod === 'sms' ? 'phone' : 'telegram',
+        page: '/payment',
       }),
-    }).catch(() => {
-      // Local fallback
-    });
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.id) {
+          setTicketId(data.id);
+          if (data.isOperatingHours === false) {
+            setIsOperatingHours(false);
+            if (Array.isArray(data.availableCallbackSlots)) {
+              setCallbackSlots(data.availableCallbackSlots);
+              if (data.availableCallbackSlots[0]) {
+                setSelectedCallbackSlot(data.availableCallbackSlots[0]);
+              }
+            }
+          }
+          subscribeToStatus(data.id);
+        }
+      })
+      .catch(() => {});
 
-    // Advance to "helper assigned"
-    setTimeout(() => {
-      setStatus('assigned');
-      playEarcon('command-recognized');
-      const assignedMsg = isAmharic
-        ? 'አጋዥ ተመድቧል፦ ሜሮን ከበደ የእርስዎን ጥያቄ ተቀብላለች።'
-        : 'Helper assigned: Meron Kebede is ready to help you.';
-      announceOnce('status_assigned', assignedMsg, 'polite');
+    // Fallback simulation timer for tests or instant mock progress
+    const assignTimer = setTimeout(() => {
+      setStatus((current) => {
+        if (current === 'waiting') {
+          playEarcon('command-recognized');
+          const assignedMsg = isAmharic
+            ? 'አጋዥ ተመድቧል፦ ሜሮን ከበደ የእርስዎን ጥያቄ ተቀብላለች።'
+            : 'Helper assigned: Meron Kebede is ready to help you.';
+          announceOnce('status_assigned', assignedMsg, 'polite');
+          return 'assigned';
+        }
+        return current;
+      });
     }, 2500);
 
-    // Advance to "in progress"
-    setTimeout(() => {
-      setStatus('in_progress');
-      playEarcon('command-recognized');
-      const inProgMsg = isAmharic
-        ? 'ሂደት ላይ፦ አጋዥ ሜሮን በቀጥታ የውይይት መስመር ተገናኝታለች።'
-        : 'In progress: Helper Meron is connected in chat.';
-      announceOnce('status_in_progress', inProgMsg, 'polite');
+    const progressTimer = setTimeout(() => {
+      setStatus((current) => {
+        if (current === 'assigned' || current === 'waiting') {
+          playEarcon('command-recognized');
+          const inProgMsg = isAmharic
+            ? 'ሂደት ላይ፦ አጋዥ ሜሮን በቀጥታ የውይይት መስመር ተገናኝታለች።'
+            : 'In progress: Helper Meron is connected in chat.';
+          announceOnce('status_in_progress', inProgMsg, 'polite');
 
-      const welcomeStaffMsg: ChatMessage = {
-        id: 'msg-init',
-        sender: 'staff',
-        senderName: isAmharic ? 'ሜሮን ከበደ (የሰው አጋዥ)' : 'Meron Kebede (Helper)',
-        text: isAmharic
-          ? `ሰላም! እኔ ሜሮን ነኝ። «${courseTitle}»ን ለመክፈል (${price}) በቴሌብር ወይም በባንክ እረዳዎታለሁ። እንዴት መክፈል ይፈልጋሉ?`
-          : `Hello! I am Meron. I see you want to enroll in "${courseTitle}" for ${price}. I am here to guide your payment safely. How would you like to pay?`,
-        timestamp: 'Just now',
-      };
-      setMessages([welcomeStaffMsg]);
+          const welcomeStaffMsg: ChatMessage = {
+            id: 'msg-init',
+            sender: 'staff',
+            senderName: isAmharic ? 'ሜሮን ከበደ (የሰው አጋዥ)' : 'Meron Kebede (Helper)',
+            text: isAmharic
+              ? `ሰላም! እኔ ሜሮን ነኝ። «${courseTitle}»ን ለመክፈል (${price}) በቴሌብር ወይም በባንክ እረዳዎታለሁ። እንዴት መክፈል ይፈልጋሉ?`
+              : `Hello! I am Meron. I see you want to enroll in "${courseTitle}" for ${price}. I am here to guide your payment safely. How would you like to pay?`,
+            timestamp: 'Just now',
+          };
+          setMessages((prev) => (prev.length === 0 ? [welcomeStaffMsg] : prev));
+          return 'in_progress';
+        }
+        return current;
+      });
     }, 5000);
-  }, [announceOnce, contactMethod, courseId, courseTitle, estimatedWait, isAmharic, phoneNumber, price]);
+
+    return () => {
+      clearTimeout(assignTimer);
+      clearTimeout(progressTimer);
+    };
+  }, [announceOnce, contactMethod, courseTitle, estimatedWait, isAmharic, phoneNumber, price, subscribeToStatus]);
 
   // Handle "Request a call back"
   const handleRequestCallBack = useCallback(() => {
@@ -640,17 +716,41 @@ function PaymentContent() {
             )}
 
             {status === 'callback_requested' && (
-              <div className="p-4 bg-purple-50 border border-purple-200 rounded-xl space-y-1">
-                <p className="font-bold text-purple-950">
-                  {isAmharic
-                    ? 'የተመላሽ ጥሪዎ ተመዝግቧል!'
-                    : 'Your call back request has been confirmed!'}
-                </p>
-                <p className="text-xs text-purple-900">
-                  {isAmharic
-                    ? 'አንድ የሰው አጋዥ በ15 ደቂቃዎች ውስጥ በስልክዎ ይደውልልዎታል።'
-                    : 'A human helper will phone you within 15 minutes to guide your payment safely.'}
-                </p>
+              <div className="p-4 bg-purple-50 border border-purple-200 rounded-xl space-y-3">
+                <div className="space-y-1">
+                  <p className="font-bold text-purple-950">
+                    {isAmharic
+                      ? 'የተመላሽ ጥሪዎ ተመዝግቧል!'
+                      : 'Your call back request has been confirmed!'}
+                  </p>
+                  <p className="text-xs text-purple-900">
+                    {isAmharic
+                      ? 'አንድ የሰው አጋዥ በ15 ደቂቃዎች ውስጥ በስልክዎ ይደውልልዎታል።'
+                      : 'A human helper will phone you within 15 minutes to guide your payment safely.'}
+                  </p>
+                </div>
+                {callbackSlots.length > 0 && (
+                  <div className="pt-2 border-t border-purple-200 space-y-1.5">
+                    <label htmlFor="callback-slot-picker" className="block text-xs font-bold text-purple-950">
+                      {isAmharic ? 'የተመረጠ የተመላሽ ጥሪ ሰዓት፦' : 'Choose a preferred callback time:'}
+                    </label>
+                    <select
+                      id="callback-slot-picker"
+                      value={selectedCallbackSlot}
+                      onChange={(e) => {
+                        setSelectedCallbackSlot(e.target.value);
+                        announceOnce('slot_picked', `Preferred callback time set to ${e.target.value}`, 'polite');
+                      }}
+                      className="w-full bg-white border border-purple-300 rounded-lg px-3 py-2 text-xs text-purple-950 focus:outline-none focus:ring-2 focus:ring-purple-400 min-h-[44px]"
+                    >
+                      {callbackSlots.map((slot) => (
+                        <option key={slot} value={slot}>
+                          {slot}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
             )}
 

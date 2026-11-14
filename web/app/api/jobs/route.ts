@@ -11,8 +11,15 @@ const jobSchema = z.object({ title: z.string().min(1), employer: z.string(), loc
 export async function GET(request: Request) {
   const params = new URL(request.url).searchParams;
   const offset = Math.max(0, Number.parseInt(params.get("offset") ?? "0", 10) || 0);
-  const [job] = await searchJobs(getDb(), params.get("query") ?? "", params.get("location") ?? "", params.get("type") ?? "", offset);
-  return Response.json({ job: job ?? null, nextOffset: job ? offset + 1 : null });
+  const limitParam = params.get("limit");
+  const limit = limitParam !== null ? Math.min(50, Math.max(1, Number.parseInt(limitParam, 10) || 10)) : 10;
+  const list = await searchJobs(getDb(), params.get("query") ?? "", params.get("location") ?? "", params.get("type") ?? "", offset, limit);
+  const [job] = list;
+  return Response.json({
+    job: job ?? null,
+    jobs: list,
+    nextOffset: list.length === limit ? offset + limit : null,
+  });
 }
 
 export const POST = withErrors(async (request: Request) => {

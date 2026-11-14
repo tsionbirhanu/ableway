@@ -5,6 +5,7 @@ import { getActor } from "@/lib/auth/session";
 import { getDb } from "@/lib/db/client";
 import { helpChannel, helpRequests, helpRequestType } from "@/lib/db/schema";
 import { summarizeConversation } from "@/lib/assistant";
+import { isHelperAvailable, getAvailableCallbackSlots } from "@/lib/helper/settings";
 
 const helpSchema = z.object({
   type: z.enum(helpRequestType.enumValues).default("general"),
@@ -41,6 +42,9 @@ export const POST = withErrors(async (request: Request) => {
     })
     .returning();
 
+  const isAvailable = isHelperAvailable();
+  const callbackSlots = !isAvailable ? getAvailableCallbackSlots() : [];
+
   return Response.json(
     {
       id: created.id,
@@ -50,7 +54,11 @@ export const POST = withErrors(async (request: Request) => {
       channel: created.channel,
       reason: created.reason,
       summary: created.summary,
-      message: "A human helper has been notified and will assist you shortly.",
+      isOperatingHours: isAvailable,
+      availableCallbackSlots: callbackSlots,
+      message: isAvailable
+        ? "A human helper has been notified and will assist you shortly."
+        : "Our helpers are currently offline. You can choose a callback time or wait in queue.",
     },
     { status: 201 }
   );

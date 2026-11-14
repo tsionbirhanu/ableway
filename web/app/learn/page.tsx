@@ -1,5 +1,5 @@
 'use client';
-e
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Play, Pause, RotateCcw, CheckCircle2, BookOpen, Volume2, ArrowRight } from 'lucide-react';
 import { useA11y } from '@/lib/a11y/a11y-context';

@@ -49,7 +49,7 @@ describe("Learning System End-to-End: Access Control, Grading, Resume, Checklist
       .values({
         name: "Test Learner",
         role: "learner",
-        primaryLanguage: "en",
+        language: "en",
       })
       .returning();
     learnerId = learner.id;
@@ -59,7 +59,7 @@ describe("Learning System End-to-End: Access Control, Grading, Resume, Checklist
       .values({
         name: "Other Learner",
         role: "learner",
-        primaryLanguage: "en",
+        language: "en",
       })
       .returning();
     otherLearnerId = otherLearner.id;
@@ -69,7 +69,7 @@ describe("Learning System End-to-End: Access Control, Grading, Resume, Checklist
       .values({
         name: "Content Manager",
         role: "content_manager",
-        primaryLanguage: "en",
+        language: "en",
       })
       .returning();
     contentManagerId = contentMgr.id;

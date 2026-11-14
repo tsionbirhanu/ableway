@@ -36,12 +36,12 @@ export async function ingestJob(db: Db, job: typeof jobs.$inferSelect) {
   await db.insert(knowledgeChunks).values({ sourceType: "job", sourceId: job.id, title: job.title, text, status: "published" });
 }
 
-export async function searchJobs(db: Db, query: string, location: string, type: string, offset = 0) {
+export async function searchJobs(db: Db, query: string, location: string, type: string, offset = 0, limit = 10) {
   const filters = [eq(jobs.status, "published"), eq(jobs.suspicious, false)];
   if (query.trim()) filters.push(or(ilike(jobs.title, `%${query}%`), ilike(jobs.employer, `%${query}%`), ilike(jobs.description, `%${query}%`))!);
   if (location.trim()) filters.push(ilike(jobs.location, `%${location}%`));
   if (type.trim()) filters.push(eq(jobs.jobType, type as typeof jobs.$inferSelect.jobType));
-  return db.select().from(jobs).where(and(...filters)).orderBy(desc(jobs.publishedAt)).limit(1).offset(Math.max(0, offset));
+  return db.select().from(jobs).where(and(...filters)).orderBy(desc(jobs.publishedAt)).limit(limit).offset(Math.max(0, offset));
 }
 
 export function matchesSubscription(job: Pick<typeof jobs.$inferSelect, "title" | "employer" | "location" | "jobType" | "description" | "requirements">,
