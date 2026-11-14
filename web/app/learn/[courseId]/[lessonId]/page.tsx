@@ -5,12 +5,14 @@ import Link from "next/link";
 import { AppHeader } from "@/components/layout/app-header";
 import { AccessibleAudioPlayer } from "@/components/audio-player/accessible-audio-player";
 import { useA11y } from "@/lib/a11y/a11y-context";
+import { useAssistant } from "@/lib/assistant/assistant-context";
 import { useEarcons } from "@/hooks/use-earcons";
 import { Bot, ArrowLeft, CheckCircle2 } from "lucide-react";
 
 export default function LessonDetailPage() {
   const { speak } = useA11y();
   const { play } = useEarcons();
+  const { setIsOpen, setPageContext } = useAssistant();
 
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
@@ -34,6 +36,14 @@ export default function LessonDetailPage() {
     },
   };
 
+  React.useEffect(() => {
+    setPageContext({
+      page: "/learn",
+      lessonTitle: lessonData.title,
+      lessonTranscript: lessonData.transcript,
+    });
+  }, [setPageContext, lessonData.title, lessonData.transcript]);
+
   const handleAnswer = (index: number) => {
     setSelectedOption(index);
     if (index === lessonData.quiz.correctIndex) {
@@ -52,7 +62,10 @@ export default function LessonDetailPage() {
     <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100">
       <AppHeader />
 
-      <main id="main-content" className="flex-1 max-w-5xl w-full mx-auto px-4 py-8 sm:px-6 lg:px-8 space-y-8">
+      <main
+        id="main-content"
+        className="flex-1 max-w-5xl w-full mx-auto px-4 py-8 sm:px-6 lg:px-8 space-y-8"
+      >
         {/* Breadcrumb / Back button */}
         <Link
           href="/learn"
@@ -70,10 +83,7 @@ export default function LessonDetailPage() {
         </div>
 
         {/* Audio Player Component */}
-        <AccessibleAudioPlayer
-          title={lessonData.title}
-          transcript={lessonData.transcript}
-        />
+        <AccessibleAudioPlayer title={lessonData.title} transcript={lessonData.transcript} />
 
         {/* Interactive Practice Quiz Section */}
         <section
@@ -120,7 +130,10 @@ export default function LessonDetailPage() {
               role="alert"
               className="p-4 bg-emerald-900/40 border border-emerald-600/50 rounded-xl text-emerald-200 text-sm flex items-start gap-2.5"
             >
-              <CheckCircle2 className="h-5 w-5 text-emerald-400 flex-none mt-0.5" aria-hidden="true" />
+              <CheckCircle2
+                className="h-5 w-5 text-emerald-400 flex-none mt-0.5"
+                aria-hidden="true"
+              />
               <p>{feedback}</p>
             </div>
           )}
@@ -131,19 +144,21 @@ export default function LessonDetailPage() {
           <div className="space-y-1">
             <h3 className="font-semibold text-white">Unclear about any concept?</h3>
             <p className="text-slate-300 text-sm">
-              The AI tutor is grounded in this lesson&apos;s transcript and ready to explain by voice.
+              The AI tutor is grounded in this lesson&apos;s transcript and ready to explain by
+              voice.
             </p>
           </div>
-          <Link
-            href="/tutor"
-            className="px-5 py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-medium rounded-xl shadow transition flex items-center gap-2 focus:outline-none focus:ring-4 focus:ring-purple-300 flex-none"
+          <button
+            type="button"
+            onClick={() => setIsOpen(true)}
+            className="px-5 py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-medium rounded-xl shadow transition flex items-center gap-2 focus:outline-none focus:ring-4 focus:ring-purple-300 flex-none min-h-[44px]"
+            aria-label="Ask AI Tutor about this lesson"
           >
             <Bot className="h-4 w-4" aria-hidden="true" />
             <span>Ask Tutor</span>
-          </Link>
+          </button>
         </div>
       </main>
     </div>
   );
 }
-

@@ -28,7 +28,7 @@ class EarconManager {
     return this.audioCtx;
   }
 
-  public play(type: EarconType | 'listening' | 'stop') {
+  public play(type: EarconType | "listening" | "stop") {
     if (!this.isEnabled) return;
     const ctx = this.getAudioContext();
     if (!ctx) return;
@@ -131,6 +131,6 @@ class EarconManager {
 
 export const earcons = new EarconManager();
 
-export function playEarcon(type: EarconType | 'listening' | 'stop') {
+export function playEarcon(type: EarconType | "listening" | "stop") {
   earcons.play(type);
 }

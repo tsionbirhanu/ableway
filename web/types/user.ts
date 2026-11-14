@@ -22,4 +22,3 @@ export interface UserProfile {
   currentCourseId?: string;
   currentLessonId?: string;
 }
-

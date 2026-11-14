@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import React, { useState, useRef, useEffect, useId } from 'react';
-import { Button } from './button';
+import React, { useState, useRef, useEffect, useId } from "react";
+import { Button } from "./button";
 
 export interface AudioPlayerProps {
   src: string;
@@ -22,7 +22,7 @@ export function AudioPlayer({
   src,
   title,
   transcript,
-  className = '',
+  className = "",
   autoPlay = false,
 }: AudioPlayerProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -47,18 +47,18 @@ export function AudioPlayer({
     const onPlay = () => setIsPlaying(true);
     const onPause = () => setIsPlaying(false);
 
-    audio.addEventListener('timeupdate', onTimeUpdate);
-    audio.addEventListener('loadedmetadata', onLoadedMetadata);
-    audio.addEventListener('ended', onEnded);
-    audio.addEventListener('play', onPlay);
-    audio.addEventListener('pause', onPause);
+    audio.addEventListener("timeupdate", onTimeUpdate);
+    audio.addEventListener("loadedmetadata", onLoadedMetadata);
+    audio.addEventListener("ended", onEnded);
+    audio.addEventListener("play", onPlay);
+    audio.addEventListener("pause", onPause);
 
     return () => {
-      audio.removeEventListener('timeupdate', onTimeUpdate);
-      audio.removeEventListener('loadedmetadata', onLoadedMetadata);
-      audio.removeEventListener('ended', onEnded);
-      audio.removeEventListener('play', onPlay);
-      audio.removeEventListener('pause', onPause);
+      audio.removeEventListener("timeupdate", onTimeUpdate);
+      audio.removeEventListener("loadedmetadata", onLoadedMetadata);
+      audio.removeEventListener("ended", onEnded);
+      audio.removeEventListener("play", onPlay);
+      audio.removeEventListener("pause", onPause);
     };
   }, []);
 
@@ -68,8 +68,8 @@ export function AudioPlayer({
     if (isPlaying) {
       audio.pause();
     } else {
-      audio.play().catch(err => {
-        console.warn('Playback error:', err);
+      audio.play().catch((err) => {
+        console.warn("Playback error:", err);
       });
     }
   };
@@ -102,10 +102,10 @@ export function AudioPlayer({
   };
 
   const formatTime = (secs: number) => {
-    if (isNaN(secs)) return '0:00';
+    if (isNaN(secs)) return "0:00";
     const mins = Math.floor(secs / 60);
     const remainingSecs = Math.floor(secs % 60);
-    return `${mins}:${remainingSecs.toString().padStart(2, '0')}`;
+    return `${mins}:${remainingSecs.toString().padStart(2, "0")}`;
   };
 
   return (
@@ -139,7 +139,7 @@ export function AudioPlayer({
           max={duration || 100}
           value={currentTime}
           step="0.1"
-          onChange={e => handleSeek(parseFloat(e.target.value))}
+          onChange={(e) => handleSeek(parseFloat(e.target.value))}
           className="w-full h-3 bg-[var(--color-bg)] rounded-lg appearance-none cursor-pointer accent-[var(--color-primary)] focus:outline focus:outline-3 focus:outline-[var(--color-focus)] focus:outline-offset-2"
           aria-valuemin={0}
           aria-valuemax={Math.round(duration)}
@@ -158,7 +158,7 @@ export function AudioPlayer({
           aria-label={isPlaying ? `Pause ${title}` : `Play ${title}`}
           className="min-h-[44px] min-w-[44px] flex items-center justify-center font-bold px-4"
         >
-          {isPlaying ? '⏸️ Pause' : '▶️ Play'}
+          {isPlaying ? "⏸️ Pause" : "▶️ Play"}
         </Button>
 
         {/* Back 10 Seconds */}
@@ -189,7 +189,7 @@ export function AudioPlayer({
           <select
             id={`speed-${progressId}`}
             value={playbackRate}
-            onChange={e => handleRateChange(parseFloat(e.target.value))}
+            onChange={(e) => handleRateChange(parseFloat(e.target.value))}
             className="min-h-[44px] px-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] text-[var(--color-text)] font-semibold focus:outline focus:outline-3 focus:outline-[var(--color-focus)] focus:outline-offset-2"
             aria-label="Audio playback rate"
           >
@@ -213,7 +213,7 @@ export function AudioPlayer({
             max="1"
             step="0.05"
             value={volume}
-            onChange={e => handleVolumeChange(parseFloat(e.target.value))}
+            onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
             className="w-24 h-3 bg-[var(--color-bg)] rounded-lg appearance-none cursor-pointer accent-[var(--color-primary)] focus:outline focus:outline-3 focus:outline-[var(--color-focus)] focus:outline-offset-2"
             aria-label="Audio volume"
             aria-valuenow={Math.round(volume * 100)}
@@ -225,12 +225,12 @@ export function AudioPlayer({
         <Button
           type="button"
           variant="outline"
-          onClick={() => setShowTranscript(prev => !prev)}
+          onClick={() => setShowTranscript((prev) => !prev)}
           aria-expanded={showTranscript}
           aria-controls={transcriptId}
           className="min-h-[44px] ml-auto font-semibold"
         >
-          {showTranscript ? 'Hide transcript' : 'Show transcript'}
+          {showTranscript ? "Hide transcript" : "Show transcript"}
         </Button>
       </div>
 

@@ -1,7 +1,8 @@
-'use client';
+"use client";
 
-import React, { useEffect } from 'react';
-import { AlertTriangle, RotateCcw, PhoneCall, Home } from 'lucide-react';
+import React, { useEffect } from "react";
+import Link from "next/link";
+import { AlertTriangle, RotateCcw, PhoneCall, Home } from "lucide-react";
 
 export default function ErrorPage({
   error,
@@ -11,7 +12,7 @@ export default function ErrorPage({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error('Application error caught by boundary:', error);
+    console.error("Application error caught by boundary:", error);
   }, [error]);
 
   return (
@@ -28,7 +29,8 @@ export default function ErrorPage({
           Something went wrong on our end
         </h1>
         <p className="text-slate-200 text-base leading-relaxed max-w-lg mx-auto">
-          An unexpected error occurred. You can try refreshing the page, go back to the home hub, or call a human helper for assistance.
+          An unexpected error occurred. You can try refreshing the page, go back to the home hub, or
+          call a human helper for assistance.
         </p>
       </header>
 
@@ -43,23 +45,22 @@ export default function ErrorPage({
           <span>Try Again</span>
         </button>
 
-        <a
+        <Link
           href="/"
           className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-white font-bold py-3.5 px-6 rounded-2xl min-h-[48px] text-sm border border-slate-600 focus:outline-none focus:ring-4 focus:ring-emerald-400"
         >
           <Home className="w-4 h-4" aria-hidden="true" />
           <span>Back to Home</span>
-        </a>
+        </Link>
 
-        <a
+        <Link
           href="/payment#human-help"
           className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-white font-bold py-3.5 px-6 rounded-2xl min-h-[48px] text-sm border border-slate-600 focus:outline-none focus:ring-4 focus:ring-emerald-400"
         >
           <PhoneCall className="w-4 h-4 text-emerald-400" aria-hidden="true" />
           <span>Call a Person</span>
-        </a>
+        </Link>
       </div>
     </div>
   );
 }
-

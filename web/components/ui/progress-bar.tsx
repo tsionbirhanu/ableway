@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 
 export interface ProgressBarProps extends React.HTMLAttributes<HTMLDivElement> {
   value: number;
@@ -20,7 +20,7 @@ export function ProgressBar({
   label,
   showPercent = true,
   valueText,
-  className = '',
+  className = "",
   ...props
 }: ProgressBarProps) {
   const clampedValue = Math.min(Math.max(value, min), max);
@@ -51,4 +51,3 @@ export function ProgressBar({
     </div>
   );
 }
-

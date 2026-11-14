@@ -44,4 +44,3 @@ export interface VoiceState {
   confidence: number;
   error: string | null;
 }
-

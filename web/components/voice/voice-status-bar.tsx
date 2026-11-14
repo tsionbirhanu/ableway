@@ -36,15 +36,19 @@ export function VoiceStatusBar({ isListening, transcript, error }: VoiceStatusBa
           transcript ? (
             <span className="text-emerald-300 font-medium">&ldquo;{transcript}&rdquo;</span>
           ) : (
-            <span className="text-slate-300">Listening for commands... (e.g. &ldquo;Help&rdquo;, &ldquo;Home&rdquo;)</span>
+            <span className="text-slate-300">
+              Listening for commands... (e.g. &ldquo;Help&rdquo;, &ldquo;Home&rdquo;)
+            </span>
           )
         ) : (
           <span className="text-slate-300">&ldquo;{transcript}&rdquo;</span>
         )}
       </div>
 
-      <Mic className={`h-4 w-4 ${isListening ? "text-rose-400" : "text-slate-400"}`} aria-hidden="true" />
+      <Mic
+        className={`h-4 w-4 ${isListening ? "text-rose-400" : "text-slate-400"}`}
+        aria-hidden="true"
+      />
     </div>
   );
 }
-

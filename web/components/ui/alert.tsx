@@ -1,6 +1,6 @@
-import React from 'react';
+import React from "react";
 
-export type AlertSeverity = 'info' | 'warning' | 'error' | 'success';
+export type AlertSeverity = "info" | "warning" | "error" | "success";
 
 export interface AlertProps extends React.HTMLAttributes<HTMLDivElement> {
   severity?: AlertSeverity;
@@ -11,7 +11,7 @@ export interface AlertProps extends React.HTMLAttributes<HTMLDivElement> {
 const severityConfig: Record<
   AlertSeverity,
   {
-    role: 'alert' | 'status';
+    role: "alert" | "status";
     iconText: string;
     badgeText: string;
     borderColor: string;
@@ -20,36 +20,36 @@ const severityConfig: Record<
   }
 > = {
   info: {
-    role: 'status',
-    iconText: 'ℹ️',
-    badgeText: 'Information:',
-    borderColor: 'border-blue-400',
-    bgColor: 'bg-blue-950/20',
-    textColor: 'text-[var(--color-text)]',
+    role: "status",
+    iconText: "ℹ️",
+    badgeText: "Information:",
+    borderColor: "border-blue-400",
+    bgColor: "bg-blue-950/20",
+    textColor: "text-[var(--color-text)]",
   },
   warning: {
-    role: 'alert',
-    iconText: '⚠️',
-    badgeText: 'Warning:',
-    borderColor: 'border-yellow-400',
-    bgColor: 'bg-yellow-950/20',
-    textColor: 'text-[var(--color-text)]',
+    role: "alert",
+    iconText: "⚠️",
+    badgeText: "Warning:",
+    borderColor: "border-yellow-400",
+    bgColor: "bg-yellow-950/20",
+    textColor: "text-[var(--color-text)]",
   },
   error: {
-    role: 'alert',
-    iconText: '⛔',
-    badgeText: 'Error:',
-    borderColor: 'border-red-400',
-    bgColor: 'bg-red-950/25',
-    textColor: 'text-[var(--color-text)]',
+    role: "alert",
+    iconText: "⛔",
+    badgeText: "Error:",
+    borderColor: "border-red-400",
+    bgColor: "bg-red-950/25",
+    textColor: "text-[var(--color-text)]",
   },
   success: {
-    role: 'status',
-    iconText: '✅',
-    badgeText: 'Success:',
-    borderColor: 'border-emerald-400',
-    bgColor: 'bg-emerald-950/20',
-    textColor: 'text-[var(--color-text)]',
+    role: "status",
+    iconText: "✅",
+    badgeText: "Success:",
+    borderColor: "border-emerald-400",
+    bgColor: "bg-emerald-950/20",
+    textColor: "text-[var(--color-text)]",
   },
 };
 
@@ -58,10 +58,10 @@ const severityConfig: Record<
  * and emoji/SVG indicators with role="alert" or role="status".
  */
 export function Alert({
-  severity = 'info',
+  severity = "info",
   title,
   children,
-  className = '',
+  className = "",
   ...props
 }: AlertProps) {
   const config = severityConfig[severity];
@@ -89,4 +89,3 @@ export function Alert({
     </div>
   );
 }
-

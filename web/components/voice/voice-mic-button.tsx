@@ -37,9 +37,10 @@ export function VoiceMicButton({
         <Mic className={isLarge ? "h-8 w-8" : "h-5 w-5"} aria-hidden="true" />
       )}
       <ScreenReaderOnly>
-        {isListening ? "Microphone active, listening. Click to stop." : "Microphone off. Click to speak."}
+        {isListening
+          ? "Microphone active, listening. Click to stop."
+          : "Microphone off. Click to speak."}
       </ScreenReaderOnly>
     </button>
   );
 }
-

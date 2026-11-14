@@ -1,7 +1,7 @@
 import { logger } from "@/lib/log";
 import { and, desc, eq } from "drizzle-orm";
 import { getDb } from "@/lib/db/client";
-import { conversations, messages } from "@/lib/db/schema";
+import { conversations, lessons, messages } from "@/lib/db/schema";
 import { retrieve } from "@/lib/knowledge/retrieve";
 import type { SearchResult } from "@/lib/knowledge/types";
 import type { MessageFlag } from "@/lib/db/json-types";
@@ -160,6 +160,50 @@ export async function askAssistant(params: AskAssistantParams): Promise<AskAssis
     });
   } catch (err) {
     logger.warn("assistant.retrieval.failed", { error: err });
+  }
+
+  // Prepend lesson transcript to retrieval context if in lesson context
+  const lessonId = (pageContext?.lessonId as string) || undefined;
+  if (lessonId) {
+    try {
+      const [lesson] = await db
+        .select({
+          id: lessons.id,
+          title: lessons.title,
+          transcript: lessons.transcript,
+        })
+        .from(lessons)
+        .where(eq(lessons.id, lessonId))
+        .limit(1);
+
+      if (lesson && lesson.transcript) {
+        knowledgeChunks.unshift({
+          id: `lesson-${lesson.id}`,
+          sourceType: "lesson",
+          sourceId: lesson.id,
+          title: `Lesson: ${lesson.title}`,
+          text: lesson.transcript,
+          language,
+          version: 1,
+          status: "published",
+          similarity: 1.0,
+        });
+      }
+    } catch (err) {
+      logger.warn("assistant.lesson_transcript.failed", { error: err });
+    }
+  } else if (pageContext?.lessonTranscript && typeof pageContext.lessonTranscript === "string") {
+    knowledgeChunks.unshift({
+      id: "lesson-context",
+      sourceType: "lesson",
+      sourceId: null,
+      title: (pageContext.lessonTitle as string) || "Current Lesson",
+      text: pageContext.lessonTranscript,
+      language,
+      version: 1,
+      status: "published",
+      similarity: 1.0,
+    });
   }
 
   const sources = knowledgeChunks.map((c) => ({

@@ -11,4 +11,3 @@ export function useEarcons() {
 
   return { play };
 }
-

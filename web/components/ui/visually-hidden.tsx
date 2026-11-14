@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 
 export interface VisuallyHiddenProps extends React.HTMLAttributes<HTMLElement> {
   as?: React.ElementType;
@@ -10,18 +10,14 @@ export interface VisuallyHiddenProps extends React.HTMLAttributes<HTMLElement> {
  * Uses the proven CSS clip-rect / sr-only pattern.
  */
 export function VisuallyHidden({
-  as: Component = 'span',
+  as: Component = "span",
   children,
-  className = '',
+  className = "",
   ...props
 }: VisuallyHiddenProps) {
   return (
-    <Component
-      className={`sr-only ${className}`}
-      {...props}
-    >
+    <Component className={`sr-only ${className}`} {...props}>
       {children}
     </Component>
   );
 }
-

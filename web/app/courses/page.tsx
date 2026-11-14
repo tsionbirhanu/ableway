@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import * as Dialog from '@radix-ui/react-dialog';
+import React, { useState, useRef, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import * as Dialog from "@radix-ui/react-dialog";
 import {
   BookOpen,
   Clock,
@@ -20,13 +20,17 @@ import {
   Scale,
   Sparkles,
   AlertCircle,
-  HelpCircle,
-} from 'lucide-react';
-import { useA11y } from '@/lib/a11y/a11y-context';
-import { playEarcon } from '@/lib/audio/earcons';
-import { speechPlayer } from '@/lib/speech/client/player';
-import { getSpeechRecognitionConstructor } from '@/lib/speech/client/recognition';
-import { useAssistant } from '@/lib/assistant/assistant-context';
+} from "lucide-react";
+import { useA11y } from "@/lib/a11y/a11y-context";
+import { playEarcon } from "@/lib/audio/earcons";
+import { speechPlayer } from "@/lib/speech/client/player";
+import {
+  getSpeechRecognitionConstructor,
+  type RecognitionErrorEvent,
+  type RecognitionLike,
+  type RecognitionResultEvent,
+} from "@/lib/speech/client/recognition";
+import { useAssistant } from "@/lib/assistant/assistant-context";
 
 export interface CourseItem {
   id: string;
@@ -47,86 +51,141 @@ export interface CourseItem {
   goals: string[];
 }
 
-export const COURSES: CourseItem[] = [
+const COURSES: CourseItem[] = [
   {
-    id: 'data-analytics',
-    slug: 'data-analytics',
-    title: 'Data Analytics',
-    titleAm: 'ዳታ አናሊቲክስ (Data Analytics)',
-    code: 'DA-100',
-    duration: '14 Weeks (56 Hours)',
-    durationAm: '14 ሳምንታት (56 ሰዓታት)',
-    level: 'Comprehensive',
-    levelAm: 'ሙሉ ፕሮግራም',
-    price: '500 ETB',
-    priceNumeric: '500',
+    id: "data-analytics",
+    slug: "data-analytics",
+    title: "Data Analytics",
+    titleAm: "ዳታ አናሊቲክስ (Data Analytics)",
+    code: "DA-100",
+    duration: "14 Weeks (56 Hours)",
+    durationAm: "14 ሳምንታት (56 ሰዓታት)",
+    level: "Comprehensive",
+    levelAm: "ሙሉ ፕሮግራም",
+    price: "500 ETB",
+    priceNumeric: "500",
     description:
-      'Learn to transform data into high-value business decisions. Master SQL databases, Python analytics, Tableau dashboards, and accessible data interpretation.',
+      "Learn to transform data into high-value business decisions. Master SQL databases, Python analytics, Tableau dashboards, and accessible data interpretation.",
     descriptionAm:
-      'ዳታን ወደ ውጤታማ የንግድ ውሳኔዎች መለወጥን ይማሩ። የSQL ዳታቤዝ፣ የፓይተን ዳታ ትንተና፣ ታብሎ እና ተደራሽ የዳታ አቀራረብን ያጠቃልላል።',
-    syllabus: ['SQL & Relational Databases', 'Python Data Analysis', 'Tableau Dashboards', 'Predictive Modeling'],
+      "ዳታን ወደ ውጤታማ የንግድ ውሳኔዎች መለወጥን ይማሩ። የSQL ዳታቤዝ፣ የፓይተን ዳታ ትንተና፣ ታብሎ እና ተደራሽ የዳታ አቀራረብን ያጠቃልላል።",
+    syllabus: [
+      "SQL & Relational Databases",
+      "Python Data Analysis",
+      "Tableau Dashboards",
+      "Predictive Modeling",
+    ],
     audioMinutes: 180,
-    goals: ['data', 'analytics', 'python', 'sql', 'numbers', 'math', 'business', 'insights', 'charts', 'analysis', 'ዳታ'],
+    goals: [
+      "data",
+      "analytics",
+      "python",
+      "sql",
+      "numbers",
+      "math",
+      "business",
+      "insights",
+      "charts",
+      "analysis",
+      "ዳታ",
+    ],
   },
   {
-    id: 'wr-100',
-    slug: 'wr-100',
-    title: 'Fundamentals of Effective Communication',
-    titleAm: 'የሥራ ቦታ ተግባቦት (Effective Communication)',
-    code: 'WR-100',
-    duration: '10 Weeks (40 Hours)',
-    durationAm: '10 ሳምንታት (40 ሰዓታት)',
-    level: 'Foundational',
-    levelAm: 'መሰረታዊ',
-    price: 'Free',
-    priceNumeric: '0',
+    id: "wr-100",
+    slug: "wr-100",
+    title: "Fundamentals of Effective Communication",
+    titleAm: "የሥራ ቦታ ተግባቦት (Effective Communication)",
+    code: "WR-100",
+    duration: "10 Weeks (40 Hours)",
+    durationAm: "10 ሳምንታት (40 ሰዓታት)",
+    level: "Foundational",
+    levelAm: "መሰረታዊ",
+    price: "Free",
+    priceNumeric: "0",
     description:
-      'Master professional communication: written reports, email etiquette, executive presentation, and inclusive collaboration designed for remote workplace success.',
-    descriptionAm:
-      'ሙያዊ የስራ ቦታ ተግባቦትን፣ ሪፖርት አጻጻፍን፣ የኢሜይል ስርዓትን፣ አቀራረብን እና አካታች የቡድን ስራን ይማሩ።',
-    syllabus: ['Business Writing', 'Verbal Persuasion', 'Active Listening', 'Conflict Resolution'],
+      "Master professional communication: written reports, email etiquette, executive presentation, and inclusive collaboration designed for remote workplace success.",
+    descriptionAm: "ሙያዊ የስራ ቦታ ተግባቦትን፣ ሪፖርት አጻጻፍን፣ የኢሜይል ስርዓትን፣ አቀራረብን እና አካታች የቡድን ስራን ይማሩ።",
+    syllabus: ["Business Writing", "Verbal Persuasion", "Active Listening", "Conflict Resolution"],
     audioMinutes: 140,
-    goals: ['communication', 'writing', 'presentation', 'speaking', 'emails', 'interviews', 'collaboration', 'english', 'ተግባቦት'],
+    goals: [
+      "communication",
+      "writing",
+      "presentation",
+      "speaking",
+      "emails",
+      "interviews",
+      "collaboration",
+      "english",
+      "ተግባቦት",
+    ],
   },
   {
-    id: 'va-1',
-    slug: 'va-1',
-    title: 'Virtual Assistant Foundations',
-    titleAm: 'ቨርቹዋል አሲስታንት (Virtual Assistant)',
-    code: 'VA-101',
-    duration: '8 Weeks (32 Hours)',
-    durationAm: '8 ሳምንታት (32 ሰዓታት)',
-    level: 'Practical',
-    levelAm: 'ተግባራዊ',
-    price: '500 ETB',
-    priceNumeric: '500',
+    id: "va-1",
+    slug: "va-1",
+    title: "Virtual Assistant Foundations",
+    titleAm: "ቨርቹዋል አሲስታንት (Virtual Assistant)",
+    code: "VA-101",
+    duration: "8 Weeks (32 Hours)",
+    durationAm: "8 ሳምንታት (32 ሰዓታት)",
+    level: "Practical",
+    levelAm: "ተግባራዊ",
+    price: "500 ETB",
+    priceNumeric: "500",
     description:
-      'Master executive virtual operations: calendar scheduling, inbox triage, document preparation, and customer coordination using accessible cloud tools.',
-    descriptionAm:
-      'የርቀት ስራ የቢሮ ረዳትነት ስራዎችን፣ የቀን መቁጠሪያ ማስተካከልን፣ የኢሜይል አያያዝን እና የደንበኞች ድጋፍን ይማሩ።',
-    syllabus: ['Calendar & Scheduling', 'Email Management', 'Google Workspace', 'Customer Support Operations'],
+      "Master executive virtual operations: calendar scheduling, inbox triage, document preparation, and customer coordination using accessible cloud tools.",
+    descriptionAm: "የርቀት ስራ የቢሮ ረዳትነት ስራዎችን፣ የቀን መቁጠሪያ ማስተካከልን፣ የኢሜይል አያያዝን እና የደንበኞች ድጋፍን ይማሩ።",
+    syllabus: [
+      "Calendar & Scheduling",
+      "Email Management",
+      "Google Workspace",
+      "Customer Support Operations",
+    ],
     audioMinutes: 120,
-    goals: ['virtual assistant', 'assistant', 'remote', 'admin', 'office', 'calendar', 'email', 'coordination', 'ቨርቹዋል'],
+    goals: [
+      "virtual assistant",
+      "assistant",
+      "remote",
+      "admin",
+      "office",
+      "calendar",
+      "email",
+      "coordination",
+      "ቨርቹዋል",
+    ],
   },
   {
-    id: 'accessibility-mastery',
-    slug: 'accessibility-mastery',
-    title: 'Digital Accessibility & Assistive Tech Mastery',
-    titleAm: 'አስስቲቭ ቴክኖሎጂ (Assistive Tech Mastery)',
-    code: 'A11Y-50',
-    duration: '4 Weeks (16 Hours)',
-    durationAm: '4 ሳምንታት (16 ሰዓታት)',
-    level: 'Specialized',
-    levelAm: 'ልዩ ስልጠና',
-    price: 'Free',
-    priceNumeric: '0',
+    id: "accessibility-mastery",
+    slug: "accessibility-mastery",
+    title: "Digital Accessibility & Assistive Tech Mastery",
+    titleAm: "አስስቲቭ ቴክኖሎጂ (Assistive Tech Mastery)",
+    code: "A11Y-50",
+    duration: "4 Weeks (16 Hours)",
+    durationAm: "4 ሳምንታት (16 ሰዓታት)",
+    level: "Specialized",
+    levelAm: "ልዩ ስልጠና",
+    price: "Free",
+    priceNumeric: "0",
     description:
-      'Master screen readers (NVDA, JAWS, TalkBack), keyboard navigation, document auditing, and accessible digital productivity for independent study and office work.',
+      "Master screen readers (NVDA, JAWS, TalkBack), keyboard navigation, document auditing, and accessible digital productivity for independent study and office work.",
     descriptionAm:
-      'የስክሪን ሪደር ሶፍትዌሮችን (NVDA, JAWS, TalkBack)፣ የኪቦርድ አጠቃቀምን እና ተደራሽ የዲጂታል ምርታማነት ክህሎቶችን ይማሩ።',
-    syllabus: ['Screen Reader Hotkeys', 'Accessible Document Creation', 'Web Navigation Mastery', 'Productivity Workflows'],
+      "የስክሪን ሪደር ሶፍትዌሮችን (NVDA, JAWS, TalkBack)፣ የኪቦርድ አጠቃቀምን እና ተደራሽ የዲጂታል ምርታማነት ክህሎቶችን ይማሩ።",
+    syllabus: [
+      "Screen Reader Hotkeys",
+      "Accessible Document Creation",
+      "Web Navigation Mastery",
+      "Productivity Workflows",
+    ],
     audioMinutes: 90,
-    goals: ['screen reader', 'accessibility', 'assistive tech', 'nvda', 'jaws', 'talkback', 'blind', 'low vision', 'አስስቲቭ'],
+    goals: [
+      "screen reader",
+      "accessibility",
+      "assistive tech",
+      "nvda",
+      "jaws",
+      "talkback",
+      "blind",
+      "low vision",
+      "አስስቲቭ",
+    ],
   },
 ];
 
@@ -136,11 +195,11 @@ export default function CoursesPage() {
   const { registerAction, unregisterAction } = useAssistant();
   const h1Ref = useRef<HTMLHeadingElement>(null);
 
-  const isAmharic = language === 'am-ET';
+  const isAmharic = language === "am-ET";
 
   // Filters & Search
-  const [filterLevel, setFilterLevel] = useState<string>('all');
-  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [filterLevel, setFilterLevel] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState<string>("");
 
   // Course Confirmation Dialog State
   const [confirmingCourse, setConfirmingCourse] = useState<CourseItem | null>(null);
@@ -152,17 +211,19 @@ export default function CoursesPage() {
 
   // Assistant State
   const [assistantActive, setAssistantActive] = useState<boolean>(false);
-  const [assistantSpokenText, setAssistantSpokenText] = useState<string>('');
-  const [voiceInputText, setVoiceInputText] = useState<string>('');
+  const [assistantSpokenText, setAssistantSpokenText] = useState<string>("");
+  const [voiceInputText, setVoiceInputText] = useState<string>("");
   const [isListening, setIsListening] = useState<boolean>(false);
   const [pageError, setPageError] = useState<string | null>(null);
 
   const isSpeakingRef = useRef<boolean>(false);
-  const recognitionRef = useRef<any>(null);
+  const recognitionRef = useRef<RecognitionLike | null>(null);
   const activeUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const speechSafetyTimerRef = useRef<NodeJS.Timeout | null>(null);
   const assistantActiveRef = useRef(assistantActive);
-  assistantActiveRef.current = assistantActive;
+  useEffect(() => {
+    assistantActiveRef.current = assistantActive;
+  }, [assistantActive]);
 
   const startListeningRef = useRef<() => void>(() => {});
 
@@ -171,7 +232,7 @@ export default function CoursesPage() {
     (text: string) => {
       isSpeakingRef.current = true;
       setAssistantSpokenText(text);
-      announce(text, 'polite');
+      announce(text, "polite");
 
       if (recognitionRef.current) {
         try {
@@ -185,7 +246,11 @@ export default function CoursesPage() {
         speechSafetyTimerRef.current = null;
       }
 
-      if (mode === 'voice-first' && !preferences.suppressInAppTTS && typeof window !== 'undefined') {
+      if (
+        mode === "voice-first" &&
+        !preferences.suppressInAppTTS &&
+        typeof window !== "undefined"
+      ) {
         // Server speech (Gemini): a real Amharic voice. Falls back to the browser voice by itself.
         speechPlayer.cancel();
         let finished = false;
@@ -208,11 +273,11 @@ export default function CoursesPage() {
 
         // Safety timer: server speech can take a few seconds to start, so allow for that.
         const words = text.split(/\s+/).length;
-        const duration = Math.max(3500, (words / (0.80 * 2.3)) * 1000 + 1500) + 20000;
+        const duration = Math.max(3500, (words / (0.8 * 2.3)) * 1000 + 1500) + 20000;
         speechSafetyTimerRef.current = setTimeout(finishSpeaking, duration);
 
         void speechPlayer
-          .speak(text, { lang: language === 'am-ET' ? 'am-ET' : 'en-US', rate: 0.8 })
+          .speak(text, { lang: language === "am-ET" ? "am-ET" : "en-US", rate: 0.8 })
           .then(finishSpeaking);
       } else {
         setTimeout(() => {
@@ -223,16 +288,16 @@ export default function CoursesPage() {
         }, 1200);
       }
     },
-    [announce, isAmharic, mode, preferences.suppressInAppTTS]
+    [announce, language, mode, preferences.suppressInAppTTS],
   );
 
   // Set page title and move focus to h1 (F0 Rule 4, 7)
   useEffect(() => {
-    document.title = isAmharic ? 'ኮርስ ይምረጡ - Ableway' : 'Choose a course - Ableway';
+    document.title = isAmharic ? "ኮርስ ይምረጡ - Ableway" : "Choose a course - Ableway";
     const welcome = isAmharic
-      ? 'ኮርስ መምረጫ ገጽ ተከፍቷል። 4 የሚገኙ ኮርሶች አሉ። በኪቦርድዎ ወይም በድምጽ ረዳቱ መምረጥ ይችላሉ።'
-      : 'Choose a course page loaded. There are 4 available courses to choose from. You can use your keyboard or the spoken assistant.';
-    announce(welcome, 'polite');
+      ? "ኮርስ መምረጫ ገጽ ተከፍቷል። 4 የሚገኙ ኮርሶች አሉ። በኪቦርድዎ ወይም በድምጽ ረዳቱ መምረጥ ይችላሉ።"
+      : "Choose a course page loaded. There are 4 available courses to choose from. You can use your keyboard or the spoken assistant.";
+    announce(welcome, "polite");
     if (h1Ref.current) {
       h1Ref.current.focus();
     }
@@ -243,19 +308,19 @@ export default function CoursesPage() {
     (course: CourseItem) => {
       setConfirmingCourse(course);
       setEnrollmentError(null);
-      playEarcon('success');
+      playEarcon("success");
 
       const titleToSay = isAmharic ? course.titleAm : course.title;
       const promptMsg = isAmharic
         ? `«${titleToSay}»ን መርጠዋል። ዋጋው ${course.price} ነው። ወደ ክፍያ መቀጠል ይፈልጋሉ?`
         : `You chose ${course.title}. The price is ${course.price}. Continue to payment?`;
 
-      announce(promptMsg, 'polite');
+      announce(promptMsg, "polite");
       if (assistantActiveRef.current) {
         speakAssistant(promptMsg);
       }
     },
-    [announce, isAmharic, speakAssistant]
+    [announce, isAmharic, speakAssistant],
   );
 
   // Close confirmation dialog
@@ -264,7 +329,7 @@ export default function CoursesPage() {
       const cancelMsg = isAmharic
         ? `የኮርስ ምርጫ ተሰርዟል። ሌላ ኮርስ መምረጥ ይችላሉ።`
         : `Course selection cancelled. You can choose another course.`;
-      announce(cancelMsg, 'polite');
+      announce(cancelMsg, "polite");
       if (assistantActiveRef.current) {
         speakAssistant(cancelMsg);
       }
@@ -277,23 +342,23 @@ export default function CoursesPage() {
   // Register global assistant action for selecting course
   useEffect(() => {
     registerAction({
-      name: 'selectCourse',
-      description: 'Enroll in a course by title or id',
+      name: "selectCourse",
+      description: "Enroll in a course by title or id",
       requiresConfirmation: true,
       confirmationPrompt: (params) => {
-        const title = (params.title as string) || 'Data Analytics';
+        const title = (params.title as string) || "Data Analytics";
         return `Are you sure you want to enroll in ${title}? This will register your enrollment and proceed to your learning dashboard.`;
       },
-      announcement: (params) => `Enrolling in ${(params.title as string) || 'course'}.`,
+      announcement: (params) => `Enrolling in ${(params.title as string) || "course"}.`,
       handler: (params) => {
-        const courseId = (params.courseId as string) || 'data-analytics';
+        const courseId = (params.courseId as string) || "data-analytics";
         const course = COURSES.find((c) => c.id === courseId || c.slug === courseId) || COURSES[0];
         handleOpenConfirmDialog(course);
       },
     });
 
     return () => {
-      unregisterAction('selectCourse');
+      unregisterAction("selectCourse");
     };
   }, [registerAction, unregisterAction, handleOpenConfirmDialog]);
 
@@ -307,12 +372,12 @@ export default function CoursesPage() {
     const pendingMsg = isAmharic
       ? `ምዝገባዎን በማረጋገጥ ላይ... እባክዎ ይጠብቁ።`
       : `Confirming your enrollment for ${confirmingCourse.title}... Please wait.`;
-    announce(pendingMsg, 'polite');
+    announce(pendingMsg, "polite");
 
     try {
-      const res = await fetch('/api/enrollments', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/enrollments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           courseId: confirmingCourse.id,
           courseTitle: confirmingCourse.title,
@@ -323,30 +388,32 @@ export default function CoursesPage() {
       const data = await res.json().catch(() => null);
 
       if (!res.ok) {
-        throw new Error(data?.error || 'We could not process your enrollment right now. Please try again.');
+        throw new Error(
+          data?.error || "We could not process your enrollment right now. Please try again.",
+        );
       }
 
-      playEarcon('success');
+      playEarcon("success");
       const successMsg = isAmharic
         ? `ምዝገባዎ ተረጋግጧል። ወደ ክፍያ ገጽ እየተላለፉ ነው።`
         : `Enrollment confirmed. Going to payment.`;
-      announce(successMsg, 'polite');
+      announce(successMsg, "polite");
 
       // Navigate to /payment with course parameters
       router.push(
         `/payment?courseId=${confirmingCourse.id}&title=${encodeURIComponent(
-          confirmingCourse.title
-        )}&price=${encodeURIComponent(confirmingCourse.priceNumeric || confirmingCourse.price)}`
+          confirmingCourse.title,
+        )}&price=${encodeURIComponent(confirmingCourse.priceNumeric || confirmingCourse.price)}`,
       );
-    } catch (err: any) {
-      playEarcon('error');
+    } catch (err) {
+      playEarcon("error");
       const errorMsg =
-        err?.message ||
+        (err instanceof Error && err.message) ||
         (isAmharic
-          ? 'ምዝገባውን ማጠናቀቅ አልተቻለም። እባክዎ የበይነመረብ ግንኙነትዎን ያረጋግጡና እንደገና ይሞክሩ።'
-          : 'We could not complete your enrollment right now. Please check your connection and try again.');
+          ? "ምዝገባውን ማጠናቀቅ አልተቻለም። እባክዎ የበይነመረብ ግንኙነትዎን ያረጋግጡና እንደገና ይሞክሩ።"
+          : "We could not complete your enrollment right now. Please check your connection and try again.");
       setEnrollmentError(errorMsg);
-      announce(errorMsg, 'assertive');
+      announce(errorMsg, "assertive");
       setIsEnrolling(false);
     }
   }, [announce, confirmingCourse, isAmharic, router]);
@@ -354,12 +421,12 @@ export default function CoursesPage() {
   // "Read all courses" button logic (works independently without assistant)
   const handleReadAllCourses = useCallback(() => {
     if (isReadingAll) {
-      if (typeof window !== 'undefined') {
+      if (typeof window !== "undefined") {
         speechPlayer.cancel();
       }
       setIsReadingAll(false);
-      const stoppedMsg = isAmharic ? 'የኮርሶችን ዝርዝር ማንበብ ቆሟል።' : 'Stopped reading all courses.';
-      announce(stoppedMsg, 'polite');
+      const stoppedMsg = isAmharic ? "የኮርሶችን ዝርዝር ማንበብ ቆሟል።" : "Stopped reading all courses.";
+      announce(stoppedMsg, "polite");
       return;
     }
 
@@ -369,20 +436,20 @@ export default function CoursesPage() {
       ? `በአጠቃላይ 4 የሚገኙ ኮርሶች አሉ። ` +
         COURSES.map(
           (c, idx) =>
-            `ኮርስ ${idx + 1}፦ ${c.titleAm}። ደረጃው፦ ${c.levelAm}። የጊዜ ርዝማኔው፦ ${c.durationAm}። ዋጋው፦ ${c.price}። ማብራሪያ፦ ${c.descriptionAm}።`
-        ).join(' ')
+            `ኮርስ ${idx + 1}፦ ${c.titleAm}። ደረጃው፦ ${c.levelAm}። የጊዜ ርዝማኔው፦ ${c.durationAm}። ዋጋው፦ ${c.price}። ማብራሪያ፦ ${c.descriptionAm}።`,
+        ).join(" ")
       : `There are 4 courses available to choose from. ` +
         COURSES.map(
           (c, idx) =>
-            `Course ${idx + 1}: ${c.title}. Level: ${c.level}. Duration: ${c.duration}. Price: ${c.price}. Description: ${c.description}.`
-        ).join(' ');
+            `Course ${idx + 1}: ${c.title}. Level: ${c.level}. Duration: ${c.duration}. Price: ${c.price}. Description: ${c.description}.`,
+        ).join(" ");
 
-    announce(fullScript, 'polite');
+    announce(fullScript, "polite");
 
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       speechPlayer.cancel();
       void speechPlayer
-        .speak(fullScript, { lang: isAmharic ? 'am-ET' : 'en-US', rate: 0.8 })
+        .speak(fullScript, { lang: isAmharic ? "am-ET" : "en-US", rate: 0.8 })
         .then(() => setIsReadingAll(false))
         .catch(() => setIsReadingAll(false));
     }
@@ -393,15 +460,15 @@ export default function CoursesPage() {
     (course: CourseItem) => {
       const text = isAmharic
         ? `${course.titleAm}። ደረጃ፦ ${course.levelAm}። የጊዜ ርዝማኔ፦ ${course.durationAm}። ዋጋ፦ ${course.price}። ${course.descriptionAm}`
-        : `${course.title}. Level: ${course.level}. Duration: ${course.duration}. Price: ${course.price}. ${course.description} Skills included: ${course.syllabus.join(', ')}.`;
+        : `${course.title}. Level: ${course.level}. Duration: ${course.duration}. Price: ${course.price}. ${course.description} Skills included: ${course.syllabus.join(", ")}.`;
 
-      announce(text, 'polite');
-      if (typeof window !== 'undefined') {
+      announce(text, "polite");
+      if (typeof window !== "undefined") {
         speechPlayer.cancel();
-        void speechPlayer.speak(text, { lang: isAmharic ? 'am-ET' : 'en-US', rate: 0.8 });
+        void speechPlayer.speak(text, { lang: isAmharic ? "am-ET" : "en-US", rate: 0.8 });
       }
     },
-    [announce, isAmharic]
+    [announce, isAmharic],
   );
 
   // Spoken voice command handler: course count, read, compare, recommend from goals
@@ -414,26 +481,26 @@ export default function CoursesPage() {
       // In-dialog voice confirmation
       if (confirmingCourse) {
         if (
-          lower.includes('yes') ||
-          lower.includes('continue') ||
-          lower.includes('confirm') ||
-          lower.includes('proceed') ||
-          lower.includes('pay') ||
-          lower.includes('አዎ') ||
-          lower.includes('ቀጥል') ||
-          lower.includes('እሺ')
+          lower.includes("yes") ||
+          lower.includes("continue") ||
+          lower.includes("confirm") ||
+          lower.includes("proceed") ||
+          lower.includes("pay") ||
+          lower.includes("አዎ") ||
+          lower.includes("ቀጥል") ||
+          lower.includes("እሺ")
         ) {
           handleConfirmEnrollment();
           return;
         }
         if (
-          lower.includes('no') ||
-          lower.includes('cancel') ||
-          lower.includes('back') ||
-          lower.includes('stop') ||
-          lower.includes('አይ') ||
-          lower.includes('ተመለስ') ||
-          lower.includes('ይቅር')
+          lower.includes("no") ||
+          lower.includes("cancel") ||
+          lower.includes("back") ||
+          lower.includes("stop") ||
+          lower.includes("አይ") ||
+          lower.includes("ተመለስ") ||
+          lower.includes("ይቅር")
         ) {
           handleCancelConfirmDialog();
           return;
@@ -442,12 +509,12 @@ export default function CoursesPage() {
 
       // 1. Assistant says how many courses there are
       if (
-        lower.includes('how many') ||
-        lower.includes('count') ||
-        lower.includes('number of courses') ||
-        lower.includes('how much courses') ||
-        lower.includes('ስንት ኮርስ') ||
-        lower.includes('ስንት ናቸው')
+        lower.includes("how many") ||
+        lower.includes("count") ||
+        lower.includes("number of courses") ||
+        lower.includes("how much courses") ||
+        lower.includes("ስንት ኮርስ") ||
+        lower.includes("ስንት ናቸው")
       ) {
         const msg = isAmharic
           ? `በአጠቃላይ 4 የሚገኙ ኮርሶች አሉ፦ ዳታ አናሊቲክስ፣ የሥራ ቦታ ተግባቦት፣ ቨርቹዋል አሲስታንት እና አስስቲቭ ቴክኖሎጂ።`
@@ -458,14 +525,14 @@ export default function CoursesPage() {
 
       // 2. Assistant reads them on request
       if (
-        lower.includes('read courses') ||
-        lower.includes('read all') ||
-        lower.includes('list courses') ||
-        lower.includes('tell me courses') ||
-        lower.includes('what courses') ||
-        lower.includes('ኮርሶችን አንብብ') ||
-        lower.includes('ዘርዝር') ||
-        lower.includes('ንገረኝ')
+        lower.includes("read courses") ||
+        lower.includes("read all") ||
+        lower.includes("list courses") ||
+        lower.includes("tell me courses") ||
+        lower.includes("what courses") ||
+        lower.includes("ኮርሶችን አንብብ") ||
+        lower.includes("ዘርዝር") ||
+        lower.includes("ንገረኝ")
       ) {
         const msg = isAmharic
           ? `አራቱ ኮርሶች የሚከተሉት ናቸው፦ 1፦ ዳታ አናሊቲክስ፣ 14 ሳምንታት፣ ዋጋው 500 ብር። 2፦ የሥራ ቦታ ተግባቦት፣ 10 ሳምንታት፣ ነጻ። 3፦ ቨርቹዋል አሲስታንት፣ 8 ሳምንታት፣ ዋጋው 500 ብር። 4፦ አስስቲቭ ቴክኖሎጂ፣ 4 ሳምንታት፣ ነጻ። የትኛውን መምረጥ ይፈልጋሉ?`
@@ -476,12 +543,12 @@ export default function CoursesPage() {
 
       // 3. Assistant compares two courses
       if (
-        lower.includes('compare') ||
-        lower.includes('difference') ||
-        lower.includes('versus') ||
-        lower.includes('vs') ||
-        lower.includes('አወዳድር') ||
-        lower.includes('ልዩነት')
+        lower.includes("compare") ||
+        lower.includes("difference") ||
+        lower.includes("versus") ||
+        lower.includes("vs") ||
+        lower.includes("አወዳድር") ||
+        lower.includes("ልዩነት")
       ) {
         const msg = isAmharic
           ? `ዳታ አናሊቲክስ እና ተግባቦትን ስናወዳድር፦ ዳታ አናሊቲክስ የ14 ሳምንታት የፓይተን እና SQL ትንተና ስልጠና ሲሆን ዋጋው 500 ብር ነው። የሥራ ቦታ ተግባቦት ደግሞ የ10 ሳምንታት የመጻፍ፣ የመናገር እና የአቀራረብ ክህሎት ስልጠና ሲሆን በነጻ የሚሰጥ ነው። የትኛውን መምረጥ ይፈልጋሉ?`
@@ -492,24 +559,24 @@ export default function CoursesPage() {
 
       // 4. Assistant recommends one from learner's goals
       if (
-        lower.includes('recommend') ||
-        lower.includes('goal') ||
-        lower.includes('suggest') ||
-        lower.includes('which should i') ||
-        lower.includes('which course') ||
-        lower.includes('best for me') ||
-        lower.includes('ምከረኝ') ||
-        lower.includes('የቱ ይሻላል') ||
-        lower.includes('ግብ')
+        lower.includes("recommend") ||
+        lower.includes("goal") ||
+        lower.includes("suggest") ||
+        lower.includes("which should i") ||
+        lower.includes("which course") ||
+        lower.includes("best for me") ||
+        lower.includes("ምከረኝ") ||
+        lower.includes("የቱ ይሻላል") ||
+        lower.includes("ግብ")
       ) {
         if (
-          lower.includes('data') ||
-          lower.includes('number') ||
-          lower.includes('math') ||
-          lower.includes('python') ||
-          lower.includes('sql') ||
-          lower.includes('analysis') ||
-          lower.includes('ዳታ')
+          lower.includes("data") ||
+          lower.includes("number") ||
+          lower.includes("math") ||
+          lower.includes("python") ||
+          lower.includes("sql") ||
+          lower.includes("analysis") ||
+          lower.includes("ዳታ")
         ) {
           const msg = isAmharic
             ? `ከዳታ እና ከቁጥሮች ጋር ለመስራት ላቀዱት ግብ፦ ዳታ አናሊቲክስን እመክርዎታለሁ። 14 ሳምንታት ሲሆን ዋጋው 500 ብር ነው። ዳታ አናሊቲክስን መምረጥ ይፈልጋሉ?`
@@ -519,14 +586,14 @@ export default function CoursesPage() {
         }
 
         if (
-          lower.includes('writing') ||
-          lower.includes('speak') ||
-          lower.includes('communication') ||
-          lower.includes('english') ||
-          lower.includes('presentation') ||
-          lower.includes('interview') ||
-          lower.includes('ተግባቦት') ||
-          lower.includes('መናገር')
+          lower.includes("writing") ||
+          lower.includes("speak") ||
+          lower.includes("communication") ||
+          lower.includes("english") ||
+          lower.includes("presentation") ||
+          lower.includes("interview") ||
+          lower.includes("ተግባቦት") ||
+          lower.includes("መናገር")
         ) {
           const msg = isAmharic
             ? `የአቀራረብ እና የስራ ቦታ ግንኙነትን ለማሻሻል ላቀዱት ግብ፦ የሥራ ቦታ ተግባቦትን እመክርዎታለሁ። 10 ሳምንታት ሲሆን በነጻ የሚሰጥ ነው። ተግባቦትን መምረጥ ይፈልጋሉ?`
@@ -536,14 +603,14 @@ export default function CoursesPage() {
         }
 
         if (
-          lower.includes('remote') ||
-          lower.includes('assistant') ||
-          lower.includes('admin') ||
-          lower.includes('office') ||
-          lower.includes('schedule') ||
-          lower.includes('email') ||
-          lower.includes('ቨርቹዋል') ||
-          lower.includes('ረዳት')
+          lower.includes("remote") ||
+          lower.includes("assistant") ||
+          lower.includes("admin") ||
+          lower.includes("office") ||
+          lower.includes("schedule") ||
+          lower.includes("email") ||
+          lower.includes("ቨርቹዋል") ||
+          lower.includes("ረዳት")
         ) {
           const msg = isAmharic
             ? `የርቀት ቢሮ ስራዎችን እና አስተዳደራዊ ተግባራትን ለማከናወን ላቀዱት ግብ፦ ቨርቹዋል አሲስታንትን እመክርዎታለሁ። 8 ሳምንታት ሲሆን ዋጋው 500 ብር ነው። ቨርቹዋል አሲስታንትን መምረጥ ይፈልጋሉ?`
@@ -553,15 +620,15 @@ export default function CoursesPage() {
         }
 
         if (
-          lower.includes('screen reader') ||
-          lower.includes('blind') ||
-          lower.includes('low vision') ||
-          lower.includes('assistive') ||
-          lower.includes('nvda') ||
-          lower.includes('jaws') ||
-          lower.includes('talkback') ||
-          lower.includes('አስስቲቭ') ||
-          lower.includes('ስክሪን ሪደር')
+          lower.includes("screen reader") ||
+          lower.includes("blind") ||
+          lower.includes("low vision") ||
+          lower.includes("assistive") ||
+          lower.includes("nvda") ||
+          lower.includes("jaws") ||
+          lower.includes("talkback") ||
+          lower.includes("አስስቲቭ") ||
+          lower.includes("ስክሪን ሪደር")
         ) {
           const msg = isAmharic
             ? `ስክሪን ሪደርን እና የኮምፒውተር ተደራሽነትን ለመማር ላቀዱት ግብ፦ አስስቲቭ ቴክኖሎጂን እመክርዎታለሁ። 4 ሳምንታት ሲሆን በነጻ የሚሰጥ ነው። አስስቲቭ ቴክኖሎጂን መምረጥ ይፈልጋሉ?`
@@ -579,62 +646,62 @@ export default function CoursesPage() {
 
       // Course selection by voice
       if (
-        lower.includes('data') ||
-        lower.includes('analytics') ||
-        lower.includes('python') ||
-        lower.includes('sql') ||
-        lower.includes('first') ||
-        lower.includes('ዳታ') ||
-        lower.includes('አናሊቲክስ') ||
-        lower.includes('አንድ') ||
-        lower === '1' ||
-        lower.includes('የመጀመሪያ')
+        lower.includes("data") ||
+        lower.includes("analytics") ||
+        lower.includes("python") ||
+        lower.includes("sql") ||
+        lower.includes("first") ||
+        lower.includes("ዳታ") ||
+        lower.includes("አናሊቲክስ") ||
+        lower.includes("አንድ") ||
+        lower === "1" ||
+        lower.includes("የመጀመሪያ")
       ) {
         handleOpenConfirmDialog(COURSES[0]);
         return;
       }
 
       if (
-        lower.includes('communication') ||
-        lower.includes('writing') ||
-        lower.includes('wr') ||
-        lower.includes('second') ||
-        lower.includes('ተግባቦት') ||
-        lower.includes('ኮሚዩኒኬሽን') ||
-        lower.includes('ሁለት') ||
-        lower === '2' ||
-        lower.includes('ሁለተኛ')
+        lower.includes("communication") ||
+        lower.includes("writing") ||
+        lower.includes("wr") ||
+        lower.includes("second") ||
+        lower.includes("ተግባቦት") ||
+        lower.includes("ኮሚዩኒኬሽን") ||
+        lower.includes("ሁለት") ||
+        lower === "2" ||
+        lower.includes("ሁለተኛ")
       ) {
         handleOpenConfirmDialog(COURSES[1]);
         return;
       }
 
       if (
-        lower.includes('virtual assistant') ||
-        lower.includes('assistant') ||
-        lower.includes('va') ||
-        lower.includes('third') ||
-        lower.includes('ቨርቹዋል') ||
-        lower.includes('ረዳት') ||
-        lower.includes('ሶስት') ||
-        lower.includes('ሦስት') ||
-        lower === '3' ||
-        lower.includes('ሦስተኛ')
+        lower.includes("virtual assistant") ||
+        lower.includes("assistant") ||
+        lower.includes("va") ||
+        lower.includes("third") ||
+        lower.includes("ቨርቹዋል") ||
+        lower.includes("ረዳት") ||
+        lower.includes("ሶስት") ||
+        lower.includes("ሦስት") ||
+        lower === "3" ||
+        lower.includes("ሦስተኛ")
       ) {
         handleOpenConfirmDialog(COURSES[2]);
         return;
       }
 
       if (
-        lower.includes('assistive') ||
-        lower.includes('accessibility') ||
-        lower.includes('screen reader') ||
-        lower.includes('fourth') ||
-        lower.includes('አስስቲቭ') ||
-        lower.includes('ስክሪን ሪደር') ||
-        lower.includes('አራት') ||
-        lower === '4' ||
-        lower.includes('አራተኛ')
+        lower.includes("assistive") ||
+        lower.includes("accessibility") ||
+        lower.includes("screen reader") ||
+        lower.includes("fourth") ||
+        lower.includes("አስስቲቭ") ||
+        lower.includes("ስክሪን ሪደር") ||
+        lower.includes("አራት") ||
+        lower === "4" ||
+        lower.includes("አራተኛ")
       ) {
         handleOpenConfirmDialog(COURSES[3]);
         return;
@@ -645,12 +712,19 @@ export default function CoursesPage() {
         : `I heard ${input}. You can say select Data Analytics, say compare, say recommend, or say read all courses.`;
       speakAssistant(fallback);
     },
-    [confirmingCourse, handleCancelConfirmDialog, handleConfirmEnrollment, handleOpenConfirmDialog, isAmharic, speakAssistant]
+    [
+      confirmingCourse,
+      handleCancelConfirmDialog,
+      handleConfirmEnrollment,
+      handleOpenConfirmDialog,
+      isAmharic,
+      speakAssistant,
+    ],
   );
 
   // Hands-free Speech Recognition
   const startListening = useCallback(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === "undefined") return;
     if (isSpeakingRef.current) return;
 
     const SpeechRec =
@@ -667,7 +741,7 @@ export default function CoursesPage() {
 
     try {
       const rec = new SpeechRec();
-      rec.lang = isAmharic ? 'am-ET' : 'en-US';
+      rec.lang = isAmharic ? "am-ET" : "en-US";
       rec.interimResults = true;
       rec.continuous = true;
 
@@ -675,11 +749,11 @@ export default function CoursesPage() {
         setIsListening(true);
       };
 
-      rec.onresult = (evt: any) => {
+      rec.onresult = (evt: RecognitionResultEvent) => {
         if (isSpeakingRef.current) return;
 
-        let interim = '';
-        let final = '';
+        let interim = "";
+        let final = "";
 
         for (let i = evt.resultIndex; i < evt.results.length; ++i) {
           const res = evt.results[i];
@@ -701,13 +775,13 @@ export default function CoursesPage() {
         }
       };
 
-      rec.onerror = (e: any) => {
-        if (e.error === 'not-allowed') {
+      rec.onerror = (e: RecognitionErrorEvent) => {
+        if (e.error === "not-allowed") {
           announce(
             isAmharic
-              ? 'የማይክራፎን ፈቃድ አልተሰጠም። በኪቦርድዎ ወይም በስክሪኑ ላይ ያለውን ቁልፍ በመጠቀም መምረጥ ይችላሉ።'
-              : 'Microphone permission not granted. You can use your keyboard to choose any course.',
-            'assertive'
+              ? "የማይክራፎን ፈቃድ አልተሰጠም። በኪቦርድዎ ወይም በስክሪኑ ላይ ያለውን ቁልፍ በመጠቀም መምረጥ ይችላሉ።"
+              : "Microphone permission not granted. You can use your keyboard to choose any course.",
+            "assertive",
           );
           setIsListening(false);
         }
@@ -737,7 +811,7 @@ export default function CoursesPage() {
 
   // Global helper for simulated voice testing
   useEffect(() => {
-    (window as any).__simulateVoiceInput = (text: string) => {
+    window.__simulateVoiceInput = (text: string) => {
       setVoiceInputText(text);
       handleVoiceCommand(text);
     };
@@ -746,21 +820,21 @@ export default function CoursesPage() {
   // Start Assistant on Button Click
   const startAssistant = useCallback(() => {
     isSpeakingRef.current = false;
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
       speechPlayer.cancel();
     }
-    playEarcon('listening');
+    playEarcon("listening");
     setAssistantActive(true);
     const intro = isAmharic
-      ? 'እንኳን ወደ ኮርስ መምረጫ በደህና መጡ። በአጠቃላይ 4 የሚገኙ ኮርሶች አሉ፦ 1: ዳታ አናሊቲክስ፤ 2: የሥራ ቦታ ተግባቦት፤ 3: ቨርቹዋል አሲስታንት፤ 4: አስስቲቭ ቴክኖሎጂ። የኮርሱን ስም መናገር፣ እንዲያወዳድርልዎ መጠየቅ፣ ወይም የሙያ ግብዎን በመናገር ምክር መጠየቅ ይችላሉ።'
-      : 'Welcome to course choice. There are 4 courses available to choose from: 1: Data Analytics, 2: Fundamentals of Effective Communication, 3: Virtual Assistant Foundations, and 4: Digital Accessibility & Assistive Tech Mastery. Say the name of a course, say compare to hear differences, or tell me your career goals for a recommendation.';
+      ? "እንኳን ወደ ኮርስ መምረጫ በደህና መጡ። በአጠቃላይ 4 የሚገኙ ኮርሶች አሉ፦ 1: ዳታ አናሊቲክስ፤ 2: የሥራ ቦታ ተግባቦት፤ 3: ቨርቹዋል አሲስታንት፤ 4: አስስቲቭ ቴክኖሎጂ። የኮርሱን ስም መናገር፣ እንዲያወዳድርልዎ መጠየቅ፣ ወይም የሙያ ግብዎን በመናገር ምክር መጠየቅ ይችላሉ።"
+      : "Welcome to course choice. There are 4 courses available to choose from: 1: Data Analytics, 2: Fundamentals of Effective Communication, 3: Virtual Assistant Foundations, and 4: Digital Accessibility & Assistive Tech Mastery. Say the name of a course, say compare to hear differences, or tell me your career goals for a recommendation.";
     speakAssistant(intro);
   }, [speakAssistant, isAmharic]);
 
   // Toggle mic listening
   const toggleListening = () => {
     isSpeakingRef.current = false;
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
       speechPlayer.cancel();
     }
     if (isListening) {
@@ -768,14 +842,16 @@ export default function CoursesPage() {
         recognitionRef.current?.abort();
       } catch {}
       setIsListening(false);
-      playEarcon('stop');
-      announce(isAmharic ? 'ማይክራፎን ቆሟል።' : 'Microphone paused.', 'polite');
+      playEarcon("stop");
+      announce(isAmharic ? "ማይክራፎን ቆሟል።" : "Microphone paused.", "polite");
     } else {
-      playEarcon('listening');
+      playEarcon("listening");
       startListening();
       announce(
-        isAmharic ? 'ማይክራፎን ተከፍቷል። የእርስዎን ትዕዛዝ በማዳመጥ ላይ...' : 'Microphone active. Listening for your course choice.',
-        'polite'
+        isAmharic
+          ? "ማይክራፎን ተከፍቷል። የእርስዎን ትዕዛዝ በማዳመጥ ላይ..."
+          : "Microphone active. Listening for your course choice.",
+        "polite",
       );
     }
   };
@@ -783,17 +859,17 @@ export default function CoursesPage() {
   // Filter courses based on level and search
   const filteredCourses = COURSES.filter((c) => {
     const matchesLevel =
-      filterLevel === 'all'
+      filterLevel === "all"
         ? true
-        : filterLevel === 'comprehensive'
-        ? c.level === 'Comprehensive'
-        : filterLevel === 'foundational'
-        ? c.level === 'Foundational'
-        : filterLevel === 'practical'
-        ? c.level === 'Practical'
-        : filterLevel === 'specialized'
-        ? c.level === 'Specialized'
-        : true;
+        : filterLevel === "comprehensive"
+          ? c.level === "Comprehensive"
+          : filterLevel === "foundational"
+            ? c.level === "Foundational"
+            : filterLevel === "practical"
+              ? c.level === "Practical"
+              : filterLevel === "specialized"
+                ? c.level === "Specialized"
+                : true;
 
     const matchesSearch =
       !searchQuery.trim() ||
@@ -815,7 +891,7 @@ export default function CoursesPage() {
             tabIndex={-1}
             className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 rounded"
           >
-            {isAmharic ? 'ኮርስ ይምረጡ' : 'Choose a course'}
+            {isAmharic ? "ኮርስ ይምረጡ" : "Choose a course"}
           </h1>
 
           {/* Top Actions: Read All Courses button & Language switch */}
@@ -830,12 +906,12 @@ export default function CoursesPage() {
               {isReadingAll ? (
                 <>
                   <VolumeX className="w-4 h-4 text-rose-600" aria-hidden="true" />
-                  <span>{isAmharic ? 'ማንበብ አቁም' : 'Stop reading'}</span>
+                  <span>{isAmharic ? "ማንበብ አቁም" : "Stop reading"}</span>
                 </>
               ) : (
                 <>
                   <Volume2 className="w-4 h-4 text-slate-700" aria-hidden="true" />
-                  <span>{isAmharic ? 'ሁሉንም ኮርሶች አንብብ' : 'Read all courses'}</span>
+                  <span>{isAmharic ? "ሁሉንም ኮርሶች አንብብ" : "Read all courses"}</span>
                 </>
               )}
             </button>
@@ -855,15 +931,15 @@ export default function CoursesPage() {
               className="min-h-[44px] px-3.5 py-2 rounded-lg font-bold text-xs border border-orange-500/80 bg-white hover:bg-slate-100 text-slate-800 flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-orange-400 cursor-pointer shadow-sm transition-colors"
             >
               <Globe className="w-3.5 h-3.5 text-orange-600" aria-hidden="true" />
-              <span>{isAmharic ? 'ቋንቋ፡ አማርኛ' : 'Language: English'}</span>
+              <span>{isAmharic ? "ቋንቋ፡ አማርኛ" : "Language: English"}</span>
             </button>
           </div>
         </div>
 
         <p className="text-base text-slate-700 max-w-2xl leading-relaxed">
           {isAmharic
-            ? 'የድምጽ ትምህርቶችን እና ፈተናዎችን ለመጀመር ከታች ካሉት ፕሮግራሞች ይምረጡ። በኪቦርድዎ ወይም በድምጽ ረዳቱ አማካኝነት መምረጥ ይችላሉ።'
-            : 'Select a programme below to start your audio lessons and practice quizzes. You can navigate by keyboard or use the spoken assistant to choose hands-free.'}
+            ? "የድምጽ ትምህርቶችን እና ፈተናዎችን ለመጀመር ከታች ካሉት ፕሮግራሞች ይምረጡ። በኪቦርድዎ ወይም በድምጽ ረዳቱ አማካኝነት መምረጥ ይችላሉ።"
+            : "Select a programme below to start your audio lessons and practice quizzes. You can navigate by keyboard or use the spoken assistant to choose hands-free."}
         </p>
       </header>
 
@@ -876,7 +952,9 @@ export default function CoursesPage() {
         >
           <div className="flex items-center gap-2 text-red-900 font-bold">
             <AlertCircle className="w-5 h-5 text-red-600" aria-hidden="true" />
-            <h2 className="text-base font-bold">{isAmharic ? 'የተፈጠረ ችግር አለ' : 'Something went wrong'}</h2>
+            <h2 className="text-base font-bold">
+              {isAmharic ? "የተፈጠረ ችግር አለ" : "Something went wrong"}
+            </h2>
           </div>
           <p className="text-sm text-red-800">{pageError}</p>
           <button
@@ -884,7 +962,7 @@ export default function CoursesPage() {
             onClick={() => setPageError(null)}
             className="text-xs font-bold text-red-900 underline hover:no-underline"
           >
-            {isAmharic ? 'ይህን መልእክት ዝጋ' : 'Dismiss this message'}
+            {isAmharic ? "ይህን መልእክት ዝጋ" : "Dismiss this message"}
           </button>
         </div>
       )}
@@ -902,20 +980,20 @@ export default function CoursesPage() {
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-lg font-bold text-slate-900">
-                  {isAmharic ? 'የድምጽ ኮርስ መምረጫ ረዳት' : 'Spoken Course Assistant'}
+                  {isAmharic ? "የድምጽ ኮርስ መምረጫ ረዳት" : "Spoken Course Assistant"}
                 </h2>
                 <span className="text-xs px-2.5 py-0.5 rounded-full font-semibold bg-[#0B132B] text-orange-400 border border-orange-500/50">
-                  {isAmharic ? 'በአማርኛ ድምጽ ለመምረጥ ዝግጁ' : 'Voice Selection Ready'}
+                  {isAmharic ? "በአማርኛ ድምጽ ለመምረጥ ዝግጁ" : "Voice Selection Ready"}
                 </span>
               </div>
               <p className="text-xs text-slate-600 mt-0.5">
                 {assistantActive
                   ? isAmharic
-                    ? 'የድምጽ ረዳቱ በአማርኛ እየተናገረ እና የእርስዎን ምርጫ እያዳመጠ ነው።'
-                    : 'Speaking slowly and listening automatically for your course choice.'
+                    ? "የድምጽ ረዳቱ በአማርኛ እየተናገረ እና የእርስዎን ምርጫ እያዳመጠ ነው።"
+                    : "Speaking slowly and listening automatically for your course choice."
                   : isAmharic
-                  ? 'የድምጽ ረዳቱን በማስጀመር ኮርሶችን በአማርኛ ድምጽ ይምረጡ ወይም ያወዳድሩ።'
-                  : 'Start the assistant to hear course recommendations, count, compare, and select by voice.'}
+                    ? "የድምጽ ረዳቱን በማስጀመር ኮርሶችን በአማርኛ ድምጽ ይምረጡ ወይም ያወዳድሩ።"
+                    : "Start the assistant to hear course recommendations, count, compare, and select by voice."}
               </p>
             </div>
           </div>
@@ -929,7 +1007,7 @@ export default function CoursesPage() {
                 className="w-full sm:w-auto min-h-[44px] min-w-[44px] px-5 py-2.5 bg-[#0B132B] hover:bg-[#131E3D] text-orange-400 hover:text-orange-300 font-bold text-sm rounded-lg flex items-center justify-center gap-2 border-2 border-orange-500 shadow-md focus:outline-none focus:ring-4 focus:ring-orange-400 cursor-pointer"
               >
                 <Mic className="w-4 h-4 text-orange-400" aria-hidden="true" />
-                <span>{isAmharic ? 'የድምጽ ረዳቱን ጀምር' : 'Start Voice Assistant'}</span>
+                <span>{isAmharic ? "የድምጽ ረዳቱን ጀምር" : "Start Voice Assistant"}</span>
               </button>
             ) : (
               <button
@@ -943,14 +1021,14 @@ export default function CoursesPage() {
                   }
                   setIsListening(false);
                   const pauseMsg = isAmharic
-                    ? 'የድምጽ ረዳቱ ቆሟል። በኪቦርድዎ ኮርስ መምረጥ ይችላሉ።'
-                    : 'Voice assistant paused. You can use your keyboard to select a course.';
-                  announce(pauseMsg, 'polite');
+                    ? "የድምጽ ረዳቱ ቆሟል። በኪቦርድዎ ኮርስ መምረጥ ይችላሉ።"
+                    : "Voice assistant paused. You can use your keyboard to select a course.";
+                  announce(pauseMsg, "polite");
                 }}
                 className="w-full sm:w-auto min-h-[44px] min-w-[44px] px-4 py-2 bg-white hover:bg-slate-100 text-slate-800 text-sm font-semibold rounded-lg flex items-center justify-center gap-2 border border-slate-300 shadow-sm cursor-pointer"
               >
                 <RotateCcw className="w-4 h-4" aria-hidden="true" />
-                <span>{isAmharic ? 'ረዳቱን አቁም' : 'Pause Assistant'}</span>
+                <span>{isAmharic ? "ረዳቱን አቁም" : "Pause Assistant"}</span>
               </button>
             )}
           </div>
@@ -959,38 +1037,38 @@ export default function CoursesPage() {
         {/* Quick Assistant Actions (Compare, Goals, Count) */}
         <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-200">
           <span className="text-xs font-semibold text-slate-700">
-            {isAmharic ? 'ፈጣን ጥያቄዎች፦' : 'Quick actions:'}
+            {isAmharic ? "ፈጣን ጥያቄዎች፦" : "Quick actions:"}
           </span>
           <button
             type="button"
-            onClick={() => handleVoiceCommand('how many courses')}
+            onClick={() => handleVoiceCommand("how many courses")}
             className="px-3 py-1.5 text-xs bg-white hover:bg-slate-100 text-slate-800 rounded-md border border-slate-300 font-medium focus:outline-none focus:ring-2 focus:ring-orange-400"
           >
-            {isAmharic ? 'ስንት ኮርሶች አሉ?' : 'How many courses?'}
+            {isAmharic ? "ስንት ኮርሶች አሉ?" : "How many courses?"}
           </button>
           <button
             type="button"
-            onClick={() => handleVoiceCommand('compare')}
+            onClick={() => handleVoiceCommand("compare")}
             className="px-3 py-1.5 text-xs bg-white hover:bg-slate-100 text-slate-800 rounded-md border border-slate-300 font-medium flex items-center gap-1 focus:outline-none focus:ring-2 focus:ring-orange-400"
           >
             <Scale className="w-3.5 h-3.5 text-orange-600" aria-hidden="true" />
-            <span>{isAmharic ? 'ኮርሶችን አወዳድር' : 'Compare 2 courses'}</span>
+            <span>{isAmharic ? "ኮርሶችን አወዳድር" : "Compare 2 courses"}</span>
           </button>
           <button
             type="button"
-            onClick={() => handleVoiceCommand('recommend from my goal to work with data')}
+            onClick={() => handleVoiceCommand("recommend from my goal to work with data")}
             className="px-3 py-1.5 text-xs bg-white hover:bg-slate-100 text-slate-800 rounded-md border border-slate-300 font-medium flex items-center gap-1 focus:outline-none focus:ring-2 focus:ring-orange-400"
           >
             <Sparkles className="w-3.5 h-3.5 text-orange-600" aria-hidden="true" />
-            <span>{isAmharic ? 'ለዳታ ግብ ምክር' : 'Recommend for Data goal'}</span>
+            <span>{isAmharic ? "ለዳታ ግብ ምክር" : "Recommend for Data goal"}</span>
           </button>
           <button
             type="button"
-            onClick={() => handleVoiceCommand('recommend from my goal to improve speaking')}
+            onClick={() => handleVoiceCommand("recommend from my goal to improve speaking")}
             className="px-3 py-1.5 text-xs bg-white hover:bg-slate-100 text-slate-800 rounded-md border border-slate-300 font-medium flex items-center gap-1 focus:outline-none focus:ring-2 focus:ring-orange-400"
           >
             <Sparkles className="w-3.5 h-3.5 text-orange-600" aria-hidden="true" />
-            <span>{isAmharic ? 'ለተግባቦት ግብ ምክር' : 'Recommend for Speaking goal'}</span>
+            <span>{isAmharic ? "ለተግባቦት ግብ ምክር" : "Recommend for Speaking goal"}</span>
           </button>
         </div>
 
@@ -1000,17 +1078,17 @@ export default function CoursesPage() {
             <div className="flex items-center justify-between min-h-[26px]">
               <div className="flex items-center gap-2 text-xs font-bold text-[#0B132B] uppercase tracking-wider">
                 <span className="w-2.5 h-2.5 rounded-full bg-orange-500" aria-hidden="true" />
-                <span>{isAmharic ? 'ረዳቱ እንዲህ ይላል፦' : 'Assistant says:'}</span>
+                <span>{isAmharic ? "ረዳቱ እንዲህ ይላል፦" : "Assistant says:"}</span>
               </div>
               <div className="h-6 flex items-center">
                 {isListening ? (
                   <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-orange-800 bg-orange-100 px-2.5 py-0.5 rounded-full border border-orange-300">
                     <span className="w-2 h-2 rounded-full bg-orange-600" />
-                    {isAmharic ? 'የኮርስ ምርጫዎን በማዳመጥ ላይ...' : 'Listening for course choice...'}
+                    {isAmharic ? "የኮርስ ምርጫዎን በማዳመጥ ላይ..." : "Listening for course choice..."}
                   </span>
                 ) : (
                   <span className="text-xs text-slate-500">
-                    {isAmharic ? 'በዝግታ እየተናገረ ነው...' : 'Speaking slowly...'}
+                    {isAmharic ? "በዝግታ እየተናገረ ነው..." : "Speaking slowly..."}
                   </span>
                 )}
               </div>
@@ -1023,7 +1101,7 @@ export default function CoursesPage() {
             >
               {assistantSpokenText ||
                 (isAmharic
-                  ? '«ዳታ አናሊቲክስ ምረጥ»፣ «ተግባቦት ምረጥ»፣ «1»፣ «አወዳድር» ወይም «ምከረኝ» ይበሉ...'
+                  ? "«ዳታ አናሊቲክስ ምረጥ»፣ «ተግባቦት ምረጥ»፣ «1»፣ «አወዳድር» ወይም «ምከረኝ» ይበሉ..."
                   : 'Say "Select Data Analytics", "Compare", "Recommend", or "How many courses"...')}
             </p>
 
@@ -1032,7 +1110,7 @@ export default function CoursesPage() {
               onSubmit={(e) => {
                 e.preventDefault();
                 handleVoiceCommand(voiceInputText);
-                setVoiceInputText('');
+                setVoiceInputText("");
               }}
               className="pt-2 flex items-center gap-2"
               aria-label="Course selection voice input form"
@@ -1054,13 +1132,17 @@ export default function CoursesPage() {
                 onClick={toggleListening}
                 className={`min-h-[44px] min-w-[44px] px-3.5 py-2.5 rounded-lg font-bold flex items-center justify-center transition-colors border ${
                   isListening
-                    ? 'bg-rose-600 text-white border-rose-700'
-                    : 'bg-[#0B132B] hover:bg-[#131E3D] text-orange-400 border-orange-500'
+                    ? "bg-rose-600 text-white border-rose-700"
+                    : "bg-[#0B132B] hover:bg-[#131E3D] text-orange-400 border-orange-500"
                 }`}
-                aria-label={isListening ? 'Pause listening' : 'Listen with microphone'}
+                aria-label={isListening ? "Pause listening" : "Listen with microphone"}
                 aria-pressed={isListening}
               >
-                {isListening ? <Mic className="w-5 h-5 text-white" /> : <MicOff className="w-5 h-5 text-orange-400" />}
+                {isListening ? (
+                  <Mic className="w-5 h-5 text-white" />
+                ) : (
+                  <MicOff className="w-5 h-5 text-orange-400" />
+                )}
               </button>
 
               <button
@@ -1079,45 +1161,49 @@ export default function CoursesPage() {
       <section aria-labelledby="available-courses-title" className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <h2 id="available-courses-title" className="text-2xl font-bold text-slate-900">
-            {isAmharic ? 'የሚገኙ ፕሮግራሞች' : 'Available Programmes'} ({filteredCourses.length})
+            {isAmharic ? "የሚገኙ ፕሮግራሞች" : "Available Programmes"} ({filteredCourses.length})
           </h2>
 
-          <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filter courses">
+          <div
+            className="flex flex-wrap items-center gap-2"
+            role="group"
+            aria-label="Filter courses"
+          >
             <button
               type="button"
               onClick={() => {
-                setFilterLevel('all');
-                setSearchQuery('');
+                setFilterLevel("all");
+                setSearchQuery("");
               }}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all focus:outline-none focus:ring-2 focus:ring-orange-400 cursor-pointer ${
-                filterLevel === 'all'
-                  ? 'bg-[#0B132B] text-orange-400 border border-orange-500'
-                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                filterLevel === "all"
+                  ? "bg-[#0B132B] text-orange-400 border border-orange-500"
+                  : "bg-slate-100 text-slate-700 hover:bg-slate-200"
               }`}
             >
-              {isAmharic ? 'ሁሉም ኮርሶች' : 'All Courses'}
+              {isAmharic ? "ሁሉም ኮርሶች" : "All Courses"}
             </button>
             <button
               type="button"
-              onClick={() => setFilterLevel('comprehensive')}
+              onClick={() => setFilterLevel("comprehensive")}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all focus:outline-none focus:ring-2 focus:ring-orange-400 cursor-pointer ${
-                filterLevel === 'comprehensive'
-                  ? 'bg-[#0B132B] text-orange-400 border border-orange-500'
-                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                filterLevel === "comprehensive"
+                  ? "bg-[#0B132B] text-orange-400 border border-orange-500"
+                  : "bg-slate-100 text-slate-700 hover:bg-slate-200"
               }`}
             >
-              {isAmharic ? 'ሙሉ ፕሮግራም' : 'Comprehensive'}
+              {isAmharic ? "ሙሉ ፕሮግራም" : "Comprehensive"}
             </button>
             <button
               type="button"
-              onClick={() => setFilterLevel('foundational')}
+              onClick={() => setFilterLevel("foundational")}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all focus:outline-none focus:ring-2 focus:ring-orange-400 cursor-pointer ${
-                filterLevel === 'foundational'
-                  ? 'bg-[#0B132B] text-orange-400 border border-orange-500'
-                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                filterLevel === "foundational"
+                  ? "bg-[#0B132B] text-orange-400 border border-orange-500"
+                  : "bg-slate-100 text-slate-700 hover:bg-slate-200"
               }`}
             >
-              {isAmharic ? 'መሰረታዊ' : 'Foundational'}
+              {isAmharic ? "መሰረታዊ" : "Foundational"}
             </button>
           </div>
         </div>
@@ -1132,7 +1218,7 @@ export default function CoursesPage() {
               <BookOpen className="w-6 h-6" aria-hidden="true" />
             </div>
             <h2 id="empty-courses-heading" className="text-xl font-bold text-slate-900">
-              {isAmharic ? 'ምንም ኮርስ አልተገኘም' : 'No courses found'}
+              {isAmharic ? "ምንም ኮርስ አልተገኘም" : "No courses found"}
             </h2>
             <p className="text-sm text-slate-700 max-w-md mx-auto leading-relaxed">
               {isAmharic
@@ -1143,12 +1229,12 @@ export default function CoursesPage() {
               type="button"
               id="reset-filter-btn"
               onClick={() => {
-                setFilterLevel('all');
-                setSearchQuery('');
+                setFilterLevel("all");
+                setSearchQuery("");
               }}
               className="min-h-[44px] px-5 py-2.5 bg-[#0B132B] hover:bg-[#131E3D] text-orange-400 font-bold rounded-lg text-sm border border-orange-500 shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-400 cursor-pointer"
             >
-              {isAmharic ? 'ሁሉንም ኮርሶች አሳይ' : 'Show all courses'}
+              {isAmharic ? "ሁሉንም ኮርሶች አሳይ" : "Show all courses"}
             </button>
           </section>
         ) : (
@@ -1159,8 +1245,8 @@ export default function CoursesPage() {
                 <article
                   className={`w-full bg-white border-2 rounded-xl p-6 shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-6 ${
                     confirmingCourse?.id === course.id
-                      ? 'border-orange-500 ring-4 ring-orange-400/40'
-                      : 'border-slate-300'
+                      ? "border-orange-500 ring-4 ring-orange-400/40"
+                      : "border-slate-300"
                   }`}
                 >
                   <div className="space-y-4">
@@ -1181,7 +1267,7 @@ export default function CoursesPage() {
                       </h2>
                       <p className="text-sm text-slate-700 mt-2 leading-relaxed">
                         <span className="font-semibold text-slate-900">
-                          {isAmharic ? 'ማብራሪያ፦ ' : 'Description: '}
+                          {isAmharic ? "ማብራሪያ፦ " : "Description: "}
                         </span>
                         {isAmharic ? course.descriptionAm : course.description}
                       </p>
@@ -1191,7 +1277,7 @@ export default function CoursesPage() {
                     <div className="grid grid-cols-2 gap-3 p-3.5 bg-slate-50 rounded-lg border border-slate-200 text-sm">
                       <div>
                         <span className="text-xs font-semibold text-slate-600 block">
-                          {isAmharic ? 'ደረጃ' : 'Level'}
+                          {isAmharic ? "ደረጃ" : "Level"}
                         </span>
                         <span className="font-bold text-slate-900">
                           {isAmharic ? course.levelAm : course.level}
@@ -1200,7 +1286,7 @@ export default function CoursesPage() {
                       <div>
                         <span className="text-xs font-semibold text-slate-600 block flex items-center gap-1">
                           <Clock className="w-3 h-3 text-slate-500" aria-hidden="true" />
-                          <span>{isAmharic ? 'የጊዜ ርዝማኔ' : 'Duration'}</span>
+                          <span>{isAmharic ? "የጊዜ ርዝማኔ" : "Duration"}</span>
                         </span>
                         <span className="font-bold text-slate-900">
                           {isAmharic ? course.durationAm : course.duration}
@@ -1209,7 +1295,7 @@ export default function CoursesPage() {
                       <div className="col-span-2 pt-2 border-t border-slate-200 flex items-center justify-between">
                         <span className="text-xs font-semibold text-slate-700 flex items-center gap-1">
                           <Tag className="w-3.5 h-3.5 text-orange-600" aria-hidden="true" />
-                          <span>{isAmharic ? 'ዋጋ' : 'Price'}</span>
+                          <span>{isAmharic ? "ዋጋ" : "Price"}</span>
                         </span>
                         <span className="text-base font-extrabold text-[#0B132B]">
                           {course.price}
@@ -1220,7 +1306,7 @@ export default function CoursesPage() {
                     {/* Syllabus modules */}
                     <div className="space-y-1.5 pt-1 border-t border-slate-200">
                       <span className="text-xs font-semibold text-slate-800 block">
-                        {isAmharic ? 'ዋና ዋና ሞጁሎች፦' : 'Syllabus modules:'}
+                        {isAmharic ? "ዋና ዋና ሞጁሎች፦" : "Syllabus modules:"}
                       </span>
                       <div className="flex flex-wrap gap-1.5">
                         {course.syllabus.map((item) => (
@@ -1235,7 +1321,10 @@ export default function CoursesPage() {
                     </div>
 
                     <div className="flex items-center gap-2 text-xs text-emerald-800 font-semibold">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" aria-hidden="true" />
+                      <CheckCircle2
+                        className="w-4 h-4 text-emerald-600 shrink-0"
+                        aria-hidden="true"
+                      />
                       <span>{course.audioMinutes} min Audio Narration &amp; Live Quizzes</span>
                     </div>
                   </div>
@@ -1250,7 +1339,7 @@ export default function CoursesPage() {
                       aria-label={`Choose this course: ${course.title}`}
                       className="w-full min-h-[48px] bg-[#0B132B] hover:bg-[#131E3D] text-orange-400 hover:text-orange-300 font-bold py-3 px-6 rounded-lg text-sm flex items-center justify-center gap-2 border-2 border-orange-500 shadow-md focus:outline-none focus:ring-4 focus:ring-orange-400 cursor-pointer transition-colors"
                     >
-                      <span>{isAmharic ? 'ይህን ኮርስ ምረጥ' : 'Choose this course'}</span>
+                      <span>{isAmharic ? "ይህን ኮርስ ምረጥ" : "Choose this course"}</span>
                       <ArrowRight className="w-4 h-4 text-orange-400" aria-hidden="true" />
                     </button>
 
@@ -1261,8 +1350,13 @@ export default function CoursesPage() {
                       className="w-full min-h-[44px] bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold py-2.5 px-4 rounded-lg text-xs flex items-center justify-center gap-1.5 border border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400 cursor-pointer"
                     >
                       <Volume2 className="w-3.5 h-3.5 text-slate-600" aria-hidden="true" />
-                      <span>{isAmharic ? 'የኮርሱን ማብራሪያ በድምጽ አዳምጥ' : 'Hear course description aloud'}</span>
-                      <span className="sr-only"> for {isAmharic ? course.titleAm : course.title}</span>
+                      <span>
+                        {isAmharic ? "የኮርሱን ማብራሪያ በድምጽ አዳምጥ" : "Hear course description aloud"}
+                      </span>
+                      <span className="sr-only">
+                        {" "}
+                        for {isAmharic ? course.titleAm : course.title}
+                      </span>
                     </button>
                   </div>
                 </article>
@@ -1299,11 +1393,9 @@ export default function CoursesPage() {
                   id="confirm-dialog-title"
                   className="text-2xl font-black text-slate-900 tracking-tight"
                 >
-                  {isAmharic ? 'የኮርስ ምርጫ ማረጋገጫ' : 'Confirm Course Choice'}
+                  {isAmharic ? "የኮርስ ምርጫ ማረጋገጫ" : "Confirm Course Choice"}
                 </Dialog.Title>
-                <span className="text-xs text-slate-500 font-mono">
-                  {confirmingCourse?.code}
-                </span>
+                <span className="text-xs text-slate-500 font-mono">{confirmingCourse?.code}</span>
               </div>
             </div>
 
@@ -1326,7 +1418,7 @@ export default function CoursesPage() {
               >
                 <div className="flex items-center gap-1.5 text-red-900 font-bold">
                   <AlertCircle className="w-4 h-4 text-red-600" aria-hidden="true" />
-                  <span>{isAmharic ? 'ስህተት' : 'Error'}</span>
+                  <span>{isAmharic ? "ስህተት" : "Error"}</span>
                 </div>
                 <p>{enrollmentError}</p>
               </div>
@@ -1341,7 +1433,7 @@ export default function CoursesPage() {
                 disabled={isEnrolling}
                 className="w-full sm:w-auto min-h-[44px] px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-lg text-sm border border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400 cursor-pointer disabled:opacity-50"
               >
-                {isAmharic ? 'አይ፣ ተመለስ' : 'No, go back'}
+                {isAmharic ? "አይ፣ ተመለስ" : "No, go back"}
               </button>
 
               <button
@@ -1352,10 +1444,10 @@ export default function CoursesPage() {
                 className="w-full sm:w-auto min-h-[48px] px-6 py-2.5 bg-[#0B132B] hover:bg-[#131E3D] text-orange-400 hover:text-orange-300 font-bold rounded-lg text-sm flex items-center justify-center gap-2 border-2 border-orange-500 shadow-md focus:outline-none focus:ring-4 focus:ring-orange-400 cursor-pointer disabled:opacity-50 transition-colors"
               >
                 {isEnrolling ? (
-                  <span>{isAmharic ? 'በማስኬድ ላይ...' : 'Processing...'}</span>
+                  <span>{isAmharic ? "በማስኬድ ላይ..." : "Processing..."}</span>
                 ) : (
                   <>
-                    <span>{isAmharic ? 'አዎ፣ ወደ ክፍያ ቀጥል' : 'Yes, continue to payment'}</span>
+                    <span>{isAmharic ? "አዎ፣ ወደ ክፍያ ቀጥል" : "Yes, continue to payment"}</span>
                     <ArrowRight className="w-4 h-4 text-orange-400" aria-hidden="true" />
                   </>
                 )}
@@ -1366,18 +1458,21 @@ export default function CoursesPage() {
       </Dialog.Root>
 
       {/* Support Callout */}
-      <aside aria-label="Course assistance" className="bg-slate-50 border border-slate-300 rounded-xl p-6 text-center space-y-2">
+      <aside
+        aria-label="Course assistance"
+        className="bg-slate-50 border border-slate-300 rounded-xl p-6 text-center space-y-2"
+      >
         <p className="text-sm text-slate-700">
           {isAmharic
-            ? 'የትኛው የትምህርት ዘርፍ ለሙያዎ እንደሚስማማ እርግጠኛ አይደሉም?'
-            : 'Unsure which path is right for your career goals?'}
+            ? "የትኛው የትምህርት ዘርፍ ለሙያዎ እንደሚስማማ እርግጠኛ አይደሉም?"
+            : "Unsure which path is right for your career goals?"}
         </p>
         <div className="flex justify-center gap-3 pt-1">
           <Link
             href="/payment#human-help"
             className="inline-flex items-center gap-1 text-sm font-bold text-orange-800 hover:text-orange-950 underline focus:outline-none focus:ring-2 focus:ring-orange-400 rounded px-1"
           >
-            <span>{isAmharic ? 'የሰው አጋዥ መመሪያ ይጠይቁ' : 'Ask a Human Helper for Guidance'}</span>
+            <span>{isAmharic ? "የሰው አጋዥ መመሪያ ይጠይቁ" : "Ask a Human Helper for Guidance"}</span>
             <ArrowRight className="w-4 h-4" aria-hidden="true" />
           </Link>
         </div>

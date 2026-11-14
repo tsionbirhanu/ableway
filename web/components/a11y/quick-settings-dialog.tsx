@@ -1,8 +1,9 @@
-'use client';
+"use client";
 
-import React, { useEffect, useRef } from 'react';
-import { X, Settings, Volume2, Moon, Sun, Eye, Sliders, Type, FastForward } from 'lucide-react';
-import { useA11y } from '@/lib/a11y/a11y-context';
+import React, { useEffect, useRef } from "react";
+import { X, Settings } from "lucide-react";
+import { useA11y } from "@/lib/a11y/a11y-context";
+import type { ContrastTheme, InteractionMode, TextSize } from "@/types/a11y";
 
 interface QuickSettingsDialogProps {
   isOpen: boolean;
@@ -41,7 +42,7 @@ export function QuickSettingsDialog({ isOpen, onClose, triggerRef }: QuickSettin
       }, 50);
 
       const handleEscape = (e: KeyboardEvent) => {
-        if (e.key === 'Escape') {
+        if (e.key === "Escape") {
           e.preventDefault();
           onClose();
           triggerRef?.current?.focus();
@@ -49,9 +50,9 @@ export function QuickSettingsDialog({ isOpen, onClose, triggerRef }: QuickSettin
       };
 
       const handleTab = (e: KeyboardEvent) => {
-        if (e.key !== 'Tab' || !dialogRef.current) return;
+        if (e.key !== "Tab" || !dialogRef.current) return;
         const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
-          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
         );
         if (focusable.length === 0) return;
         const first = focusable[0];
@@ -66,12 +67,13 @@ export function QuickSettingsDialog({ isOpen, onClose, triggerRef }: QuickSettin
         }
       };
 
-      window.addEventListener('keydown', handleEscape);
-      dialogRef.current?.addEventListener('keydown', handleTab);
+      const dialog = dialogRef.current;
+      window.addEventListener("keydown", handleEscape);
+      dialog?.addEventListener("keydown", handleTab);
 
       return () => {
-        window.removeEventListener('keydown', handleEscape);
-        dialogRef.current?.removeEventListener('keydown', handleTab);
+        window.removeEventListener("keydown", handleEscape);
+        dialog?.removeEventListener("keydown", handleTab);
       };
     } else {
       triggerRef?.current?.focus();
@@ -119,21 +121,21 @@ export function QuickSettingsDialog({ isOpen, onClose, triggerRef }: QuickSettin
             </legend>
             <div className="grid grid-cols-3 gap-2">
               {[
-                { id: 'voice-first', label: 'Voice Mode' },
-                { id: 'screen-reader', label: 'Screen Reader' },
-                { id: 'hybrid', label: 'Hybrid' },
+                { id: "voice-first", label: "Voice Mode" },
+                { id: "screen-reader", label: "Screen Reader" },
+                { id: "hybrid", label: "Hybrid" },
               ].map((m) => (
                 <button
                   key={m.id}
                   type="button"
                   onClick={() => {
-                    setMode(m.id as any);
+                    setMode(m.id as InteractionMode);
                     announce(`Mode switched to ${m.label}.`);
                   }}
                   className={`p-3 rounded-xl text-xs font-bold min-h-[44px] transition-colors ${
                     mode === m.id
-                      ? 'bg-orange-500 text-white shadow-sm'
-                      : 'bg-slate-800 text-slate-200 hover:bg-slate-700'
+                      ? "bg-orange-500 text-white shadow-sm"
+                      : "bg-slate-800 text-slate-200 hover:bg-slate-700"
                   }`}
                   aria-pressed={mode === m.id}
                 >
@@ -152,7 +154,7 @@ export function QuickSettingsDialog({ isOpen, onClose, triggerRef }: QuickSettin
               id="qs-theme"
               value={theme}
               onChange={(e) => {
-                setTheme(e.target.value as any);
+                setTheme(e.target.value as ContrastTheme);
                 announce(`Theme set to ${e.target.value}`);
               }}
               className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white min-h-[44px] focus:outline-none focus:ring-2 focus:ring-emerald-500"
@@ -173,7 +175,7 @@ export function QuickSettingsDialog({ isOpen, onClose, triggerRef }: QuickSettin
               id="qs-text-size"
               value={fontSize}
               onChange={(e) => {
-                setFontSize(e.target.value as any);
+                setFontSize(e.target.value as TextSize);
                 announce(`Text size set to ${e.target.value}`);
               }}
               className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white min-h-[44px] focus:outline-none focus:ring-2 focus:ring-emerald-500"
@@ -201,7 +203,9 @@ export function QuickSettingsDialog({ isOpen, onClose, triggerRef }: QuickSettin
                 onChange={(e) => setSpeechRate(parseFloat(e.target.value))}
                 className="flex-1 accent-emerald-500 min-h-[44px]"
               />
-              <span className="font-mono text-xs font-bold text-emerald-400 w-12 text-right">{speechRate}x</span>
+              <span className="font-mono text-xs font-bold text-emerald-400 w-12 text-right">
+                {speechRate}x
+              </span>
             </div>
           </div>
 
@@ -213,7 +217,7 @@ export function QuickSettingsDialog({ isOpen, onClose, triggerRef }: QuickSettin
               </label>
               <select
                 id="qs-voice"
-                value={selectedVoice || ''}
+                value={selectedVoice || ""}
                 onChange={(e) => setSelectedVoice(e.target.value || null)}
                 className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white min-h-[44px] focus:outline-none focus:ring-2 focus:ring-emerald-500"
               >
@@ -249,18 +253,25 @@ export function QuickSettingsDialog({ isOpen, onClose, triggerRef }: QuickSettin
 
           {/* Reduced Motion Toggle */}
           <div className="pt-2">
-            <label htmlFor="qs-reduced-motion" className="flex items-center gap-3 cursor-pointer min-h-[44px]">
+            <label
+              htmlFor="qs-reduced-motion"
+              className="flex items-center gap-3 cursor-pointer min-h-[44px]"
+            >
               <input
                 id="qs-reduced-motion"
                 type="checkbox"
                 checked={reducedMotion}
                 onChange={(e) => {
                   setReducedMotion(e.target.checked);
-                  announce(e.target.checked ? 'Reduced motion enabled.' : 'Reduced motion disabled.');
+                  announce(
+                    e.target.checked ? "Reduced motion enabled." : "Reduced motion disabled.",
+                  );
                 }}
                 className="w-5 h-5 rounded text-emerald-600 bg-slate-950 border-slate-700"
               />
-              <span className="text-xs text-slate-100 font-bold">7. Respect Reduced Motion (Disable Animations)</span>
+              <span className="text-xs text-slate-100 font-bold">
+                7. Respect Reduced Motion (Disable Animations)
+              </span>
             </label>
           </div>
         </div>
@@ -279,4 +290,3 @@ export function QuickSettingsDialog({ isOpen, onClose, triggerRef }: QuickSettin
     </div>
   );
 }
-

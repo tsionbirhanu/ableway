@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
+import React, { useState, useRef, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   Mic,
   MicOff,
@@ -14,12 +14,17 @@ import {
   ArrowRight,
   RotateCcw,
   Globe,
-} from 'lucide-react';
-import { useA11y } from '@/lib/a11y/a11y-context';
-import { playEarcon } from '@/lib/audio/earcons';
-import { speechPlayer } from '@/lib/speech/client/player';
-import { getSpeechRecognitionConstructor } from '@/lib/speech/client/recognition';
-import { createAccountWithPasskey, saveSignUpPrefill } from '@/lib/passkeys/client';
+} from "lucide-react";
+import { useA11y } from "@/lib/a11y/a11y-context";
+import { playEarcon } from "@/lib/audio/earcons";
+import { speechPlayer } from "@/lib/speech/client/player";
+import {
+  getSpeechRecognitionConstructor,
+  type RecognitionErrorEvent,
+  type RecognitionLike,
+  type RecognitionResultEvent,
+} from "@/lib/speech/client/recognition";
+import { createAccountWithPasskey, saveSignUpPrefill } from "@/lib/passkeys/client";
 
 interface RegisterFormData {
   fullName: string;
@@ -31,23 +36,23 @@ interface RegisterFormData {
 }
 
 type AssistantState =
-  | 'idle'
-  | 'intro'
-  | 'ask_name'
-  | 'confirm_name'
-  | 'spell_name'
-  | 'ask_email'
-  | 'confirm_email'
-  | 'spell_email'
-  | 'ask_phone'
-  | 'confirm_phone'
-  | 'ask_language'
-  | 'confirm_language'
-  | 'read_privacy'
-  | 'confirm_summary'
-  | 'ask_code'
-  | 'confirm_code'
-  | 'completed';
+  | "idle"
+  | "intro"
+  | "ask_name"
+  | "confirm_name"
+  | "spell_name"
+  | "ask_email"
+  | "confirm_email"
+  | "spell_email"
+  | "ask_phone"
+  | "confirm_phone"
+  | "ask_language"
+  | "confirm_language"
+  | "read_privacy"
+  | "confirm_summary"
+  | "ask_code"
+  | "confirm_code"
+  | "completed";
 
 interface FormErrors {
   fullName?: string;
@@ -60,14 +65,13 @@ interface FormErrors {
 
 declare global {
   interface Window {
-    __simulateVoiceInput?: (text: string) => void;
     fillField?: (field: keyof RegisterFormData, value: string | boolean) => void;
   }
 }
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { announce, speak, mode, preferences, language, toggleLanguage, setLanguage } = useA11y();
+  const { announce, speak, mode, preferences, language, toggleLanguage } = useA11y();
 
   // Page Heading & Summary Refs for accessible focus management (F0 Rule 7 & 16)
   const h1Ref = useRef<HTMLHeadingElement>(null);
@@ -76,25 +80,25 @@ export default function RegisterPage() {
 
   // Form State
   const [formData, setFormData] = useState<RegisterFormData>({
-    fullName: '',
-    email: '',
-    phone: '',
-    preferredLanguage: 'en',
+    fullName: "",
+    email: "",
+    phone: "",
+    preferredLanguage: "en",
     consent: false,
-    oneTimeCode: '',
+    oneTimeCode: "",
   });
 
   const [errors, setErrors] = useState<FormErrors>({});
-  const [stage, setStage] = useState<'details' | 'verification' | 'success'>('details');
+  const [stage, setStage] = useState<"details" | "verification" | "success">("details");
 
   // Assistant State
   const [assistantActive, setAssistantActive] = useState<boolean>(false);
-  const [assistantStep, setAssistantStep] = useState<AssistantState>('idle');
-  const [assistantSpokenText, setAssistantSpokenText] = useState<string>('');
-  const [spellingBuffer, setSpellingBuffer] = useState<string>('');
-  const [voiceInputText, setVoiceInputText] = useState<string>('');
+  const [assistantStep, setAssistantStep] = useState<AssistantState>("idle");
+  const [assistantSpokenText, setAssistantSpokenText] = useState<string>("");
+  const [spellingBuffer, setSpellingBuffer] = useState<string>("");
+  const [voiceInputText, setVoiceInputText] = useState<string>("");
   const [isListening, setIsListening] = useState<boolean>(false);
-  const recognitionRef = useRef<any>(null);
+  const recognitionRef = useRef<RecognitionLike | null>(null);
   const isSpeakingRef = useRef<boolean>(false);
   const activeUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const speechSafetyTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -110,7 +114,9 @@ export default function RegisterPage() {
   spellingBufferRef.current = spellingBuffer;
 
   const assistantActiveRef = useRef(assistantActive);
-  assistantActiveRef.current = assistantActive;
+  useEffect(() => {
+    assistantActiveRef.current = assistantActive;
+  }, [assistantActive]);
 
   // Function to start listening hands-free without clicking the mic button
   const startListeningRef = useRef<() => void>(() => {});
@@ -121,7 +127,7 @@ export default function RegisterPage() {
       // Mark speaking active so speech recognition stays muted and does not echo
       isSpeakingRef.current = true;
       setAssistantSpokenText(text);
-      announce(text, 'polite');
+      announce(text, "polite");
 
       // Abort active recognition immediately so it doesn't hear assistant speech
       if (recognitionRef.current) {
@@ -136,7 +142,11 @@ export default function RegisterPage() {
         speechSafetyTimerRef.current = null;
       }
 
-      if (mode === 'voice-first' && !preferences.suppressInAppTTS && typeof window !== 'undefined') {
+      if (
+        mode === "voice-first" &&
+        !preferences.suppressInAppTTS &&
+        typeof window !== "undefined"
+      ) {
         // Server speech (Gemini): a real Amharic voice. Falls back to the browser voice by itself.
         speechPlayer.cancel();
         let finished = false;
@@ -152,7 +162,7 @@ export default function RegisterPage() {
           activeUtteranceRef.current = null;
           // Hands-free: Wait 400ms after speech ends so room echo clears, then start listening
           setTimeout(() => {
-            if (assistantActiveRef.current && assistantStepRef.current !== 'completed') {
+            if (assistantActiveRef.current && assistantStepRef.current !== "completed") {
               startListeningRef.current();
             }
           }, 400);
@@ -160,66 +170,67 @@ export default function RegisterPage() {
 
         // Safety timer: server speech can take a few seconds to start, so allow for that.
         const words = text.split(/\s+/).length;
-        const estimatedDurationMs = Math.max(3500, (words / (0.80 * 2.3)) * 1000 + 1500) + 20000;
+        const estimatedDurationMs = Math.max(3500, (words / (0.8 * 2.3)) * 1000 + 1500) + 20000;
         speechSafetyTimerRef.current = setTimeout(finishSpeaking, estimatedDurationMs);
 
         void speechPlayer
-          .speak(text, { lang: language === 'am-ET' ? 'am-ET' : 'en-US', rate: 0.8 })
+          .speak(text, { lang: language === "am-ET" ? "am-ET" : "en-US", rate: 0.8 })
           .then(finishSpeaking);
       } else {
         // In screen reader mode or if speech synthesis is not active, automatically open mic after delay
         setTimeout(() => {
           isSpeakingRef.current = false;
-          if (assistantActiveRef.current && assistantStepRef.current !== 'completed') {
+          if (assistantActiveRef.current && assistantStepRef.current !== "completed") {
             startListeningRef.current();
           }
         }, 1200);
       }
     },
-    [announce, mode, preferences.suppressInAppTTS]
+    [announce, language, mode, preferences.suppressInAppTTS],
   );
 
   // Move focus to h1 on route change / page mount (F0 Rule 7)
   useEffect(() => {
-    document.title = 'Create your account - Ableway';
-    announce('Create your account page loaded. Use keyboard or start the spoken assistant.', 'polite');
+    document.title = "Create your account - Ableway";
+    announce(
+      "Create your account page loaded. Use keyboard or start the spoken assistant.",
+      "polite",
+    );
     if (h1Ref.current) {
       h1Ref.current.focus();
     }
   }, [announce]);
 
   // Core fillField function (Requirement: calls fillField, reads the value back)
-  const fillField = useCallback(
-    (field: keyof RegisterFormData, value: string | boolean) => {
-      setFormData((prev) => ({
-        ...prev,
-        [field]: value,
-      }));
+  const fillField = useCallback((field: keyof RegisterFormData, value: string | boolean) => {
+    setFormData((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
 
-      // Keep native DOM elements synchronized
-      if (typeof document !== 'undefined') {
-        const input = document.querySelector(`[name="${field}"]`) as HTMLInputElement | HTMLSelectElement | null;
-        if (input) {
-          if (input.type === 'checkbox') {
-            (input as HTMLInputElement).checked = Boolean(value);
-          } else {
-            input.value = String(value);
-          }
-          input.dispatchEvent(new Event('input', { bubbles: true }));
-          input.dispatchEvent(new Event('change', { bubbles: true }));
+    // Keep native DOM elements synchronized
+    if (typeof document !== "undefined") {
+      const input = document.querySelector(`[name="${field}"]`) as
+        HTMLInputElement | HTMLSelectElement | null;
+      if (input) {
+        if (input.type === "checkbox") {
+          (input as HTMLInputElement).checked = Boolean(value);
+        } else {
+          input.value = String(value);
         }
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+        input.dispatchEvent(new Event("change", { bubbles: true }));
       }
+    }
 
-      // Clear error for that field if present
-      setErrors((prev) => {
-        if (!prev[field]) return prev;
-        const next = { ...prev };
-        delete next[field];
-        return next;
-      });
-    },
-    []
-  );
+    // Clear error for that field if present
+    setErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  }, []);
 
   // Expose fillField globally for testing and assistant tools
   useEffect(() => {
@@ -228,7 +239,7 @@ export default function RegisterPage() {
 
   // Clean strings
   const cleanSpokenInput = (text: string) => {
-    return text.trim().replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, '');
+    return text.trim().replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "");
   };
 
   // Helper to parse letter-by-letter or spelled input
@@ -236,32 +247,32 @@ export default function RegisterPage() {
     let text = input.trim();
     if (isEmail) {
       text = text
-        .replace(/\bat\b/gi, '@')
-        .replace(/\bdot\b/gi, '.')
-        .replace(/\s*@\s*/g, '@')
-        .replace(/\s*\.\s*/g, '.');
+        .replace(/\bat\b/gi, "@")
+        .replace(/\bdot\b/gi, ".")
+        .replace(/\s*@\s*/g, "@")
+        .replace(/\s*\.\s*/g, ".");
     }
-    const cleaned = text.replace(/[-_]/g, ' ');
+    const cleaned = text.replace(/[-_]/g, " ");
     const parts = cleaned.split(/\s+/).filter(Boolean);
-    if (parts.length > 1 && parts.every((p) => p.length === 1 || p === '@' || p === '.')) {
-      return parts.join('');
+    if (parts.length > 1 && parts.every((p) => p.length === 1 || p === "@" || p === ".")) {
+      return parts.join("");
     }
-    return text.replace(/\s+/g, isEmail ? '' : ' ');
+    return text.replace(/\s+/g, isEmail ? "" : " ");
   };
 
   // Assistant Question progression
   const startAssistant = useCallback(() => {
     isSpeakingRef.current = false;
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
       speechPlayer.cancel();
     }
-    playEarcon('listening');
+    playEarcon("listening");
     setAssistantActive(true);
-    setAssistantStep('ask_name');
+    setAssistantStep("ask_name");
     const introMsg =
-      language === 'am-ET'
-        ? 'እንኳን ወደ ኤብልዌይ አካውንት መፍጠሪያ በደህና መጡ። ሙሉ ስምዎን፣ ኢሜይልዎን፣ ስልክዎን እና የግላዊነት ውልን አንድ በአንድ እጠይቆታለሁ። በመናገር ወይም በመተየብ መመለስ ይችላሉ። በማንኛውም ጊዜ ድገመው፣ ኢሜይል ቀይር ወይም ቀጥል ማለት ይችላሉ። ሙሉ ስምዎ ማን ነው?'
-        : 'I will help you create your account. I will ask you for your full name, email, optional phone, preferred language, and privacy consent one by one. You can answer by speaking or typing. You can say repeat, change email, or next at any time. What is your full name?';
+      language === "am-ET"
+        ? "እንኳን ወደ ኤብልዌይ አካውንት መፍጠሪያ በደህና መጡ። ሙሉ ስምዎን፣ ኢሜይልዎን፣ ስልክዎን እና የግላዊነት ውልን አንድ በአንድ እጠይቆታለሁ። በመናገር ወይም በመተየብ መመለስ ይችላሉ። በማንኛውም ጊዜ ድገመው፣ ኢሜይል ቀይር ወይም ቀጥል ማለት ይችላሉ። ሙሉ ስምዎ ማን ነው?"
+        : "I will help you create your account. I will ask you for your full name, email, optional phone, preferred language, and privacy consent one by one. You can answer by speaking or typing. You can say repeat, change email, or next at any time. What is your full name?";
     speakAssistant(introMsg);
   }, [speakAssistant, language]);
 
@@ -273,210 +284,208 @@ export default function RegisterPage() {
 
       const lower = input.toLowerCase();
       const currentStep = assistantStepRef.current;
-      const isAmharic = language === 'am-ET';
+      const isAmharic = language === "am-ET";
 
       // Bilingual affirmations and confirmations
       const isAffirm = (t: string) =>
-        t === 'yes' ||
-        t === 'yes that is right' ||
-        t === 'yes thats right' ||
-        t === 'that is right' ||
-        t === 'thats right' ||
-        t === 'right' ||
-        t === 'correct' ||
-        t === 'sure' ||
-        t === 'ok' ||
-        t === 'okay' ||
-        t === 'next' ||
-        t === 'submit' ||
-        t === 'yes submit' ||
-        t === 'yes please' ||
-        t === 'confirm' ||
-        t === 'i agree' ||
-        t === 'yes i agree' ||
-        t === 'agree' ||
-        t === 'i consent' ||
-        t === 'yes i consent' ||
-        t === 'አዎ' ||
-        t === 'አዎን' ||
-        t === 'ትክክል ነው' ||
-        t === 'ትክክል' ||
-        t === 'እሺ' ||
-        t === 'ይሁን' ||
-        t.includes('እስማማለሁ') ||
-        t.includes('አዎ እስማማለሁ');
+        t === "yes" ||
+        t === "yes that is right" ||
+        t === "yes thats right" ||
+        t === "that is right" ||
+        t === "thats right" ||
+        t === "right" ||
+        t === "correct" ||
+        t === "sure" ||
+        t === "ok" ||
+        t === "okay" ||
+        t === "next" ||
+        t === "submit" ||
+        t === "yes submit" ||
+        t === "yes please" ||
+        t === "confirm" ||
+        t === "i agree" ||
+        t === "yes i agree" ||
+        t === "agree" ||
+        t === "i consent" ||
+        t === "yes i consent" ||
+        t === "አዎ" ||
+        t === "አዎን" ||
+        t === "ትክክል ነው" ||
+        t === "ትክክል" ||
+        t === "እሺ" ||
+        t === "ይሁን" ||
+        t.includes("እስማማለሁ") ||
+        t.includes("አዎ እስማማለሁ");
 
       const isDeny = (t: string) =>
-        t === 'no' ||
-        t === 'not right' ||
-        t === 'not yet' ||
-        t === 'wrong' ||
-        t.includes('not right') ||
-        t.includes('wrong') ||
-        t === 'አይ' ||
-        t === 'አይደለም' ||
-        t === 'አልስማማም' ||
-        t === 'ገና ነው';
+        t === "no" ||
+        t === "not right" ||
+        t === "not yet" ||
+        t === "wrong" ||
+        t.includes("not right") ||
+        t.includes("wrong") ||
+        t === "አይ" ||
+        t === "አይደለም" ||
+        t === "አልስማማም" ||
+        t === "ገና ነው";
 
       // Amharic number word converter for OTP / digits
       const parseAmharicNumberWords = (t: string) =>
         t
-          .replace(/\bአንድ\b/gi, '1')
-          .replace(/\bሁለት\b/gi, '2')
-          .replace(/\b(ሦስት|ሶስት)\b/gi, '3')
-          .replace(/\bአራት\b/gi, '4')
-          .replace(/\bአምስት\b/gi, '5')
-          .replace(/\bስድስት\b/gi, '6')
-          .replace(/\bሰባት\b/gi, '7')
-          .replace(/\bስምንት\b/gi, '8')
-          .replace(/\bዘጠኝ\b/gi, '9')
-          .replace(/\bዜሮ\b/gi, '0');
+          .replace(/\bአንድ\b/gi, "1")
+          .replace(/\bሁለት\b/gi, "2")
+          .replace(/\b(ሦስት|ሶስት)\b/gi, "3")
+          .replace(/\bአራት\b/gi, "4")
+          .replace(/\bአምስት\b/gi, "5")
+          .replace(/\bስድስት\b/gi, "6")
+          .replace(/\bሰባት\b/gi, "7")
+          .replace(/\bስምንት\b/gi, "8")
+          .replace(/\bዘጠኝ\b/gi, "9")
+          .replace(/\bዜሮ\b/gi, "0");
 
       // 1. Global Navigation / Meta Voice Commands
-      if (lower === 'repeat' || lower === 'ድገም' || lower === 'ድገመው' || lower === 'እንደገና') {
+      if (lower === "repeat" || lower === "ድገም" || lower === "ድገመው" || lower === "እንደገና") {
         switch (currentStep) {
-          case 'ask_name':
+          case "ask_name":
             speakAssistant(
               isAmharic
-                ? 'ሙሉ ስምዎ ማን ነው? ፊደል በፊደል ለመናገር ፊደል ማለት ይችላሉ።'
-                : 'What is your full name? You can also say spell to spell it letter by letter.'
+                ? "ሙሉ ስምዎ ማን ነው? ፊደል በፊደል ለመናገር ፊደል ማለት ይችላሉ።"
+                : "What is your full name? You can also say spell to spell it letter by letter.",
             );
             break;
-          case 'confirm_name':
+          case "confirm_name":
             speakAssistant(
               isAmharic
                 ? `ስምዎ ${formDataRef.current.fullName} ተብሎ ተመዝግቧል። ትክክል ነው?`
-                : `I entered ${formDataRef.current.fullName}. Is that right?`
+                : `I entered ${formDataRef.current.fullName}. Is that right?`,
             );
             break;
-          case 'spell_name':
+          case "spell_name":
             speakAssistant(
               isAmharic
-                ? `ፊደል በፊደል በማስገባት ላይ፦ ${spellingBufferRef.current || 'ምንም አልተገኘም'}። ፊደል ይናገሩ ወይም ሲጨርሱ ጨረስኩ ይበሉ።`
-                : `Spelling full name. Current letters: ${spellingBufferRef.current || 'none'}. Say letters, or say done when finished.`
+                ? `ፊደል በፊደል በማስገባት ላይ፦ ${spellingBufferRef.current || "ምንም አልተገኘም"}። ፊደል ይናገሩ ወይም ሲጨርሱ ጨረስኩ ይበሉ።`
+                : `Spelling full name. Current letters: ${spellingBufferRef.current || "none"}. Say letters, or say done when finished.`,
             );
             break;
-          case 'ask_email':
+          case "ask_email":
             speakAssistant(
               isAmharic
-                ? 'የኢሜይል አድራሻዎ ምንድን ነው? ፊደል ማለት ይችላሉ።'
-                : 'What is your email address? You can also say spell.'
+                ? "የኢሜይል አድራሻዎ ምንድን ነው? ፊደል ማለት ይችላሉ።"
+                : "What is your email address? You can also say spell.",
             );
             break;
-          case 'confirm_email':
+          case "confirm_email":
             speakAssistant(
               isAmharic
                 ? `ኢሜይልዎ ${formDataRef.current.email} ተብሎ ተመዝግቧል። ትክክል ነው?`
-                : `I entered ${formDataRef.current.email}. Is that right?`
+                : `I entered ${formDataRef.current.email}. Is that right?`,
             );
             break;
-          case 'spell_email':
+          case "spell_email":
             speakAssistant(
               isAmharic
-                ? `ኢሜይል በፊደል፦ ${spellingBufferRef.current || 'ምንም አልተገኘም'}።`
-                : `Spelling email. Current: ${spellingBufferRef.current || 'none'}. Say letters, say at for @ and dot for period, or say done.`
+                ? `ኢሜይል በፊደል፦ ${spellingBufferRef.current || "ምንም አልተገኘም"}።`
+                : `Spelling email. Current: ${spellingBufferRef.current || "none"}. Say letters, say at for @ and dot for period, or say done.`,
             );
             break;
-          case 'ask_phone':
+          case "ask_phone":
             speakAssistant(
               isAmharic
-                ? 'ስልክ ቁጥርዎ ምንድን ነው? ማስገባት ካልፈለጉ ዝለል ይበሉ።'
-                : 'What is your phone number? This is optional. Say your number, or say next or skip.'
+                ? "ስልክ ቁጥርዎ ምንድን ነው? ማስገባት ካልፈለጉ ዝለል ይበሉ።"
+                : "What is your phone number? This is optional. Say your number, or say next or skip.",
             );
             break;
-          case 'confirm_phone':
+          case "confirm_phone":
             speakAssistant(
               isAmharic
                 ? `ስልክ ቁጥርዎ ${formDataRef.current.phone} ተብሎ ተመዝግቧል። ትክክል ነው?`
-                : `I entered ${formDataRef.current.phone}. Is that right?`
+                : `I entered ${formDataRef.current.phone}. Is that right?`,
             );
             break;
-          case 'ask_language':
+          case "ask_language":
             speakAssistant(
               isAmharic
-                ? 'የሚመርጡት ቋንቋ ምንድን ነው? አማርኛ ወይም እንግሊዝኛ?'
-                : 'What is your preferred language? English, Amharic, or Afaan Oromoo?'
+                ? "የሚመርጡት ቋንቋ ምንድን ነው? አማርኛ ወይም እንግሊዝኛ?"
+                : "What is your preferred language? English, Amharic, or Afaan Oromoo?",
             );
             break;
-          case 'confirm_language':
+          case "confirm_language":
             speakAssistant(
               isAmharic
                 ? `ቋንቋ ${formDataRef.current.preferredLanguage} ተመርጧል። ትክክል ነው?`
-                : `I selected ${formDataRef.current.preferredLanguage}. Is that right?`
+                : `I selected ${formDataRef.current.preferredLanguage}. Is that right?`,
             );
             break;
-          case 'read_privacy':
+          case "read_privacy":
             speakAssistant(
               isAmharic
-                ? 'የኤብልዌይ የግላዊነት ውል፦ የግል መረጃዎ ለትምህርት አገልግሎት ብቻ የሚውል ሲሆን ለሶስተኛ ወገን አይተላለፍም። ውሉን ይቀበላሉ? እባክዎን አዎ ወይም አይ ይበሉ።'
-                : 'Here is our plain-language privacy summary: We collect your name, email, phone number, and preferred language only to create your account, deliver lessons, and provide help. We never sell your personal information or share it with third parties to train AI models. Do you agree and give your consent?'
+                ? "የኤብልዌይ የግላዊነት ውል፦ የግል መረጃዎ ለትምህርት አገልግሎት ብቻ የሚውል ሲሆን ለሶስተኛ ወገን አይተላለፍም። ውሉን ይቀበላሉ? እባክዎን አዎ ወይም አይ ይበሉ።"
+                : "Here is our plain-language privacy summary: We collect your name, email, phone number, and preferred language only to create your account, deliver lessons, and provide help. We never sell your personal information or share it with third parties to train AI models. Do you agree and give your consent?",
             );
             break;
-          case 'confirm_summary':
+          case "confirm_summary":
             speakAssistant(
               isAmharic
                 ? `የምዝገባ ማጠቃለያ፦ ስም: ${formDataRef.current.fullName}፣ ኢሜይል: ${formDataRef.current.email}። አሁን አካውንትዎን መፍጠር ይፈልጋሉ? አዎ ይበሉ።`
-                : `Here is your registration summary: Full name: ${formDataRef.current.fullName}. Email: ${formDataRef.current.email}. Phone: ${formDataRef.current.phone || 'Not provided'}. Preferred language: ${formDataRef.current.preferredLanguage}. Privacy consent: Agreed. Do you want to submit your registration now?`
+                : `Here is your registration summary: Full name: ${formDataRef.current.fullName}. Email: ${formDataRef.current.email}. Phone: ${formDataRef.current.phone || "Not provided"}. Preferred language: ${formDataRef.current.preferredLanguage}. Privacy consent: Agreed. Do you want to submit your registration now?`,
             );
             break;
-          case 'ask_code':
+          case "ask_code":
             speakAssistant(
               isAmharic
-                ? 'ባለ 6 ድጂት ማረጋገጫ ኮድዎን ይናገሩ።'
-                : 'What is your 6-digit one-time code? Enter or say the code.'
+                ? "ባለ 6 ድጂት ማረጋገጫ ኮድዎን ይናገሩ።"
+                : "What is your 6-digit one-time code? Enter or say the code.",
             );
             break;
-          case 'confirm_code':
+          case "confirm_code":
             speakAssistant(
               isAmharic
                 ? `የማረጋገጫ ኮድ ${formDataRef.current.oneTimeCode} ተመዝግቧል። ትክክል ነው?`
-                : `I entered code ${formDataRef.current.oneTimeCode}. Is that right?`
+                : `I entered code ${formDataRef.current.oneTimeCode}. Is that right?`,
             );
             break;
           default:
             speakAssistant(
-              isAmharic
-                ? 'በምዝገባዎ በምን ልርዳዎ?'
-                : 'How can I help you with your registration?'
+              isAmharic ? "በምዝገባዎ በምን ልርዳዎ?" : "How can I help you with your registration?",
             );
         }
         return;
       }
 
       // 2. Jumping between fields with "change [field]" (English & Amharic)
-      if (lower.includes('change name') || lower.includes('ስም ቀይር') || lower.includes('ስሜን ቀይር')) {
-        setAssistantStep('ask_name');
+      if (lower.includes("change name") || lower.includes("ስም ቀይር") || lower.includes("ስሜን ቀይር")) {
+        setAssistantStep("ask_name");
         speakAssistant(
           isAmharic
-            ? 'ስምዎን እንቀይር። ሙሉ ስምዎ ማን ነው?'
-            : 'Let us change your name. What is your full name?'
+            ? "ስምዎን እንቀይር። ሙሉ ስምዎ ማን ነው?"
+            : "Let us change your name. What is your full name?",
         );
         return;
       }
-      if (lower.includes('change email') || lower.includes('ኢሜይል ቀይር')) {
-        setAssistantStep('ask_email');
+      if (lower.includes("change email") || lower.includes("ኢሜይል ቀይር")) {
+        setAssistantStep("ask_email");
         speakAssistant(
           isAmharic
-            ? 'ኢሜይልዎን እንቀይር። የኢሜይል አድራሻዎ ምንድን ነው?'
-            : 'Let us change your email. What is your email address?'
+            ? "ኢሜይልዎን እንቀይር። የኢሜይል አድራሻዎ ምንድን ነው?"
+            : "Let us change your email. What is your email address?",
         );
         return;
       }
-      if (lower.includes('change phone') || lower.includes('ስልክ ቀይር')) {
-        setAssistantStep('ask_phone');
+      if (lower.includes("change phone") || lower.includes("ስልክ ቀይር")) {
+        setAssistantStep("ask_phone");
         speakAssistant(
           isAmharic
-            ? 'ስልክ ቁጥርዎን እንቀይር። ስልክ ቁጥርዎ ምንድን ነው? ወይም ዝለል ይበሉ።'
-            : 'Let us change your phone number. What is your phone number? Or say skip.'
+            ? "ስልክ ቁጥርዎን እንቀይር። ስልክ ቁጥርዎ ምንድን ነው? ወይም ዝለል ይበሉ።"
+            : "Let us change your phone number. What is your phone number? Or say skip.",
         );
         return;
       }
-      if (lower.includes('change language') || lower.includes('ቋንቋ ቀይር')) {
-        setAssistantStep('ask_language');
+      if (lower.includes("change language") || lower.includes("ቋንቋ ቀይር")) {
+        setAssistantStep("ask_language");
         speakAssistant(
           isAmharic
-            ? 'የመማሪያ ቋንቋዎን እንቀይር። አማርኛ ወይም እንግሊዝኛ?'
-            : 'Let us change your preferred language. English, Amharic, or Afaan Oromoo?'
+            ? "የመማሪያ ቋንቋዎን እንቀይር። አማርኛ ወይም እንግሊዝኛ?"
+            : "Let us change your preferred language. English, Amharic, or Afaan Oromoo?",
         );
         return;
       }
@@ -484,287 +493,287 @@ export default function RegisterPage() {
       // 3. Step-by-Step State Machine
       switch (currentStep) {
         // --- NAME ---
-        case 'ask_name': {
-          if (lower.includes('spell')) {
-            setAssistantStep('spell_name');
-            setSpellingBuffer('');
-            speakAssistant('Spelling mode for full name. Please spell your name letter by letter, or say done when finished.');
+        case "ask_name": {
+          if (lower.includes("spell")) {
+            setAssistantStep("spell_name");
+            setSpellingBuffer("");
+            speakAssistant(
+              "Spelling mode for full name. Please spell your name letter by letter, or say done when finished.",
+            );
             return;
           }
-          if (lower === 'next' && formDataRef.current.fullName) {
-            setAssistantStep('ask_email');
-            speakAssistant('What is your email address?');
+          if (lower === "next" && formDataRef.current.fullName) {
+            setAssistantStep("ask_email");
+            speakAssistant("What is your email address?");
             return;
           }
-          const val = input.replace(/^(my name is|i am|name is)\s+/i, '').trim();
-          fillField('fullName', val);
-          setAssistantStep('confirm_name');
+          const val = input.replace(/^(my name is|i am|name is)\s+/i, "").trim();
+          fillField("fullName", val);
+          setAssistantStep("confirm_name");
           speakAssistant(`I entered ${val}. Is that right?`);
           break;
         }
 
-        case 'spell_name': {
-          if (lower === 'done' || lower.includes('done')) {
+        case "spell_name": {
+          if (lower === "done" || lower.includes("done")) {
             const finalVal = spellingBufferRef.current.trim();
-            fillField('fullName', finalVal);
-            setAssistantStep('confirm_name');
-            speakAssistant(`Spelled: ${finalVal.split('').join('-')}. I entered ${finalVal}. Is that right?`);
+            fillField("fullName", finalVal);
+            setAssistantStep("confirm_name");
+            speakAssistant(
+              `Spelled: ${finalVal.split("").join("-")}. I entered ${finalVal}. Is that right?`,
+            );
             return;
           }
           const parsed = parseSpelledLetters(input, false);
           const newBuf = (spellingBufferRef.current + parsed).trim();
           setSpellingBuffer(newBuf);
-          fillField('fullName', newBuf);
+          fillField("fullName", newBuf);
           speakAssistant(`Building: ${newBuf}. Say more letters or say done.`);
           break;
         }
 
-        case 'confirm_name': {
+        case "confirm_name": {
           if (isAffirm(lower)) {
-            setAssistantStep('ask_email');
+            setAssistantStep("ask_email");
             speakAssistant(
-              isAmharic
-                ? 'በጣም ጥሩ። የኢሜይል አድራሻዎ ምንድን ነው?'
-                : 'Great. What is your email address?'
+              isAmharic ? "በጣም ጥሩ። የኢሜይል አድራሻዎ ምንድን ነው?" : "Great. What is your email address?",
             );
           } else if (isDeny(lower)) {
-            setAssistantStep('ask_name');
+            setAssistantStep("ask_name");
             speakAssistant(
               isAmharic
-                ? 'እንደገና እንሞክር። ሙሉ ስምዎ ማን ነው?'
-                : 'Let us try again. What is your full name? You can also say spell.'
+                ? "እንደገና እንሞክር። ሙሉ ስምዎ ማን ነው?"
+                : "Let us try again. What is your full name? You can also say spell.",
             );
           } else {
             speakAssistant(
               isAmharic
                 ? `ስምዎ ${formDataRef.current.fullName} ትክክል ከሆነ አዎ ይበሉ፣ ወይም ለመቀየር አይ ይበሉ።`
-                : `Please answer yes if ${formDataRef.current.fullName} is correct, or say no to change it.`
+                : `Please answer yes if ${formDataRef.current.fullName} is correct, or say no to change it.`,
             );
           }
           break;
         }
 
         // --- EMAIL ---
-        case 'ask_email': {
-          if (lower.includes('spell')) {
-            setAssistantStep('spell_email');
-            setSpellingBuffer('');
+        case "ask_email": {
+          if (lower.includes("spell")) {
+            setAssistantStep("spell_email");
+            setSpellingBuffer("");
             speakAssistant(
               isAmharic
-                ? 'የኢሜይል ፊደል አገባብ። ፊደላትን አንድ በአንድ ይናገሩ፣ @ ለማለት at እና ነጥብ ለማለት dot ይበሉ።'
-                : 'Spelling mode for email. Please spell your email letter by letter. Say at for @ and dot for period, or say done when finished.'
+                ? "የኢሜይል ፊደል አገባብ። ፊደላትን አንድ በአንድ ይናገሩ፣ @ ለማለት at እና ነጥብ ለማለት dot ይበሉ።"
+                : "Spelling mode for email. Please spell your email letter by letter. Say at for @ and dot for period, or say done when finished.",
             );
             return;
           }
-          if ((lower === 'next' || lower === 'ቀጥል') && formDataRef.current.email) {
-            setAssistantStep('ask_phone');
+          if ((lower === "next" || lower === "ቀጥል") && formDataRef.current.email) {
+            setAssistantStep("ask_phone");
             speakAssistant(
               isAmharic
-                ? 'ስልክ ቁጥርዎ ምንድን ነው? ማስገባት ካልፈለጉ ዝለል ይበሉ።'
-                : 'What is your phone number? This is optional. Say your number, or say next or skip.'
+                ? "ስልክ ቁጥርዎ ምንድን ነው? ማስገባት ካልፈለጉ ዝለል ይበሉ።"
+                : "What is your phone number? This is optional. Say your number, or say next or skip.",
             );
             return;
           }
-          const rawEmail = input.replace(/^(my email is|email is|ኢሜይሌ)\s+/i, '').trim();
+          const rawEmail = input.replace(/^(my email is|email is|ኢሜይሌ)\s+/i, "").trim();
           const parsedEmail = parseSpelledLetters(rawEmail, true).toLowerCase();
-          fillField('email', parsedEmail);
-          setAssistantStep('confirm_email');
+          fillField("email", parsedEmail);
+          setAssistantStep("confirm_email");
           speakAssistant(
             isAmharic
               ? `ኢሜይልዎ ${parsedEmail} ተብሎ ተመዝግቧል። ትክክል ነው?`
-              : `I entered ${parsedEmail}. Is that right?`
+              : `I entered ${parsedEmail}. Is that right?`,
           );
           break;
         }
 
-        case 'spell_email': {
-          if (lower === 'done' || lower.includes('done') || lower === 'ጨረስኩ') {
+        case "spell_email": {
+          if (lower === "done" || lower.includes("done") || lower === "ጨረስኩ") {
             const finalEmail = parseSpelledLetters(spellingBufferRef.current, true).toLowerCase();
-            fillField('email', finalEmail);
-            setAssistantStep('confirm_email');
+            fillField("email", finalEmail);
+            setAssistantStep("confirm_email");
             speakAssistant(
               isAmharic
                 ? `የተጻፈው ኢሜይል ${finalEmail} ነው። ትክክል ነው?`
-                : `Spelled: ${finalEmail}. I entered ${finalEmail}. Is that right?`
+                : `Spelled: ${finalEmail}. I entered ${finalEmail}. Is that right?`,
             );
             return;
           }
           const parsed = parseSpelledLetters(input, true);
           const newBuf = (spellingBufferRef.current + parsed).trim();
           setSpellingBuffer(newBuf);
-          fillField('email', parseSpelledLetters(newBuf, true).toLowerCase());
+          fillField("email", parseSpelledLetters(newBuf, true).toLowerCase());
           speakAssistant(`Building email: ${newBuf}. Say more letters or say done.`);
           break;
         }
 
-        case 'confirm_email': {
+        case "confirm_email": {
           if (isAffirm(lower)) {
-            setAssistantStep('ask_phone');
+            setAssistantStep("ask_phone");
             speakAssistant(
               isAmharic
-                ? 'ስልክ ቁጥርዎ ምንድን ነው? ይህ አማራጭ ነው፣ መዝለል ከፈለጉ ዝለል ማለት ይችላሉ።'
-                : 'What is your phone number? This is optional. Say your number, or say next or skip.'
+                ? "ስልክ ቁጥርዎ ምንድን ነው? ይህ አማራጭ ነው፣ መዝለል ከፈለጉ ዝለል ማለት ይችላሉ።"
+                : "What is your phone number? This is optional. Say your number, or say next or skip.",
             );
           } else if (isDeny(lower)) {
-            setAssistantStep('ask_email');
+            setAssistantStep("ask_email");
             speakAssistant(
               isAmharic
-                ? 'የኢሜይል አድራሻዎ ምንድን ነው?'
-                : 'What is your email address? You can also say spell.'
+                ? "የኢሜይል አድራሻዎ ምንድን ነው?"
+                : "What is your email address? You can also say spell.",
             );
           } else {
             speakAssistant(
               isAmharic
                 ? `ኢሜይልዎ ${formDataRef.current.email} ትክክል ከሆነ አዎ ይበሉ፣ ወይም ለመቀየር አይ ይበሉ።`
-                : `Please answer yes if ${formDataRef.current.email} is correct, or say no to change it.`
+                : `Please answer yes if ${formDataRef.current.email} is correct, or say no to change it.`,
             );
           }
           break;
         }
 
         // --- PHONE (OPTIONAL) ---
-        case 'ask_phone': {
+        case "ask_phone": {
           if (
-            lower === 'skip' ||
-            lower === 'next' ||
-            lower === 'none' ||
-            lower === 'no' ||
-            lower === 'no phone' ||
-            lower === 'ዝለል' ||
-            lower === 'አልፈልግም'
+            lower === "skip" ||
+            lower === "next" ||
+            lower === "none" ||
+            lower === "no" ||
+            lower === "no phone" ||
+            lower === "ዝለል" ||
+            lower === "አልፈልግም"
           ) {
-            fillField('phone', '');
-            setAssistantStep('ask_language');
+            fillField("phone", "");
+            setAssistantStep("ask_language");
             speakAssistant(
               isAmharic
-                ? 'ስልክ ተዘሏል። የሚመርጡት የመማሪያ ቋንቋ ምንድን ነው? አማርኛ ወይም እንግሊዝኛ?'
-                : 'Phone skipped. What is your preferred language? English, Amharic, or Afaan Oromoo?'
+                ? "ስልክ ተዘሏል። የሚመርጡት የመማሪያ ቋንቋ ምንድን ነው? አማርኛ ወይም እንግሊዝኛ?"
+                : "Phone skipped. What is your preferred language? English, Amharic, or Afaan Oromoo?",
             );
             return;
           }
-          const rawPhone = input.replace(/^(my phone is|phone is|number is|ስልኬ)\s+/i, '').trim();
-          fillField('phone', rawPhone);
-          setAssistantStep('confirm_phone');
+          const rawPhone = input.replace(/^(my phone is|phone is|number is|ስልኬ)\s+/i, "").trim();
+          fillField("phone", rawPhone);
+          setAssistantStep("confirm_phone");
           speakAssistant(
             isAmharic
               ? `ስልክ ቁጥርዎ ${rawPhone} ተብሎ ተመዝግቧል። ትክክል ነው?`
-              : `I entered ${rawPhone}. Is that right?`
+              : `I entered ${rawPhone}. Is that right?`,
           );
           break;
         }
 
-        case 'confirm_phone': {
+        case "confirm_phone": {
           if (isAffirm(lower)) {
-            setAssistantStep('ask_language');
+            setAssistantStep("ask_language");
             speakAssistant(
               isAmharic
-                ? 'የሚመርጡት የመማሪያ ቋንቋ ምንድን ነው? አማርኛ ወይም እንግሊዝኛ?'
-                : 'What is your preferred language? English, Amharic, or Afaan Oromoo?'
+                ? "የሚመርጡት የመማሪያ ቋንቋ ምንድን ነው? አማርኛ ወይም እንግሊዝኛ?"
+                : "What is your preferred language? English, Amharic, or Afaan Oromoo?",
             );
           } else if (isDeny(lower)) {
-            setAssistantStep('ask_phone');
+            setAssistantStep("ask_phone");
             speakAssistant(
-              isAmharic
-                ? 'ስልክ ቁጥርዎን ያስገቡ ወይም ዝለል ይበሉ።'
-                : 'What is your phone number? Or say skip.'
+              isAmharic ? "ስልክ ቁጥርዎን ያስገቡ ወይም ዝለል ይበሉ።" : "What is your phone number? Or say skip.",
             );
           } else {
             speakAssistant(
               isAmharic
                 ? `ስልክ ቁጥርዎ ${formDataRef.current.phone} ትክክል ከሆነ አዎ ይበሉ።`
-                : `Please answer yes if ${formDataRef.current.phone} is correct, or say no to change it.`
+                : `Please answer yes if ${formDataRef.current.phone} is correct, or say no to change it.`,
             );
           }
           break;
         }
 
         // --- LANGUAGE ---
-        case 'ask_language': {
-          let selected = 'en';
-          if (lower.includes('amharic') || lower.includes('am') || lower.includes('አማርኛ')) {
-            selected = 'am';
-          } else if (lower.includes('oromoo') || lower.includes('afaan') || lower.includes('om')) {
-            selected = 'om';
-          } else if (lower.includes('tigrinya') || lower.includes('ti')) {
-            selected = 'ti';
-          } else if (lower.includes('somali') || lower.includes('so')) {
-            selected = 'so';
+        case "ask_language": {
+          let selected = "en";
+          if (lower.includes("amharic") || lower.includes("am") || lower.includes("አማርኛ")) {
+            selected = "am";
+          } else if (lower.includes("oromoo") || lower.includes("afaan") || lower.includes("om")) {
+            selected = "om";
+          } else if (lower.includes("tigrinya") || lower.includes("ti")) {
+            selected = "ti";
+          } else if (lower.includes("somali") || lower.includes("so")) {
+            selected = "so";
           } else {
-            selected = 'en';
+            selected = "en";
           }
 
           const labelMap: Record<string, string> = {
-            en: 'English',
-            am: 'Amharic',
-            om: 'Afaan Oromoo',
-            ti: 'Tigrinya',
-            so: 'Somali',
+            en: "English",
+            am: "Amharic",
+            om: "Afaan Oromoo",
+            ti: "Tigrinya",
+            so: "Somali",
           };
 
-          fillField('preferredLanguage', selected);
-          setAssistantStep('confirm_language');
+          fillField("preferredLanguage", selected);
+          setAssistantStep("confirm_language");
           speakAssistant(
             isAmharic
               ? `የተመረጠው የመማሪያ ቋንቋ ${labelMap[selected] || selected} ነው። ትክክል ነው?`
-              : `I selected ${labelMap[selected] || selected}. Is that right?`
+              : `I selected ${labelMap[selected] || selected}. Is that right?`,
           );
           break;
         }
 
-        case 'confirm_language': {
+        case "confirm_language": {
           if (isAffirm(lower)) {
-            setAssistantStep('read_privacy');
+            setAssistantStep("read_privacy");
             speakAssistant(
               isAmharic
-                ? 'የኤብልዌይ የግላዊነት ውል፦ የግል መረጃዎ ለትምህርት አገልግሎት ብቻ የሚውል ሲሆን ለሶስተኛ ወገን አይተላለፍም። ውሉን ይቀበላሉ? እባክዎን አዎ ወይም አይ ይበሉ።'
-                : 'Here is our plain-language privacy summary: We collect your name, email, phone number, and preferred language only to create your account, deliver lessons, and provide help. We never sell your personal information or share it with third parties to train AI models. Do you agree and give your consent?'
+                ? "የኤብልዌይ የግላዊነት ውል፦ የግል መረጃዎ ለትምህርት አገልግሎት ብቻ የሚውል ሲሆን ለሶስተኛ ወገን አይተላለፍም። ውሉን ይቀበላሉ? እባክዎን አዎ ወይም አይ ይበሉ።"
+                : "Here is our plain-language privacy summary: We collect your name, email, phone number, and preferred language only to create your account, deliver lessons, and provide help. We never sell your personal information or share it with third parties to train AI models. Do you agree and give your consent?",
             );
           } else if (isDeny(lower)) {
-            setAssistantStep('ask_language');
+            setAssistantStep("ask_language");
             speakAssistant(
               isAmharic
-                ? 'የሚመርጡት የመማሪያ ቋንቋ ምንድን ነው? አማርኛ ወይም እንግሊዝኛ?'
-                : 'What is your preferred language? English, Amharic, or Afaan Oromoo?'
+                ? "የሚመርጡት የመማሪያ ቋንቋ ምንድን ነው? አማርኛ ወይም እንግሊዝኛ?"
+                : "What is your preferred language? English, Amharic, or Afaan Oromoo?",
             );
           } else {
             speakAssistant(
               isAmharic
-                ? 'ይህ ቋንቋ ትክክል ከሆነ አዎ ይበሉ፣ ወይም ሌላ ለመምረጥ አይ ይበሉ።'
-                : 'Please answer yes if this language is correct, or say no to choose another.'
+                ? "ይህ ቋንቋ ትክክል ከሆነ አዎ ይበሉ፣ ወይም ሌላ ለመምረጥ አይ ይበሉ።"
+                : "Please answer yes if this language is correct, or say no to choose another.",
             );
           }
           break;
         }
 
         // --- PRIVACY CONSENT ---
-        case 'read_privacy': {
+        case "read_privacy": {
           if (isAffirm(lower)) {
-            fillField('consent', true);
-            setAssistantStep('confirm_summary');
+            fillField("consent", true);
+            setAssistantStep("confirm_summary");
             const summary = isAmharic
               ? `ውሉ ተመዝግቧል። የምዝገባ ማጠቃለያ፦ ስም: ${formDataRef.current.fullName}፣ ኢሜይል: ${formDataRef.current.email}። አሁን አካውንትዎን መፍጠር ይፈልጋሉ? አዎ ይበሉ።`
-              : `Consent recorded. Here is your full registration summary: Full name: ${formDataRef.current.fullName}. Email: ${formDataRef.current.email}. Phone: ${formDataRef.current.phone || 'Not provided'}. Preferred language: ${formDataRef.current.preferredLanguage}. Privacy consent: Agreed. Do you want to submit your registration now?`;
+              : `Consent recorded. Here is your full registration summary: Full name: ${formDataRef.current.fullName}. Email: ${formDataRef.current.email}. Phone: ${formDataRef.current.phone || "Not provided"}. Preferred language: ${formDataRef.current.preferredLanguage}. Privacy consent: Agreed. Do you want to submit your registration now?`;
             speakAssistant(summary);
           } else {
             // Explicit yes required!
-            fillField('consent', false);
+            fillField("consent", false);
             speakAssistant(
               isAmharic
-                ? 'ውሉ አልተመዘገበም። ለመቀጠል የግላዊነት ውሉን በግልጽ አዎ በማለት መቀበል አለብዎት። ውሉን ይቀበላሉ?'
-                : 'Consent has not been recorded. You must give an explicit yes to agree to the privacy notice before we can continue. Do you agree and give your consent?'
+                ? "ውሉ አልተመዘገበም። ለመቀጠል የግላዊነት ውሉን በግልጽ አዎ በማለት መቀበል አለብዎት። ውሉን ይቀበላሉ?"
+                : "Consent has not been recorded. You must give an explicit yes to agree to the privacy notice before we can continue. Do you agree and give your consent?",
             );
           }
           break;
         }
 
         // --- FULL SUMMARY CONFIRMATION ---
-        case 'confirm_summary': {
+        case "confirm_summary": {
           if (isAffirm(lower)) {
             // Passkey step: the phone's own unlock prompt takes over, so stop listening first.
             pausePasskeyListening();
             const passkeyMsg = isAmharic
-              ? 'አመሰግናለሁ። አሁን ስልክዎ እንዲከፍቱት ይጠይቅዎታል፣ እንደተለመደው ይክፈቱት። ይህ የይለፍ ቁልፍዎን ይፈጥራል።'
-              : 'Thank you. Your phone will now ask you to unlock it, like you always do. This creates your passkey. You do not need a password.';
+              ? "አመሰግናለሁ። አሁን ስልክዎ እንዲከፍቱት ይጠይቅዎታል፣ እንደተለመደው ይክፈቱት። ይህ የይለፍ ቁልፍዎን ይፈጥራል።"
+              : "Thank you. Your phone will now ask you to unlock it, like you always do. This creates your passkey. You do not need a password.";
             speakAssistant(passkeyMsg);
             setTimeout(() => {
               void createAccountRef.current();
@@ -772,48 +781,46 @@ export default function RegisterPage() {
           } else if (isDeny(lower)) {
             speakAssistant(
               isAmharic
-                ? 'ምዝገባው ቆሟል። ስም ቀይር፣ ኢሜይል ቀይር ወይም ስልክ ቀይር ማለት ይችላሉ።'
-                : 'Submission paused. You can say change name, change email, change phone, change language, or submit when ready.'
+                ? "ምዝገባው ቆሟል። ስም ቀይር፣ ኢሜይል ቀይር ወይም ስልክ ቀይር ማለት ይችላሉ።"
+                : "Submission paused. You can say change name, change email, change phone, change language, or submit when ready.",
             );
           } else {
             speakAssistant(
               isAmharic
-                ? 'አካውንትዎን ለመፍጠር አዎ ይበሉ፣ ወይም መረጃ ለመቀየር ኢሜይል ቀይር ይበሉ።'
-                : 'Please say yes to submit your registration, or say change email or repeat.'
+                ? "አካውንትዎን ለመፍጠር አዎ ይበሉ፣ ወይም መረጃ ለመቀየር ኢሜይል ቀይር ይበሉ።"
+                : "Please say yes to submit your registration, or say change email or repeat.",
             );
           }
           break;
         }
 
         // --- ONE-TIME CODE (SIGN-IN) ---
-        case 'ask_code': {
+        case "ask_code": {
           const withDigits = parseAmharicNumberWords(input);
-          const rawCode = cleanSpokenInput(withDigits).replace(/\s+/g, '');
-          fillField('oneTimeCode', rawCode);
-          setAssistantStep('confirm_code');
+          const rawCode = cleanSpokenInput(withDigits).replace(/\s+/g, "");
+          fillField("oneTimeCode", rawCode);
+          setAssistantStep("confirm_code");
           speakAssistant(
             isAmharic
-              ? `የማረጋገጫ ኮድ ${rawCode.split('').join(' ')} ተመዝግቧል። ትክክል ነው?`
-              : `I entered code ${rawCode.split('').join(' ')}. Is that right?`
+              ? `የማረጋገጫ ኮድ ${rawCode.split("").join(" ")} ተመዝግቧል። ትክክል ነው?`
+              : `I entered code ${rawCode.split("").join(" ")}. Is that right?`,
           );
           break;
         }
 
-        case 'confirm_code': {
+        case "confirm_code": {
           if (isAffirm(lower)) {
             completeRegistration();
           } else if (isDeny(lower)) {
-            setAssistantStep('ask_code');
+            setAssistantStep("ask_code");
             speakAssistant(
-              isAmharic
-                ? 'ባለ 6 ድጂት ማረጋገጫ ኮድዎን ይናገሩ።'
-                : 'What is your 6-digit one-time code?'
+              isAmharic ? "ባለ 6 ድጂት ማረጋገጫ ኮድዎን ይናገሩ።" : "What is your 6-digit one-time code?",
             );
           } else {
             speakAssistant(
               isAmharic
-                ? 'ይህን ኮድ ለማረጋገጥ አዎ ይበሉ፣ ወይም እንደገና ለማስገባት አይ ይበሉ።'
-                : 'Say yes to verify this one-time code, or say no to re-enter it.'
+                ? "ይህን ኮድ ለማረጋገጥ አዎ ይበሉ፣ ወይም እንደገና ለማስገባት አይ ይበሉ።"
+                : "Say yes to verify this one-time code, or say no to re-enter it.",
             );
           }
           break;
@@ -821,14 +828,12 @@ export default function RegisterPage() {
 
         default:
           speakAssistant(
-            isAmharic
-              ? 'በምዝገባዎ በምን ልርዳዎ?'
-              : 'How can I help you with your registration?'
+            isAmharic ? "በምዝገባዎ በምን ልርዳዎ?" : "How can I help you with your registration?",
           );
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [fillField, speakAssistant]
+    [fillField, speakAssistant],
   );
 
   // Bind global simulation hook
@@ -845,30 +850,33 @@ export default function RegisterPage() {
     const newErrors: FormErrors = {};
 
     if (!current.fullName.trim()) {
-      newErrors.fullName = 'Enter your full name';
+      newErrors.fullName = "Enter your full name";
     }
 
     if (!current.email.trim()) {
-      newErrors.email = 'Enter an email like name@example.com';
+      newErrors.email = "Enter an email like name@example.com";
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(current.email.trim())) {
-      newErrors.email = 'Enter an email like name@example.com';
+      newErrors.email = "Enter an email like name@example.com";
     }
 
     if (!current.preferredLanguage) {
-      newErrors.preferredLanguage = 'Select your preferred language';
+      newErrors.preferredLanguage = "Select your preferred language";
     }
 
     if (!current.consent) {
-      newErrors.consent = 'You must check the consent box to agree to the privacy notice';
+      newErrors.consent = "You must check the consent box to agree to the privacy notice";
     }
 
     setErrors(newErrors);
 
     if (Object.keys(newErrors).length > 0) {
-      playEarcon('error');
+      playEarcon("error");
       // Announce and move focus to error summary (Rule 16)
       const errorCount = Object.keys(newErrors).length;
-      announce(`The form has ${errorCount} error${errorCount > 1 ? 's' : ''}. Please review the error summary.`, 'assertive');
+      announce(
+        `The form has ${errorCount} error${errorCount > 1 ? "s" : ""}. Please review the error summary.`,
+        "assertive",
+      );
       if (errorSummaryRef.current) {
         errorSummaryRef.current.focus();
       }
@@ -886,8 +894,9 @@ export default function RegisterPage() {
     }
 
     pausePasskeyListening();
-    const msg = 'Your device will now ask you to unlock it. This creates your passkey. You do not need a password.';
-    announce(msg, 'polite');
+    const msg =
+      "Your device will now ask you to unlock it. This creates your passkey. You do not need a password.";
+    announce(msg, "polite");
     setAssistantSpokenText(msg);
     // Called straight from the button press: some browsers (Safari) only allow passkeys after a tap or key press.
     void createAccount();
@@ -898,8 +907,8 @@ export default function RegisterPage() {
   // Stop hands-free listening while the device's unlock prompt is open.
   // 'completed' is the state the listening guards already respect.
   function pausePasskeyListening() {
-    assistantStepRef.current = 'completed';
-    setAssistantStep('completed');
+    assistantStepRef.current = "completed";
+    setAssistantStep("completed");
     if (recognitionRef.current) {
       try {
         recognitionRef.current.abort();
@@ -909,10 +918,10 @@ export default function RegisterPage() {
   }
 
   const fieldErrorKeys: Record<string, keyof FormErrors> = {
-    name: 'fullName',
-    email: 'email',
-    phone: 'phone',
-    language: 'preferredLanguage',
+    name: "fullName",
+    email: "email",
+    phone: "phone",
+    language: "preferredLanguage",
   };
 
   async function createAccount() {
@@ -921,38 +930,38 @@ export default function RegisterPage() {
       name: current.fullName,
       email: current.email,
       phone: current.phone.trim() ? current.phone : undefined,
-      language: current.preferredLanguage || 'en',
+      language: current.preferredLanguage || "en",
     });
 
     if (result.ok) {
-      setStage('success');
-      setAssistantStep('completed');
-      playEarcon('success');
-      const successMsg = 'Account created. Going to course choice';
-      announce(successMsg, 'polite');
+      setStage("success");
+      setAssistantStep("completed");
+      playEarcon("success");
+      const successMsg = "Account created. Going to course choice";
+      announce(successMsg, "polite");
       setAssistantSpokenText(successMsg);
-      if (mode === 'voice-first' && !preferences.suppressInAppTTS) {
+      if (mode === "voice-first" && !preferences.suppressInAppTTS) {
         speak(successMsg);
       }
       setTimeout(() => {
-        router.push('/courses');
+        router.push("/courses");
         router.refresh();
       }, 1800);
       return;
     }
 
-    playEarcon('error');
+    playEarcon("error");
 
     // This device cannot make passkeys: continue with a password, keeping name and email.
-    if (result.reason === 'unsupported') {
+    if (result.reason === "unsupported") {
       saveSignUpPrefill({ name: current.fullName, email: current.email });
       const msg = `${result.message} Going to the password page now.`;
-      announce(msg, 'assertive');
+      announce(msg, "assertive");
       setAssistantSpokenText(msg);
-      if (mode === 'voice-first' && !preferences.suppressInAppTTS) {
+      if (mode === "voice-first" && !preferences.suppressInAppTTS) {
         speak(msg);
       }
-      setTimeout(() => router.push('/sign-up'), 2500);
+      setTimeout(() => router.push("/sign-up"), 2500);
       return;
     }
 
@@ -969,19 +978,19 @@ export default function RegisterPage() {
       }
     }
 
-    const detail = result.fieldErrors ? Object.values(result.fieldErrors).join(' ') : '';
+    const detail = result.fieldErrors ? Object.values(result.fieldErrors).join(" ") : "";
     const retry =
-      result.reason === 'email_taken'
-        ? ' You can sign in on the login page.'
-        : ' Say yes to try again, or say change email. You can also press the Create account button.';
-    const msg = `${result.message} ${detail}${retry}`.replace(/\s+/g, ' ').trim();
+      result.reason === "email_taken"
+        ? " You can sign in on the login page."
+        : " Say yes to try again, or say change email. You can also press the Create account button.";
+    const msg = `${result.message} ${detail}${retry}`.replace(/\s+/g, " ").trim();
 
     if (assistantActiveRef.current) {
-      assistantStepRef.current = 'confirm_summary';
-      setAssistantStep('confirm_summary');
+      assistantStepRef.current = "confirm_summary";
+      setAssistantStep("confirm_summary");
       speakAssistant(msg);
     } else {
-      announce(msg, 'assertive');
+      announce(msg, "assertive");
       setAssistantSpokenText(msg);
     }
   }
@@ -993,12 +1002,15 @@ export default function RegisterPage() {
   // Step 2: Verification with One-Time Code
   const completeRegistration = () => {
     const inputVal = oneTimeCodeInputRef.current?.value;
-    const code = (inputVal || formDataRef.current.oneTimeCode || '').trim();
+    const code = (inputVal || formDataRef.current.oneTimeCode || "").trim();
     if (!code || code.length < 4) {
-      const err = { oneTimeCode: 'Enter the 6-digit one-time code sent to your email' };
+      const err = { oneTimeCode: "Enter the 6-digit one-time code sent to your email" };
       setErrors(err);
-      playEarcon('error');
-      announce('Invalid one-time code. Enter the 6-digit one-time code sent to your email.', 'assertive');
+      playEarcon("error");
+      announce(
+        "Invalid one-time code. Enter the 6-digit one-time code sent to your email.",
+        "assertive",
+      );
       if (errorSummaryRef.current) {
         errorSummaryRef.current.focus();
       }
@@ -1006,18 +1018,18 @@ export default function RegisterPage() {
     }
 
     // Success (Requirement: "Account created. Going to course choice" and redirect)
-    setStage('success');
-    setAssistantStep('completed');
-    playEarcon('success');
-    const successMsg = 'Account created. Going to course choice';
-    announce(successMsg, 'polite');
+    setStage("success");
+    setAssistantStep("completed");
+    playEarcon("success");
+    const successMsg = "Account created. Going to course choice";
+    announce(successMsg, "polite");
     setAssistantSpokenText(successMsg);
-    if (mode === 'voice-first' && !preferences.suppressInAppTTS) {
+    if (mode === "voice-first" && !preferences.suppressInAppTTS) {
       speak(successMsg);
     }
 
     setTimeout(() => {
-      router.push('/courses');
+      router.push("/courses");
     }, 1800);
   };
 
@@ -1028,7 +1040,7 @@ export default function RegisterPage() {
 
   // Hands-free Web Speech API STT: Automatically receives voice without clicking mic button
   const startListening = useCallback(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === "undefined") return;
     // Mutex: Do not start listening while assistant is actively speaking
     if (isSpeakingRef.current) return;
 
@@ -1037,7 +1049,10 @@ export default function RegisterPage() {
       getSpeechRecognitionConstructor();
 
     if (!SpeechRec) {
-      announce('Speech recognition is not supported in this browser. Please use Chrome or Edge.', 'assertive');
+      announce(
+        "Speech recognition is not supported in this browser. Please use Chrome or Edge.",
+        "assertive",
+      );
       return;
     }
 
@@ -1049,7 +1064,7 @@ export default function RegisterPage() {
 
     try {
       const rec = new SpeechRec();
-      rec.lang = language === 'am-ET' ? 'am-ET' : 'en-US';
+      rec.lang = language === "am-ET" ? "am-ET" : "en-US";
       rec.interimResults = true;
       rec.continuous = true;
 
@@ -1057,12 +1072,12 @@ export default function RegisterPage() {
         setIsListening(true);
       };
 
-      rec.onresult = (evt: any) => {
+      rec.onresult = (evt: RecognitionResultEvent) => {
         // If speaking flag is active, ignore incoming audio
         if (isSpeakingRef.current) return;
 
-        let interim = '';
-        let final = '';
+        let interim = "";
+        let final = "";
 
         for (let i = evt.resultIndex; i < evt.results.length; ++i) {
           const res = evt.results[i];
@@ -1085,9 +1100,12 @@ export default function RegisterPage() {
         }
       };
 
-      rec.onerror = (e: any) => {
-        if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
-          announce('Microphone permission not granted. Please allow microphone access or type your answers.', 'assertive');
+      rec.onerror = (e: RecognitionErrorEvent) => {
+        if (e.error === "not-allowed" || e.error === "service-not-allowed") {
+          announce(
+            "Microphone permission not granted. Please allow microphone access or type your answers.",
+            "assertive",
+          );
           setIsListening(false);
         }
       };
@@ -1096,9 +1114,17 @@ export default function RegisterPage() {
         setIsListening(false);
         // Hands-free continuous auto-receive:
         // Only reconnect if assistant is NOT speaking and is still active
-        if (!isSpeakingRef.current && assistantActiveRef.current && assistantStepRef.current !== 'completed') {
+        if (
+          !isSpeakingRef.current &&
+          assistantActiveRef.current &&
+          assistantStepRef.current !== "completed"
+        ) {
           setTimeout(() => {
-            if (!isSpeakingRef.current && assistantActiveRef.current && assistantStepRef.current !== 'completed') {
+            if (
+              !isSpeakingRef.current &&
+              assistantActiveRef.current &&
+              assistantStepRef.current !== "completed"
+            ) {
               try {
                 rec.start();
               } catch {}
@@ -1110,9 +1136,9 @@ export default function RegisterPage() {
       recognitionRef.current = rec;
       rec.start();
     } catch (err) {
-      console.warn('Speech recognition start failed:', err);
+      console.warn("Speech recognition start failed:", err);
     }
-  }, [handleAssistantCommand, announce]);
+  }, [handleAssistantCommand, announce, language]);
 
   // Bind ref for speakAssistant auto-receive
   useEffect(() => {
@@ -1123,7 +1149,7 @@ export default function RegisterPage() {
   const toggleListening = () => {
     // Unlock speaking mutex in case user clicks mic to speak
     isSpeakingRef.current = false;
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
       speechPlayer.cancel();
     }
 
@@ -1132,12 +1158,12 @@ export default function RegisterPage() {
         recognitionRef.current?.abort();
       } catch {}
       setIsListening(false);
-      playEarcon('stop');
-      announce('Microphone paused.', 'polite');
+      playEarcon("stop");
+      announce("Microphone paused.", "polite");
     } else {
-      playEarcon('listening');
+      playEarcon("listening");
       startListening();
-      announce('Microphone active. Listening for your response.', 'polite');
+      announce("Microphone active. Listening for your response.", "polite");
     }
   };
 
@@ -1153,13 +1179,16 @@ export default function RegisterPage() {
           Create your account
         </h1>
         <p className="text-base text-slate-700 max-w-2xl leading-relaxed">
-          Join Ableway to access accessible courses, audio lessons, and human assistance. You can fill this form by keyboard, or start the spoken assistant to answer by voice hands-free. Already have an account?{' '}
+          Join Ableway to access accessible courses, audio lessons, and human assistance. You can
+          fill this form by keyboard, or start the spoken assistant to answer by voice hands-free.
+          Already have an account?{" "}
           <Link
             href="/login"
             className="underline font-bold text-orange-800 hover:text-orange-950 focus:outline-none focus:ring-2 focus:ring-orange-500 rounded px-0.5"
           >
             Sign in here
-          </Link>.
+          </Link>
+          .
         </p>
       </header>
 
@@ -1182,8 +1211,8 @@ export default function RegisterPage() {
               </div>
               <p className="text-xs text-slate-600 mt-0.5">
                 {assistantActive
-                  ? 'Speaking slowly and listening automatically without needing to click the mic button.'
-                  : 'Start the assistant once to guide you hands-free question by question.'}
+                  ? "Speaking slowly and listening automatically without needing to click the mic button."
+                  : "Start the assistant once to guide you hands-free question by question."}
               </p>
             </div>
           </div>
@@ -1201,11 +1230,11 @@ export default function RegisterPage() {
                 }
               }}
               id="reg-lang-switch-btn"
-              aria-label={`${language === 'am-ET' ? 'ቋንቋ፡ አማርኛ' : 'Language: English'} - Switch language / ቋንቋ ቀይር`}
+              aria-label={`${language === "am-ET" ? "ቋንቋ፡ አማርኛ" : "Language: English"} - Switch language / ቋንቋ ቀይር`}
               className="min-h-[44px] px-4 py-2 rounded-xl font-bold text-xs bg-slate-100 hover:bg-slate-200 text-slate-800 flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-orange-400 cursor-pointer shadow-sm transition-colors"
             >
               <Globe className="w-3.5 h-3.5 text-orange-600" aria-hidden="true" />
-              <span>{language === 'am-ET' ? 'ቋንቋ፡ አማርኛ' : 'Language: English'}</span>
+              <span>{language === "am-ET" ? "ቋንቋ፡ አማርኛ" : "Language: English"}</span>
             </button>
 
             {!assistantActive ? (
@@ -1216,14 +1245,14 @@ export default function RegisterPage() {
                 className="w-full sm:w-auto min-h-[44px] min-w-[44px] px-6 py-2.5 bg-orange-500 hover:bg-orange-400 text-white font-bold text-sm rounded-xl flex items-center justify-center gap-2 shadow-md hover:shadow-orange-500/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 cursor-pointer transition-all"
               >
                 <Mic className="w-4 h-4 text-white" aria-hidden="true" />
-                <span>{language === 'am-ET' ? 'የድምጽ ረዳቱን ጀምር' : 'Start Voice Assistant'}</span>
+                <span>{language === "am-ET" ? "የድምጽ ረዳቱን ጀምር" : "Start Voice Assistant"}</span>
               </button>
             ) : (
               <button
                 type="button"
                 onClick={() => {
                   setAssistantActive(false);
-                  setAssistantStep('idle');
+                  setAssistantStep("idle");
                   if (recognitionRef.current) {
                     try {
                       recognitionRef.current.abort();
@@ -1231,16 +1260,16 @@ export default function RegisterPage() {
                   }
                   setIsListening(false);
                   announce(
-                    language === 'am-ET'
-                      ? 'የድምጽ ረዳቱ ቆሟል። በኪቦርድዎ መቀጠል ይችላሉ።'
-                      : 'Voice assistant stopped. You can continue using your keyboard.',
-                    'polite'
+                    language === "am-ET"
+                      ? "የድምጽ ረዳቱ ቆሟል። በኪቦርድዎ መቀጠል ይችላሉ።"
+                      : "Voice assistant stopped. You can continue using your keyboard.",
+                    "polite",
                   );
                 }}
                 className="w-full sm:w-auto min-h-[44px] min-w-[44px] px-5 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 text-sm font-semibold rounded-xl flex items-center justify-center gap-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-400 cursor-pointer transition-colors"
               >
                 <RotateCcw className="w-4 h-4" aria-hidden="true" />
-                <span>{language === 'am-ET' ? 'ረዳቱን አቁም' : 'Pause Assistant'}</span>
+                <span>{language === "am-ET" ? "ረዳቱን አቁም" : "Pause Assistant"}</span>
               </button>
             )}
           </div>
@@ -1271,14 +1300,15 @@ export default function RegisterPage() {
               className="text-base text-slate-900 font-medium leading-relaxed"
               aria-live="polite"
             >
-              {assistantSpokenText || 'Starting your registration assistant...'}
+              {assistantSpokenText || "Starting your registration assistant..."}
             </p>
 
             {/* Quick spoken commands guide */}
             <p className="text-xs text-slate-600 pt-1">
-              Spoken commands you can say anytime: <strong className="text-slate-900">&quot;repeat&quot;</strong>,{' '}
-              <strong className="text-slate-900">&quot;next&quot;</strong>,{' '}
-              <strong className="text-slate-900">&quot;spell&quot;</strong>, or{' '}
+              Spoken commands you can say anytime:{" "}
+              <strong className="text-slate-900">&quot;repeat&quot;</strong>,{" "}
+              <strong className="text-slate-900">&quot;next&quot;</strong>,{" "}
+              <strong className="text-slate-900">&quot;spell&quot;</strong>, or{" "}
               <strong className="text-slate-900">&quot;change email&quot;</strong>.
             </p>
 
@@ -1287,7 +1317,7 @@ export default function RegisterPage() {
               onSubmit={(e) => {
                 e.preventDefault();
                 handleAssistantCommand(voiceInputText);
-                setVoiceInputText('');
+                setVoiceInputText("");
               }}
               className="pt-2 flex items-center gap-2"
               aria-label="Spoken assistant answer form"
@@ -1312,14 +1342,18 @@ export default function RegisterPage() {
                 data-testid="assistant-voice-mic"
                 className={`min-h-[44px] min-w-[44px] px-3.5 py-2.5 rounded-xl font-bold flex items-center justify-center transition-colors shadow-sm ${
                   isListening
-                    ? 'bg-rose-600 text-white'
-                    : 'bg-[#0B132B] hover:bg-[#152248] text-orange-400'
+                    ? "bg-rose-600 text-white"
+                    : "bg-[#0B132B] hover:bg-[#152248] text-orange-400"
                 }`}
-                aria-label={isListening ? 'Pause listening' : 'Listen with microphone'}
+                aria-label={isListening ? "Pause listening" : "Listen with microphone"}
                 aria-pressed={isListening}
-                title={isListening ? 'Listening automatically' : 'Click to enable microphone'}
+                title={isListening ? "Listening automatically" : "Click to enable microphone"}
               >
-                {isListening ? <Mic className="w-5 h-5 text-white" /> : <MicOff className="w-5 h-5 text-orange-400" />}
+                {isListening ? (
+                  <Mic className="w-5 h-5 text-white" />
+                ) : (
+                  <MicOff className="w-5 h-5 text-orange-400" />
+                )}
               </button>
 
               <button
@@ -1410,7 +1444,7 @@ export default function RegisterPage() {
       )}
 
       {/* STAGE 1: Standard Accessible Form (F0 Rule 1, 5, 15, 16 - Normal Clean UI Components) */}
-      {stage === 'details' && (
+      {stage === "details" && (
         <form
           onSubmit={handleDetailsFormSubmit}
           noValidate
@@ -1434,18 +1468,19 @@ export default function RegisterPage() {
                 autoComplete="name"
                 required
                 value={formData.fullName}
-                onChange={(e) => fillField('fullName', e.target.value)}
+                onChange={(e) => fillField("fullName", e.target.value)}
                 placeholder="e.g. Jane Doe"
-                aria-describedby={`reg-name-desc ${errors.fullName ? 'reg-name-error' : ''}`}
-                aria-invalid={errors.fullName ? 'true' : 'false'}
+                aria-describedby={`reg-name-desc ${errors.fullName ? "reg-name-error" : ""}`}
+                aria-invalid={errors.fullName ? "true" : "false"}
                 className={`w-full min-h-[44px] bg-white border rounded-lg px-4 py-2.5 text-slate-900 text-base focus:outline-none focus:ring-2 ${
                   errors.fullName
-                    ? 'border-rose-500 focus:ring-rose-400'
-                    : 'border-slate-300 focus:border-orange-500 focus:ring-orange-400'
+                    ? "border-rose-500 focus:ring-rose-400"
+                    : "border-slate-300 focus:border-orange-500 focus:ring-orange-400"
                 }`}
               />
               <p id="reg-name-desc" className="text-xs text-slate-600">
-                Enter your full legal or preferred name. You can also spell letter-by-letter with the voice assistant.
+                Enter your full legal or preferred name. You can also spell letter-by-letter with
+                the voice assistant.
               </p>
               {errors.fullName && (
                 <p id="reg-name-error" role="alert" className="text-sm font-semibold text-rose-700">
@@ -1457,7 +1492,8 @@ export default function RegisterPage() {
             {/* Email Address */}
             <div className="space-y-2">
               <label htmlFor="reg-email" className="block text-sm font-semibold text-slate-800">
-                Email address <span className="text-orange-800 font-normal text-xs">(required)</span>
+                Email address{" "}
+                <span className="text-orange-800 font-normal text-xs">(required)</span>
               </label>
               <input
                 id="reg-email"
@@ -1466,21 +1502,25 @@ export default function RegisterPage() {
                 autoComplete="email"
                 required
                 value={formData.email}
-                onChange={(e) => fillField('email', e.target.value)}
+                onChange={(e) => fillField("email", e.target.value)}
                 placeholder="e.g. name@example.com"
-                aria-describedby={`reg-email-desc ${errors.email ? 'reg-email-error' : ''}`}
-                aria-invalid={errors.email ? 'true' : 'false'}
+                aria-describedby={`reg-email-desc ${errors.email ? "reg-email-error" : ""}`}
+                aria-invalid={errors.email ? "true" : "false"}
                 className={`w-full min-h-[44px] bg-white border rounded-lg px-4 py-2.5 text-slate-900 text-base focus:outline-none focus:ring-2 ${
                   errors.email
-                    ? 'border-rose-500 focus:ring-rose-400'
-                    : 'border-slate-300 focus:border-orange-500 focus:ring-orange-400'
+                    ? "border-rose-500 focus:ring-rose-400"
+                    : "border-slate-300 focus:border-orange-500 focus:ring-orange-400"
                 }`}
               />
               <p id="reg-email-desc" className="text-xs text-slate-600">
                 Enter an email like name@example.com. Used for sign-in with a one-time code.
               </p>
               {errors.email && (
-                <p id="reg-email-error" role="alert" className="text-sm font-semibold text-rose-700">
+                <p
+                  id="reg-email-error"
+                  role="alert"
+                  className="text-sm font-semibold text-rose-700"
+                >
                   {errors.email}
                 </p>
               )}
@@ -1497,7 +1537,7 @@ export default function RegisterPage() {
                 type="tel"
                 autoComplete="tel"
                 value={formData.phone}
-                onChange={(e) => fillField('phone', e.target.value)}
+                onChange={(e) => fillField("phone", e.target.value)}
                 placeholder="e.g. +251 91 123 4567"
                 aria-describedby="reg-phone-desc"
                 className="w-full min-h-[44px] bg-white border border-slate-300 rounded-lg px-4 py-2.5 text-slate-900 text-base focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-400"
@@ -1516,7 +1556,8 @@ export default function RegisterPage() {
 
             <div className="space-y-2">
               <label htmlFor="reg-lang" className="block text-sm font-semibold text-slate-800">
-                Preferred language <span className="text-orange-800 font-normal text-xs">(required)</span>
+                Preferred language{" "}
+                <span className="text-orange-800 font-normal text-xs">(required)</span>
               </label>
               <select
                 id="reg-lang"
@@ -1524,9 +1565,9 @@ export default function RegisterPage() {
                 autoComplete="language"
                 required
                 value={formData.preferredLanguage}
-                onChange={(e) => fillField('preferredLanguage', e.target.value)}
-                aria-describedby={`reg-lang-desc ${errors.preferredLanguage ? 'reg-lang-error' : ''}`}
-                aria-invalid={errors.preferredLanguage ? 'true' : 'false'}
+                onChange={(e) => fillField("preferredLanguage", e.target.value)}
+                aria-describedby={`reg-lang-desc ${errors.preferredLanguage ? "reg-lang-error" : ""}`}
+                aria-invalid={errors.preferredLanguage ? "true" : "false"}
                 className="w-full min-h-[44px] bg-white border border-slate-300 rounded-lg px-4 py-2.5 text-slate-900 text-base focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-400"
               >
                 <option value="en">English (Default)</option>
@@ -1559,7 +1600,9 @@ export default function RegisterPage() {
                 <span>Plain-Language Privacy Summary</span>
               </div>
               <p className="text-sm text-slate-700 leading-relaxed">
-                We collect your name, email, phone number, and preferred language only to create your account, deliver lessons, and provide help. We never sell your personal information or share it with third parties to train AI models.
+                We collect your name, email, phone number, and preferred language only to create
+                your account, deliver lessons, and provide help. We never sell your personal
+                information or share it with third parties to train AI models.
               </p>
             </div>
 
@@ -1575,21 +1618,26 @@ export default function RegisterPage() {
                   type="checkbox"
                   required
                   checked={formData.consent}
-                  onChange={(e) => fillField('consent', e.target.checked)}
-                  aria-describedby={`reg-consent-desc ${errors.consent ? 'reg-consent-error' : ''}`}
-                  aria-invalid={errors.consent ? 'true' : 'false'}
+                  onChange={(e) => fillField("consent", e.target.checked)}
+                  aria-describedby={`reg-consent-desc ${errors.consent ? "reg-consent-error" : ""}`}
+                  aria-invalid={errors.consent ? "true" : "false"}
                   className="mt-1 w-5 h-5 rounded text-[#0B132B] accent-orange-600 focus:ring-orange-500 bg-white border-slate-300"
                 />
                 <span className="text-sm text-slate-900 leading-normal">
-                  I agree to the privacy terms and consent to creating my account.{' '}
+                  I agree to the privacy terms and consent to creating my account.{" "}
                   <span className="text-orange-800 font-normal text-xs">(required)</span>
                 </span>
               </label>
               <p id="reg-consent-desc" className="text-xs text-slate-600 pl-9">
-                You must give your consent to register. The assistant will ask for an explicit yes before recording consent.
+                You must give your consent to register. The assistant will ask for an explicit yes
+                before recording consent.
               </p>
               {errors.consent && (
-                <p id="reg-consent-error" role="alert" className="text-sm font-semibold text-rose-700 pl-9">
+                <p
+                  id="reg-consent-error"
+                  role="alert"
+                  className="text-sm font-semibold text-rose-700 pl-9"
+                >
                   {errors.consent}
                 </p>
               )}
@@ -1610,7 +1658,7 @@ export default function RegisterPage() {
       )}
 
       {/* STAGE 2: One-Time Code Sign-In Verification (F0 Rule 17: No CAPTCHA, accepts paste, autocomplete="one-time-code") */}
-      {stage === 'verification' && (
+      {stage === "verification" && (
         <form
           onSubmit={handleVerificationSubmit}
           noValidate
@@ -1623,16 +1671,19 @@ export default function RegisterPage() {
 
             <div className="bg-slate-50 border border-slate-300 rounded-lg p-4 text-sm text-slate-800 space-y-1">
               <p>
-                We sent a 6-digit one-time code to <strong className="text-slate-900">{formData.email}</strong>.
+                We sent a 6-digit one-time code to{" "}
+                <strong className="text-slate-900">{formData.email}</strong>.
               </p>
               <p className="text-xs text-orange-700 font-medium">
-                No passwords or CAPTCHAs needed. You can paste the code directly. (Demo code: 123456)
+                No passwords or CAPTCHAs needed. You can paste the code directly. (Demo code:
+                123456)
               </p>
             </div>
 
             <div className="space-y-2">
               <label htmlFor="reg-otp" className="block text-sm font-semibold text-slate-800">
-                One-time code <span className="text-orange-800 font-normal text-xs">(required)</span>
+                One-time code{" "}
+                <span className="text-orange-800 font-normal text-xs">(required)</span>
               </label>
               <input
                 ref={oneTimeCodeInputRef}
@@ -1643,14 +1694,14 @@ export default function RegisterPage() {
                 autoComplete="one-time-code"
                 required
                 value={formData.oneTimeCode}
-                onChange={(e) => fillField('oneTimeCode', e.target.value)}
+                onChange={(e) => fillField("oneTimeCode", e.target.value)}
                 placeholder="e.g. 123456"
-                aria-describedby={`reg-otp-desc ${errors.oneTimeCode ? 'reg-otp-error' : ''}`}
-                aria-invalid={errors.oneTimeCode ? 'true' : 'false'}
+                aria-describedby={`reg-otp-desc ${errors.oneTimeCode ? "reg-otp-error" : ""}`}
+                aria-invalid={errors.oneTimeCode ? "true" : "false"}
                 className={`w-full min-h-[44px] bg-white border rounded-lg px-4 py-3 text-slate-900 text-lg tracking-widest font-mono focus:outline-none focus:ring-2 ${
                   errors.oneTimeCode
-                    ? 'border-rose-500 focus:ring-rose-400'
-                    : 'border-slate-300 focus:border-orange-500 focus:ring-orange-400'
+                    ? "border-rose-500 focus:ring-rose-400"
+                    : "border-slate-300 focus:border-orange-500 focus:ring-orange-400"
                 }`}
               />
               <p id="reg-otp-desc" className="text-xs text-slate-600">
@@ -1668,8 +1719,8 @@ export default function RegisterPage() {
             <button
               type="button"
               onClick={() => {
-                setStage('details');
-                setAssistantStep('ask_email');
+                setStage("details");
+                setAssistantStep("ask_email");
               }}
               className="flex-1 min-h-[44px] bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold py-3 px-4 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-slate-400 cursor-pointer transition-colors"
             >
@@ -1687,13 +1738,16 @@ export default function RegisterPage() {
       )}
 
       {/* STAGE 3: Success Banner (Requirement: "Account created. Going to course choice") */}
-      {stage === 'success' && (
+      {stage === "success" && (
         <section
           role="status"
           aria-live="polite"
           className="bg-orange-50 border-2 border-orange-500 rounded-xl p-8 sm:p-12 text-center space-y-4 shadow-sm"
         >
-          <CheckCircle2 className="w-16 h-16 text-orange-600 mx-auto animate-bounce" aria-hidden="true" />
+          <CheckCircle2
+            className="w-16 h-16 text-orange-600 mx-auto animate-bounce"
+            aria-hidden="true"
+          />
           <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900">Account created!</h2>
           <p className="text-lg text-orange-800 font-semibold">
             Account created. Going to course choice...

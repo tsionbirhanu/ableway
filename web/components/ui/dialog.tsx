@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import React, { useEffect, useRef } from 'react';
-import { X } from 'lucide-react';
+import React, { useEffect, useRef } from "react";
+import { X } from "lucide-react";
 
 export interface DialogProps {
   isOpen: boolean;
@@ -23,15 +23,15 @@ export function Dialog({ isOpen, onClose, title, description, children, triggerR
       }, 50);
 
       const handleKeyDown = (e: KeyboardEvent) => {
-        if (e.key === 'Escape') {
+        if (e.key === "Escape") {
           e.preventDefault();
           onClose();
           triggerRef?.current?.focus();
         }
 
-        if (e.key === 'Tab' && dialogRef.current) {
+        if (e.key === "Tab" && dialogRef.current) {
           const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
-            'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+            'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
           );
           if (focusable.length === 0) return;
           const first = focusable[0];
@@ -47,8 +47,8 @@ export function Dialog({ isOpen, onClose, title, description, children, triggerR
         }
       };
 
-      window.addEventListener('keydown', handleKeyDown);
-      return () => window.removeEventListener('keydown', handleKeyDown);
+      window.addEventListener("keydown", handleKeyDown);
+      return () => window.removeEventListener("keydown", handleKeyDown);
     } else {
       triggerRef?.current?.focus();
     }
@@ -57,13 +57,16 @@ export function Dialog({ isOpen, onClose, title, description, children, triggerR
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" role="presentation">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+      role="presentation"
+    >
       <section
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="ui-dialog-title"
-        aria-describedby={description ? 'ui-dialog-desc' : undefined}
+        aria-describedby={description ? "ui-dialog-desc" : undefined}
         className="w-full max-w-lg bg-slate-900 border-2 border-slate-700 rounded-3xl p-6 sm:p-8 space-y-6 shadow-2xl text-slate-100 max-h-[90vh] overflow-y-auto"
       >
         <div className="flex items-center justify-between border-b border-slate-800 pb-3">
@@ -93,4 +96,3 @@ export function Dialog({ isOpen, onClose, title, description, children, triggerR
     </div>
   );
 }
-

@@ -33,7 +33,7 @@ export function useVoiceAssistant() {
         case "HELP":
           play("command-recognized");
           await speak(
-            "Available commands: Home, Go Back, Next Lesson, Previous Lesson, Ask Tutor, Find Jobs, Slower, Faster, or Stop."
+            "Available commands: Home, Go Back, Next Lesson, Previous Lesson, Ask Tutor, Find Jobs, Slower, Faster, or Stop.",
           );
           break;
 
@@ -98,7 +98,7 @@ export function useVoiceAssistant() {
           break;
       }
     },
-    [router, speak, stopSpeaking, increaseSpeechRate, decreaseSpeechRate, play]
+    [router, speak, stopSpeaking, increaseSpeechRate, decreaseSpeechRate, play],
   );
 
   const startListening = useCallback(() => {
@@ -155,4 +155,3 @@ export function useVoiceAssistant() {
     executeCommand,
   };
 }
-

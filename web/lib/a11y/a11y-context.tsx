@@ -75,6 +75,8 @@ export function A11yProvider({ children }: { children: React.ReactNode }) {
     try {
       const stored = localStorage.getItem("ableway_a11y_preferences");
       if (stored) {
+        // Restored after mount, not in useState, so server and client render the same HTML.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setPreferences((prev) => ({ ...prev, ...JSON.parse(stored) }));
       }
     } catch {
@@ -102,7 +104,7 @@ export function A11yProvider({ children }: { children: React.ReactNode }) {
       "text-large",
       "text-x-large",
       "text-xx-large",
-      "motion-reduce"
+      "motion-reduce",
     );
 
     if (preferences.contrastTheme !== "default") {
@@ -121,8 +123,7 @@ export function A11yProvider({ children }: { children: React.ReactNode }) {
       const updated = {
         ...prev,
         ...newPrefs,
-        suppressInAppTTS:
-          (newPrefs.interactionMode ?? prev.interactionMode) === "screen-reader",
+        suppressInAppTTS: (newPrefs.interactionMode ?? prev.interactionMode) === "screen-reader",
       };
       // Send to server API to persist in cookies & profile
       fetch("/api/profile/settings", {
@@ -135,30 +136,48 @@ export function A11yProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  const setInteractionMode = useCallback((mode: InteractionMode) => {
-    saveSettings({ interactionMode: mode });
-  }, [saveSettings]);
+  const setInteractionMode = useCallback(
+    (mode: InteractionMode) => {
+      saveSettings({ interactionMode: mode });
+    },
+    [saveSettings],
+  );
 
-  const setContrastTheme = useCallback((theme: ContrastTheme) => {
-    saveSettings({ contrastTheme: theme });
-  }, [saveSettings]);
+  const setContrastTheme = useCallback(
+    (theme: ContrastTheme) => {
+      saveSettings({ contrastTheme: theme });
+    },
+    [saveSettings],
+  );
 
-  const setTextSize = useCallback((size: TextSize) => {
-    saveSettings({ textSize: size });
-  }, [saveSettings]);
+  const setTextSize = useCallback(
+    (size: TextSize) => {
+      saveSettings({ textSize: size });
+    },
+    [saveSettings],
+  );
 
-  const setSpeechRate = useCallback((rate: number) => {
-    const clamped = Math.max(0.5, Math.min(2.0, rate));
-    saveSettings({ speechRate: clamped });
-  }, [saveSettings]);
+  const setSpeechRate = useCallback(
+    (rate: number) => {
+      const clamped = Math.max(0.5, Math.min(2.0, rate));
+      saveSettings({ speechRate: clamped });
+    },
+    [saveSettings],
+  );
 
-  const setReducedMotion = useCallback((reduced: boolean) => {
-    saveSettings({ reducedMotion: reduced });
-  }, [saveSettings]);
+  const setReducedMotion = useCallback(
+    (reduced: boolean) => {
+      saveSettings({ reducedMotion: reduced });
+    },
+    [saveSettings],
+  );
 
-  const setSelectedVoice = useCallback((voice: string | null) => {
-    saveSettings({ selectedVoice: voice });
-  }, [saveSettings]);
+  const setSelectedVoice = useCallback(
+    (voice: string | null) => {
+      saveSettings({ selectedVoice: voice });
+    },
+    [saveSettings],
+  );
 
   const increaseSpeechRate = useCallback(() => {
     setPreferences((prev) => {
@@ -184,22 +203,25 @@ export function A11yProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const setLanguage = useCallback((lang: string) => {
-    saveSettings({ language: lang });
-    if (typeof document !== "undefined") {
-      document.documentElement.lang = lang === 'am-ET' ? 'am' : 'en';
-    }
-    const msg = lang === 'am-ET' ? 'ቋንቋ ወደ አማርኛ ተቀይሯል።' : 'Language set to English.';
-    setLastAnnouncement(msg);
-  }, [saveSettings]);
+  const setLanguage = useCallback(
+    (lang: string) => {
+      saveSettings({ language: lang });
+      if (typeof document !== "undefined") {
+        document.documentElement.lang = lang === "am-ET" ? "am" : "en";
+      }
+      const msg = lang === "am-ET" ? "ቋንቋ ወደ አማርኛ ተቀይሯል።" : "Language set to English.";
+      setLastAnnouncement(msg);
+    },
+    [saveSettings],
+  );
 
   const toggleLanguage = useCallback(() => {
     setPreferences((prev) => {
-      const nextLang = prev.language === 'am-ET' ? 'en-US' : 'am-ET';
+      const nextLang = prev.language === "am-ET" ? "en-US" : "am-ET";
       if (typeof document !== "undefined") {
-        document.documentElement.lang = nextLang === 'am-ET' ? 'am' : 'en';
+        document.documentElement.lang = nextLang === "am-ET" ? "am" : "en";
       }
-      const msg = nextLang === 'am-ET' ? 'ቋንቋ ወደ አማርኛ ተቀይሯል።' : 'Language set to English.';
+      const msg = nextLang === "am-ET" ? "ቋንቋ ወደ አማርኛ ተቀይሯል።" : "Language set to English.";
       setLastAnnouncement(msg);
       saveSettings({ language: nextLang });
       return { ...prev, language: nextLang };
@@ -221,7 +243,7 @@ export function A11yProvider({ children }: { children: React.ReactNode }) {
         lang: preferences.language,
       });
     },
-    [preferences, announce]
+    [preferences, announce],
   );
 
   const stopSpeaking = useCallback(() => {

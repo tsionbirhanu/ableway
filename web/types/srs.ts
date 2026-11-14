@@ -1,8 +1,8 @@
-export type UserRole = 'learner' | 'helper' | 'admin' | 'codesigner';
-export type AccessibilityMode = 'voice_first' | 'screen_reader' | 'hybrid';
-export type ContrastTheme = 'standard' | 'high_contrast' | 'pure_black' | 'yellow_black';
-export type FontSize = 'normal' | 'large' | 'xlarge';
-export type Language = 'en' | 'am' | 'om';
+export type UserRole = "learner" | "helper" | "admin" | "codesigner";
+export type AccessibilityMode = "voice_first" | "screen_reader" | "hybrid";
+export type ContrastTheme = "standard" | "high_contrast" | "pure_black" | "yellow_black";
+export type FontSize = "normal" | "large" | "xlarge";
+export type Language = "en" | "am" | "om";
 
 export interface AccessibilitySettings {
   mode: AccessibilityMode;
@@ -30,10 +30,10 @@ export interface Course {
   slug: string;
   description: string;
   duration: string;
-  level: 'beginner' | 'intermediate' | 'advanced';
+  level: "beginner" | "intermediate" | "advanced";
   price: number;
   currency: string;
-  status: 'draft' | 'published' | 'archived';
+  status: "draft" | "published" | "archived";
 }
 
 export interface Module {
@@ -68,12 +68,12 @@ export interface Quiz {
   module_id: string;
   title: string;
   questions: QuizQuestion[];
-  status: 'draft' | 'published';
+  status: "draft" | "published";
 }
 
-export type HelpRequestType = 'payment' | 'general' | 'technical' | 'telegram' | 'urgent';
-export type HelpRequestTrigger = 'learner' | 'assistant';
-export type HelpRequestStatus = 'waiting' | 'assigned' | 'in_progress' | 'done';
+export type HelpRequestType = "payment" | "general" | "technical" | "telegram" | "urgent";
+export type HelpRequestTrigger = "learner" | "assistant";
+export type HelpRequestStatus = "waiting" | "assigned" | "in_progress" | "done";
 
 export interface HelpRequest {
   id: string;
@@ -88,7 +88,7 @@ export interface HelpRequest {
   status: HelpRequestStatus;
   assigned_helper_id?: string;
   assigned_helper_name?: string;
-  channel: 'web' | 'telegram' | 'phone' | 'sms';
+  channel: "web" | "telegram" | "phone" | "sms";
   contact_preference: string;
   notes?: string;
   created_at: string;
@@ -115,20 +115,14 @@ export interface Job {
   how_to_apply: string;
   deadline?: string;
   accessibility_notes?: string;
-  status: 'draft' | 'published' | 'closed';
+  status: "draft" | "published" | "closed";
 }
 
 export type AllowedActionName =
-  | 'fill_field'
-  | 'read_back'
-  | 'go_to_page'
-  | 'select_course'
-  | 'request_human'
-  | 'start_quiz';
+  "fill_field" | "read_back" | "go_to_page" | "select_course" | "request_human" | "start_quiz";
 
 export interface AllowedAction {
   name: AllowedActionName;
   params: Record<string, unknown>;
   requiresConfirmation?: boolean;
 }
-

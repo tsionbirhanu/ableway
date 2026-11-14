@@ -8,6 +8,7 @@ import { summarizeConversation } from "@/lib/assistant";
 import { getDb } from "@/lib/db/client";
 import { conversations, helpChannel, helpRequestType } from "@/lib/db/schema";
 import { createLearnerHelpRequest } from "@/lib/help-requests";
+import { isHelperAvailable, getAvailableCallbackSlots } from "@/lib/helper/settings";
 
 /**
  * Ask for a human from the web assistant. Same policy and per-IP limit as
@@ -50,6 +51,9 @@ export const POST = withApi({}, async (request: Request) => {
     summary,
   });
 
+  const isAvailable = isHelperAvailable();
+  const callbackSlots = !isAvailable ? getAvailableCallbackSlots() : [];
+
   return Response.json(
     {
       id: created.id,
@@ -57,7 +61,11 @@ export const POST = withApi({}, async (request: Request) => {
       status: created.status,
       trigger: body.trigger,
       channel: body.channel,
-      message: "A human helper has been notified and will assist you shortly.",
+      isOperatingHours: isAvailable,
+      availableCallbackSlots: callbackSlots,
+      message: isAvailable
+        ? "A human helper has been notified and will assist you shortly."
+        : "Our helpers are currently offline. You can choose a callback time or wait in queue.",
     },
     { status: 201 },
   );

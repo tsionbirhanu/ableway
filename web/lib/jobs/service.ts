@@ -63,6 +63,7 @@ export async function searchJobs(
   location: string,
   type: string,
   offset = 0,
+  limit = 1,
 ) {
   const filters = [eq(jobs.status, "published"), eq(jobs.suspicious, false)];
   if (query.trim())
@@ -80,7 +81,7 @@ export async function searchJobs(
     .from(jobs)
     .where(and(...filters))
     .orderBy(desc(jobs.publishedAt))
-    .limit(1)
+    .limit(Math.min(50, Math.max(1, limit)))
     .offset(Math.max(0, offset));
 }
 

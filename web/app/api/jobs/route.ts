@@ -40,13 +40,21 @@ const searchQuery = z.strictObject({
   location: text(200).default(""),
   type: z.enum(jobType.enumValues).or(z.literal("")).default(""),
   offset: queryInt(0, 10_000, 0),
+  limit: queryInt(1, 50, 10),
 });
 
-/** One job at a time (it is read aloud), with the offset of the next one. */
+/**
+ * A page of jobs. `job` is the first one, for clients (voice, Telegram) that
+ * read one result at a time; `nextOffset` is null on the last page.
+ */
 export const GET = withApi({}, async (request: Request) => {
   const q = parseQuery(request, searchQuery);
-  const [job] = await searchJobs(getDb(), q.query, q.location, q.type, q.offset);
-  return Response.json({ job: job ?? null, nextOffset: job ? q.offset + 1 : null });
+  const list = await searchJobs(getDb(), q.query, q.location, q.type, q.offset, q.limit);
+  return Response.json({
+    job: list[0] ?? null,
+    jobs: list,
+    nextOffset: list.length === q.limit ? q.offset + q.limit : null,
+  });
 });
 
 export const POST = withApi({}, async (request: Request) => {

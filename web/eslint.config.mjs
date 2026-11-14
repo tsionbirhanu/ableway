@@ -13,13 +13,25 @@ const eslintConfig = defineConfig([
     files: ["**/*.{js,jsx,mjs,ts,tsx}"],
     rules: {
       ...jsxA11y.flatConfigs.strict.rules,
+      // Scrollable regions, chat logs and tab panels must be focusable so
+      // keyboard users can scroll them (axe: scrollable-region-focusable;
+      // WAI-ARIA tabs pattern).
+      "jsx-a11y/no-noninteractive-tabindex": [
+        "error",
+        { tags: [], roles: ["tabpanel", "region", "log"], allowExpressionValues: true },
+      ],
+      // Card-style radio and checkbox labels nest their text a few levels deep.
+      "jsx-a11y/label-has-associated-control": ["error", { depth: 5 }],
     },
   },
   {
     files: ["**/*.{ts,tsx}"],
     rules: {
       "@typescript-eslint/no-explicit-any": "error",
-      "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        { argsIgnorePattern: "^_", ignoreRestSiblings: true },
+      ],
     },
   },
   {

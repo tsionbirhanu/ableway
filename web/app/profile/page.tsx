@@ -1,21 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import {
-  Send,
-  KeyRound,
-  Shield,
-  CheckCircle2,
-  Trash2,
-  Bell,
-  User,
-  Settings,
-  HelpCircle,
-  Clock,
-} from "lucide-react";
-import { useA11y } from "@/lib/a11y/a11y-context";
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import Link from 'next/link';
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import Link from "next/link";
 import {
   User,
   Sliders,
@@ -34,10 +20,11 @@ import {
   AlertTriangle,
   Globe,
   HelpCircle,
-} from 'lucide-react';
-import { useA11y } from '@/lib/a11y/a11y-context';
-import { playEarcon } from '@/lib/audio/earcons';
-import { Button, Dialog } from '@/components/ui';
+} from "lucide-react";
+import { useA11y } from "@/lib/a11y/a11y-context";
+import type { ContrastTheme, InteractionMode, TextSize } from "@/types/a11y";
+import { playEarcon } from "@/lib/audio/earcons";
+import { Button, Dialog } from "@/components/ui";
 
 interface AlertSubscription {
   id: string;
@@ -50,19 +37,19 @@ interface AlertSubscription {
 
 const INITIAL_SUBSCRIPTIONS: AlertSubscription[] = [
   {
-    id: 'sub-1',
-    keywords: 'Accessibility tester, screen reader evaluation',
-    location: 'Remote',
-    jobType: 'Full-time',
-    channel: 'Telegram',
+    id: "sub-1",
+    keywords: "Accessibility tester, screen reader evaluation",
+    location: "Remote",
+    jobType: "Full-time",
+    channel: "Telegram",
     active: true,
   },
   {
-    id: 'sub-2',
-    keywords: 'Customer support, bilingual Amharic English',
-    location: 'Addis Ababa',
-    jobType: 'Part-time',
-    channel: 'SMS',
+    id: "sub-2",
+    keywords: "Customer support, bilingual Amharic English",
+    location: "Addis Ababa",
+    jobType: "Part-time",
+    channel: "SMS",
     active: true,
   },
 ];
@@ -82,51 +69,12 @@ export default function ProfilePage() {
     toggleLanguage,
   } = useA11y();
 
-  const [oneTimeCode, setOneTimeCode] = useState<string | null>(null);
-  const [codeExpiresIn, setCodeExpiresIn] = useState<number>(600);
-  const [isLinked, setIsLinked] = useState<boolean>(false);
-  const [alertTelegram, setAlertTelegram] = useState(true);
-  const [alertSMS, setAlertSMS] = useState(false);
-  const [jobInterests, setJobInterests] = useState(
-    "Customer support, accessibility testing, remote transcription",
-  );
-  const [shortcutsEnabled, setShortcutsEnabled] = useState(true);
-
-  const handleGenerateLinkCode = async () => {
-    try {
-      const res = await fetch("/api/telegram/link-code", { method: "POST" });
-      if (res.ok) {
-        const data = await res.json();
-        setOneTimeCode(data.code);
-        setCodeExpiresIn(data.expiresInSeconds || 600);
-        announce(
-          `Your one-time Telegram linking code is ${data.code.split("").join(" ")}. It is valid for 10 minutes.`,
-          "polite",
-        );
-        return;
-      }
-    } catch {
-      // Fallback for offline demo
-    }
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    setOneTimeCode(code);
-    setCodeExpiresIn(600);
-    announce(
-      `Your one-time Telegram linking code is ${code.split("").join(" ")}. It is valid for 10 minutes.`,
-      "polite",
-    );
-  };
-
-  // Rule 18: Allow user to extend expiring codes
-  const handleExtendCode = () => {
-    setCodeExpiresIn((prev) => prev + 600);
-    announce("Code expiration extended by 10 minutes.", "polite");
   const h1Ref = useRef<HTMLHeadingElement | null>(null);
 
   // 1. Personal details state
-  const [fullName, setFullName] = useState('Abebe Bikila');
-  const [email, setEmail] = useState('abebe@example.com');
-  const [phone, setPhone] = useState('+251911234567');
+  const [fullName, setFullName] = useState("Abebe Bikila");
+  const [email, setEmail] = useState("abebe@example.com");
+  const [phone, setPhone] = useState("+251911234567");
   const [personalDetailsSaved, setPersonalDetailsSaved] = useState(false);
 
   // 2. Accessibility settings state
@@ -134,10 +82,10 @@ export default function ProfilePage() {
 
   // 4. Alerts state
   const [subscriptions, setSubscriptions] = useState<AlertSubscription[]>(INITIAL_SUBSCRIPTIONS);
-  const [alertKeywords, setAlertKeywords] = useState('');
-  const [alertLocation, setAlertLocation] = useState('Remote');
-  const [alertJobType, setAlertJobType] = useState('Full-time');
-  const [alertChannel, setAlertChannel] = useState('Telegram');
+  const [alertKeywords, setAlertKeywords] = useState("");
+  const [alertLocation, setAlertLocation] = useState("Remote");
+  const [alertJobType, setAlertJobType] = useState("Full-time");
+  const [alertChannel, setAlertChannel] = useState("Telegram");
   const [alertFormError, setAlertFormError] = useState<string | null>(null);
 
   // 5. Telegram section state
@@ -158,13 +106,13 @@ export default function ProfilePage() {
   const deleteTriggerRef = useRef<HTMLButtonElement | null>(null);
   const alertKeywordsInputRef = useRef<HTMLInputElement | null>(null);
 
-  const isAmharic = language === 'am-ET' || language === 'am';
+  const isAmharic = language === "am-ET" || language === "am";
 
   // Move focus to h1 on mount (F0 Rule 7)
   useEffect(() => {
     document.title = isAmharic
-      ? 'የተጠቃሚ መገለጫ እና ምርጫዎች - Ableway'
-      : 'Learner profile and settings - Ableway';
+      ? "የተጠቃሚ መገለጫ እና ምርጫዎች - Ableway"
+      : "Learner profile and settings - Ableway";
     if (h1Ref.current) {
       h1Ref.current.focus();
     }
@@ -179,7 +127,7 @@ export default function ProfilePage() {
         if (prev <= 1) {
           clearInterval(timer);
           setIsExpired(true);
-          announce('Code has expired. Please make a new code.', 'assertive');
+          announce("Code has expired. Please make a new code.", "assertive");
           return 0;
         }
         return prev - 1;
@@ -201,8 +149,8 @@ export default function ProfilePage() {
         if (data.linked) {
           setIsLinked(true);
           setLinkCode(null);
-          playEarcon('success');
-          announce('Telegram connected', 'polite');
+          playEarcon("success");
+          announce("Telegram connected", "polite");
         }
       } catch {
         // Polling gracefully ignores network hiccups
@@ -216,17 +164,17 @@ export default function ProfilePage() {
   const handleSavePersonalDetails = (e: React.FormEvent) => {
     e.preventDefault();
     setPersonalDetailsSaved(true);
-    playEarcon('success');
-    announce('Personal details saved successfully.', 'polite');
+    playEarcon("success");
+    announce("Personal details saved successfully.", "polite");
   };
 
   // Handle Add Job Alert
   const handleAddAlert = (e: React.FormEvent) => {
     e.preventDefault();
     if (!alertKeywords.trim()) {
-      setAlertFormError('Please enter one or more keywords for this alert.');
+      setAlertFormError("Please enter one or more keywords for this alert.");
       alertKeywordsInputRef.current?.focus();
-      announce('Error: Please enter one or more keywords for this alert.', 'assertive');
+      announce("Error: Please enter one or more keywords for this alert.", "assertive");
       return;
     }
 
@@ -234,7 +182,7 @@ export default function ProfilePage() {
     const newSub: AlertSubscription = {
       id: `sub-${Date.now()}`,
       keywords: alertKeywords.trim(),
-      location: alertLocation.trim() || 'Any location',
+      location: alertLocation.trim() || "Any location",
       jobType: alertJobType,
       channel: alertChannel,
       active: true,
@@ -242,25 +190,25 @@ export default function ProfilePage() {
 
     setSubscriptions((prev) => [newSub, ...prev]);
     const addedMsg = `New job alert added for ${newSub.keywords} delivered via ${newSub.channel}.`;
-    setAlertKeywords('');
-    playEarcon('success');
-    announce(addedMsg, 'polite');
+    setAlertKeywords("");
+    playEarcon("success");
+    announce(addedMsg, "polite");
   };
 
   const handleTogglePause = (sub: AlertSubscription) => {
     const updatedStatus = !sub.active;
     setSubscriptions((prev) =>
-      prev.map((item) => (item.id === sub.id ? { ...item, active: updatedStatus } : item))
+      prev.map((item) => (item.id === sub.id ? { ...item, active: updatedStatus } : item)),
     );
     const msg = updatedStatus
       ? `Alert for ${sub.keywords} resumed.`
       : `Alert for ${sub.keywords} paused.`;
-    announce(msg, 'polite');
+    announce(msg, "polite");
   };
 
   const handleDeleteSubscription = (sub: AlertSubscription) => {
     setSubscriptions((prev) => prev.filter((item) => item.id !== sub.id));
-    announce(`Alert for ${sub.keywords} deleted.`, 'polite');
+    announce(`Alert for ${sub.keywords} deleted.`, "polite");
   };
 
   // Handle Telegram Connect & Code Generation
@@ -270,198 +218,64 @@ export default function ProfilePage() {
     setExpirySeconds(300);
     setIsExpired(false);
     setIsCopied(false);
-    playEarcon('listening');
-    const slowDigits = code.split('').join(' ');
+    playEarcon("listening");
+    const slowDigits = code.split("").join(" ");
     announce(
       `Your Telegram linking code is ${slowDigits}. It expires in 5 minutes. Follow the four steps on screen.`,
-      'polite'
+      "polite",
     );
+
+    // Sync with backend link-code endpoint in background
+    void fetch("/api/telegram/link-code", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code }),
+    }).catch(() => null);
   }, [announce]);
 
   // Handle Copy Code
   const handleCopyCode = async () => {
     if (!linkCode) return;
     try {
-      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      if (typeof navigator !== "undefined" && navigator.clipboard) {
         await navigator.clipboard.writeText(linkCode);
       }
       setIsCopied(true);
-      announce('Code copied to clipboard.', 'polite');
+      announce("Code copied to clipboard.", "polite");
       setTimeout(() => setIsCopied(false), 3000);
     } catch {
-      announce('Code copied.', 'polite');
+      announce("Code copied.", "polite");
     }
   };
 
   // Handle Read Code Slowly Character by Character
   const handleReadCodeSlowly = () => {
     if (!linkCode) return;
-    const slowSpokenText = linkCode.split('').join(' ... ');
-    if (mode === 'voice-first') {
+    const slowSpokenText = linkCode.split("").join(" ... ");
+    if (mode === "voice-first") {
       speak(slowSpokenText, true);
     } else {
-      announce(`Code digits: ${slowSpokenText}`, 'assertive');
+      announce(`Code digits: ${slowSpokenText}`, "assertive");
     }
   };
 
   // Simulated link event (for tests and demonstration)
   const handleSimulateLinkConnected = () => {
     setIsLinked(true);
-    setOneTimeCode(null);
-    announce(
-      "Telegram account linked successfully! You will now receive job alerts directly in Telegram.",
-      "polite",
-    );
-  };
-
-  const handleUnlink = async () => {
-    try {
-      await fetch("/api/telegram/link-code", { method: "DELETE" });
-    } catch {
-      // Ignore
-    }
-    setIsLinked(false);
-    announce("Telegram account disconnected. All Telegram alerts have stopped.", "polite");
-  };
-
-  return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-10 space-y-8">
-      {/* Page Title & Heading (Rule 2) */}
-      <header className="space-y-2">
-        <h1 id="profile-h1" className="text-3xl font-extrabold text-white">
-          Learner Profile & Settings
-        </h1>
-        <p className="text-slate-200 text-sm">
-          Manage your accessibility preferences, view keyboard shortcuts, and connect your Telegram
-          account for mobile job alerts.
-        </p>
-      </header>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {/* Left Column: Accessibility & Alert Settings */}
-        <div className="space-y-6">
-          <section
-            aria-labelledby="a11y-prefs-heading"
-            className="p-6 bg-slate-900 border border-slate-700 rounded-3xl space-y-4"
-          >
-            <h2
-              id="a11y-prefs-heading"
-              className="text-lg font-bold text-white flex items-center gap-2"
-            >
-              <Settings className="w-5 h-5 text-emerald-400" aria-hidden="true" />
-              <span>Accessibility Preferences</span>
-            </h2>
-
-            <div className="space-y-4 text-sm">
-              {/* Interaction Mode (Rule 20) */}
-              <div>
-                <span className="block text-xs font-bold text-slate-200 mb-1.5">
-                  Assistant Mode:
-                </span>
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    { id: "voice-first", label: "Voice Mode" },
-                    { id: "screen-reader", label: "Screen Reader" },
-                    { id: "hybrid", label: "Hybrid" },
-                  ].map((m) => (
-                    <button
-                      key={m.id}
-                      type="button"
-                      onClick={() => {
-                        setMode(m.id as any);
-                        announce(`Switched to ${m.label}.`);
-                      }}
-                      className={`p-2.5 rounded-xl text-xs font-bold border min-h-[44px] transition-colors ${
-                        mode === m.id
-                          ? "bg-emerald-700 border-emerald-400 text-white"
-                          : "bg-slate-950 border-slate-700 text-slate-200 hover:border-slate-600"
-                      }`}
-                      aria-pressed={mode === m.id}
-                    >
-                      {m.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Contrast Theme (Rule 10 & 11) */}
-              <div>
-                <label
-                  htmlFor="profile-theme-select"
-                  className="block text-xs font-bold text-slate-200 mb-1"
-                >
-                  Contrast Theme:
-                </label>
-                <select
-                  id="profile-theme-select"
-                  value={theme}
-                  onChange={(e) => setTheme(e.target.value as any)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white min-h-[44px] focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                >
-                  <option value="default">Standard Contrast (4.5:1)</option>
-                  <option value="high-contrast">High Contrast (7:1+)</option>
-                  <option value="dark-contrast">Pure Black (OLED)</option>
-                  <option value="yellow-black">Yellow on Black</option>
-                </select>
-              </div>
-
-              {/* Text Sizing (Rule 11) */}
-              <div>
-                <label
-                  htmlFor="profile-font-select"
-                  className="block text-xs font-bold text-slate-200 mb-1"
-                >
-                  Text Sizing:
-                </label>
-                <select
-                  id="profile-font-select"
-                  value={fontSize}
-                  onChange={(e) => setFontSize(e.target.value as any)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white min-h-[44px] focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                >
-                  <option value="normal">Normal (100%)</option>
-                  <option value="large">Large (125%)</option>
-                  <option value="x-large">Extra Large (150%)</option>
-                  <option value="xx-large">Maximum (180%)</option>
-                </select>
-              </div>
-
-              {/* Rule 9: Switchable Shortcuts */}
-              <div className="pt-2">
-                <label
-                  htmlFor="shortcuts-toggle"
-                  className="flex items-center gap-3 cursor-pointer min-h-[44px]"
-                >
-                  <input
-                    id="shortcuts-toggle"
-                    type="checkbox"
-                    checked={shortcutsEnabled}
-                    onChange={(e) => {
-                      setShortcutsEnabled(e.target.checked);
-                      announce(
-                        e.target.checked
-                          ? "Keyboard shortcuts enabled."
-                          : "Keyboard shortcuts turned off.",
-                      );
-                    }}
-                    className="w-5 h-5 rounded text-emerald-600 bg-slate-950 border-slate-700"
-                  />
-                  <span className="text-xs text-slate-100 font-medium">
-                    Enable Global Keyboard Shortcuts
-                  </span>
-                </label>
     setLinkCode(null);
-    playEarcon('success');
-    announce('Telegram connected', 'polite');
+    playEarcon("success");
+    announce("Telegram connected", "polite");
   };
 
   // Handle Confirm Unlink Telegram
   const handleConfirmUnlink = () => {
     setIsLinked(false);
     setIsUnlinkDialogOpen(false);
-    playEarcon('stop');
-    announce('Telegram disconnected', 'polite');
+    playEarcon("stop");
+    announce("Telegram disconnected", "polite");
     unlinkTriggerRef.current?.focus();
+
+    void fetch("/api/telegram/link-code", { method: "DELETE" }).catch(() => null);
   };
 
   // Handle Export Data Confirmation
@@ -475,34 +289,38 @@ export default function ProfilePage() {
       telegramLinked: isLinked,
     };
     const blob = new Blob([JSON.stringify(dataToExport, null, 2)], {
-      type: 'application/json',
+      type: "application/json",
     });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
-    a.download = 'ableway-learner-data.json';
+    a.download = "ableway-learner-data.json";
     a.click();
     URL.revokeObjectURL(url);
-    announce('Your data export has downloaded.', 'polite');
+    announce("Your data export has downloaded.", "polite");
     exportTriggerRef.current?.focus();
+
+    void fetch("/api/profile/export").catch(() => null);
   };
 
   // Handle Delete Account Confirmation
   const handleConfirmDeleteAccount = () => {
     setIsDeleteDialogOpen(false);
-    announce('Your account has been deleted.', 'assertive');
+    announce("Your account has been deleted.", "assertive");
     deleteTriggerRef.current?.focus();
+
+    void fetch("/api/profile/delete", { method: "POST" }).catch(() => null);
   };
 
   // Format expiry time text
   const formatExpiryTime = () => {
     if (isExpired || expirySeconds <= 0) {
-      return 'Code has expired. Please make a new code.';
+      return "Code has expired. Please make a new code.";
     }
     const minutes = Math.floor(expirySeconds / 60);
     const seconds = expirySeconds % 60;
-    return `Code expires in ${minutes} minute${minutes === 1 ? '' : 's'} ${seconds} second${
-      seconds === 1 ? '' : 's'
+    return `Code expires in ${minutes} minute${minutes === 1 ? "" : "s"} ${seconds} second${
+      seconds === 1 ? "" : "s"
     }.`;
   };
 
@@ -534,7 +352,7 @@ export default function ProfilePage() {
               className="min-h-[44px] px-3.5 py-2 rounded-xl font-bold text-xs border border-orange-500/80 bg-white hover:bg-slate-100 text-slate-800 flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-orange-400 cursor-pointer shadow-sm transition-colors"
             >
               <Globe className="w-3.5 h-3.5 text-orange-600" aria-hidden="true" />
-              <span>{isAmharic ? 'ቋንቋ፡ አማርኛ' : 'Language: English'}</span>
+              <span>{isAmharic ? "ቋንቋ፡ አማርኛ" : "Language: English"}</span>
             </button>
 
             <Link
@@ -549,7 +367,8 @@ export default function ProfilePage() {
 
         <p className="text-base text-slate-700 max-w-3xl leading-relaxed">
           Manage your personal details, accessibility settings, preferred language, job alerts,
-          Telegram connection, and privacy. Everything works with keyboard, screen reader, and speech.
+          Telegram connection, and privacy. Everything works with keyboard, screen reader, and
+          speech.
         </p>
       </header>
 
@@ -561,7 +380,10 @@ export default function ProfilePage() {
               <User className="w-5 h-5 text-orange-600" aria-hidden="true" />
             </div>
             <div>
-              <h2 id="heading-personal-details" className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+              <h2
+                id="heading-personal-details"
+                className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight"
+              >
                 Personal details
               </h2>
               <p className="text-xs sm:text-sm text-slate-600 mt-0.5">
@@ -572,7 +394,10 @@ export default function ProfilePage() {
 
           <form onSubmit={handleSavePersonalDetails} className="space-y-5 pt-2">
             <div className="space-y-1.5 w-full">
-              <label htmlFor="personal-full-name" className="block text-sm font-bold text-slate-900">
+              <label
+                htmlFor="personal-full-name"
+                className="block text-sm font-bold text-slate-900"
+              >
                 Full name <span className="text-orange-600 font-semibold">(required)</span>
               </label>
               <input
@@ -587,7 +412,10 @@ export default function ProfilePage() {
             </div>
 
             <div className="space-y-1.5 w-full">
-              <label htmlFor="personal-email-address" className="block text-sm font-bold text-slate-900">
+              <label
+                htmlFor="personal-email-address"
+                className="block text-sm font-bold text-slate-900"
+              >
                 Email address <span className="text-orange-600 font-semibold">(required)</span>
               </label>
               <p id="personal-email-hint" className="text-xs text-slate-600">
@@ -606,7 +434,10 @@ export default function ProfilePage() {
             </div>
 
             <div className="space-y-1.5 w-full">
-              <label htmlFor="personal-phone-number" className="block text-sm font-bold text-slate-900">
+              <label
+                htmlFor="personal-phone-number"
+                className="block text-sm font-bold text-slate-900"
+              >
                 Phone number
               </label>
               <p id="personal-phone-hint" className="text-xs text-slate-600">
@@ -631,7 +462,10 @@ export default function ProfilePage() {
                 Save personal details
               </button>
               {personalDetailsSaved && (
-                <span className="text-sm font-semibold text-emerald-800 bg-emerald-50 border border-emerald-300 px-3 py-1 rounded-full flex items-center gap-1.5" role="status">
+                <span
+                  className="text-sm font-semibold text-emerald-800 bg-emerald-50 border border-emerald-300 px-3 py-1 rounded-full flex items-center gap-1.5"
+                  role="status"
+                >
                   <CheckCircle2 className="w-4 h-4 text-emerald-600" aria-hidden="true" />
                   <span>Saved</span>
                 </span>
@@ -649,7 +483,10 @@ export default function ProfilePage() {
               <Sliders className="w-5 h-5 text-orange-600" aria-hidden="true" />
             </div>
             <div>
-              <h2 id="heading-a11y-settings" className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+              <h2
+                id="heading-a11y-settings"
+                className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight"
+              >
                 Accessibility settings
               </h2>
               <p className="text-xs sm:text-sm text-slate-600 mt-0.5">
@@ -667,32 +504,32 @@ export default function ProfilePage() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {[
                   {
-                    id: 'voice-first',
-                    name: 'Voice Mode',
-                    desc: 'The app speaks aloud and listens for speech.',
+                    id: "voice-first",
+                    name: "Voice Mode",
+                    desc: "The app speaks aloud and listens for speech.",
                   },
                   {
-                    id: 'screen-reader',
-                    name: 'Screen Reader',
-                    desc: 'Silent mode. Output goes to NVDA/JAWS live regions.',
+                    id: "screen-reader",
+                    name: "Screen Reader",
+                    desc: "Silent mode. Output goes to NVDA/JAWS live regions.",
                   },
                   {
-                    id: 'hybrid',
-                    name: 'Hybrid Mode',
-                    desc: 'Combines screen reader text and optional audio.',
+                    id: "hybrid",
+                    name: "Hybrid Mode",
+                    desc: "Combines screen reader text and optional audio.",
                   },
                 ].map((item) => (
                   <button
                     key={item.id}
                     type="button"
                     onClick={() => {
-                      setMode(item.id as any);
-                      announce(`Interaction mode set to ${item.name}.`, 'polite');
+                      setMode(item.id as InteractionMode);
+                      announce(`Interaction mode set to ${item.name}.`, "polite");
                     }}
                     className={`p-4 rounded-xl text-left border-2 min-h-[44px] transition-all flex flex-col justify-between ${
                       mode === item.id
-                        ? 'bg-orange-50/90 border-orange-500 text-slate-900 shadow-sm ring-2 ring-orange-400/30'
-                        : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50'
+                        ? "bg-orange-50/90 border-orange-500 text-slate-900 shadow-sm ring-2 ring-orange-400/30"
+                        : "bg-white border-slate-300 text-slate-700 hover:bg-slate-50"
                     }`}
                     aria-pressed={mode === item.id}
                   >
@@ -703,37 +540,12 @@ export default function ProfilePage() {
               </div>
             </fieldset>
 
-          {/* Job Alerts (Rule 15: native label & inputs) */}
-          <section
-            aria-labelledby="alerts-heading"
-            className="p-6 bg-slate-900 border border-slate-700 rounded-3xl space-y-4"
-          >
-            <h2
-              id="alerts-heading"
-              className="text-lg font-bold text-white flex items-center gap-2"
-            >
-              <Bell className="w-5 h-5 text-emerald-400" aria-hidden="true" />
-              <span>Job Alerts & Channels</span>
-            </h2>
-
-            <div className="space-y-3 text-sm">
-              <label
-                htmlFor="pref-alert-telegram"
-                className="flex items-center gap-3 cursor-pointer min-h-[44px]"
-              >
-                <input
-                  id="pref-alert-telegram"
-                  type="checkbox"
-                  checked={alertTelegram}
-                  onChange={(e) => setAlertTelegram(e.target.checked)}
-                  className="w-5 h-5 rounded text-emerald-600 bg-slate-950 border-slate-700"
-                />
-                <span className="text-slate-200 text-xs font-medium">
-                  Receive instant alerts via Telegram Bot
-                </span>
             {/* Contrast Theme */}
             <div className="space-y-1.5 w-full">
-              <label htmlFor="a11y-contrast-theme" className="block text-sm font-bold text-slate-900">
+              <label
+                htmlFor="a11y-contrast-theme"
+                className="block text-sm font-bold text-slate-900"
+              >
                 Contrast theme
               </label>
               <p id="a11y-theme-hint" className="text-xs text-slate-600">
@@ -743,8 +555,11 @@ export default function ProfilePage() {
                 id="a11y-contrast-theme"
                 value={theme}
                 onChange={(e) => {
-                  setTheme(e.target.value as any);
-                  announce(`Theme changed to ${e.target.options[e.target.selectedIndex].text}.`, 'polite');
+                  setTheme(e.target.value as ContrastTheme);
+                  announce(
+                    `Theme changed to ${e.target.options[e.target.selectedIndex].text}.`,
+                    "polite",
+                  );
                 }}
                 aria-describedby="a11y-theme-hint"
                 className="w-full bg-white border-2 border-slate-300 rounded-xl px-4 py-3 text-slate-900 text-base min-h-[44px] focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-200"
@@ -768,8 +583,11 @@ export default function ProfilePage() {
                 id="a11y-text-size"
                 value={fontSize}
                 onChange={(e) => {
-                  setFontSize(e.target.value as any);
-                  announce(`Text size set to ${e.target.options[e.target.selectedIndex].text}.`, 'polite');
+                  setFontSize(e.target.value as TextSize);
+                  announce(
+                    `Text size set to ${e.target.options[e.target.selectedIndex].text}.`,
+                    "polite",
+                  );
                 }}
                 aria-describedby="a11y-size-hint"
                 className="w-full bg-white border-2 border-slate-300 rounded-xl px-4 py-3 text-slate-900 text-base min-h-[44px] focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-200"
@@ -781,13 +599,12 @@ export default function ProfilePage() {
               </select>
             </div>
 
-              <label
-                htmlFor="pref-alert-sms"
-                className="flex items-center gap-3 cursor-pointer min-h-[44px]"
-              >
             {/* Global Keyboard Shortcuts Toggle (F0 Rule 9) */}
             <div className="pt-2">
-              <label htmlFor="a11y-keyboard-shortcuts" className="flex items-start gap-3 cursor-pointer min-h-[44px]">
+              <label
+                htmlFor="a11y-keyboard-shortcuts"
+                className="flex items-start gap-3 cursor-pointer min-h-[44px]"
+              >
                 <input
                   id="a11y-keyboard-shortcuts"
                   type="checkbox"
@@ -796,33 +613,13 @@ export default function ProfilePage() {
                     setShortcutsEnabled(e.target.checked);
                     announce(
                       e.target.checked
-                        ? 'Global keyboard shortcuts enabled.'
-                        : 'Global keyboard shortcuts disabled.',
-                      'polite'
+                        ? "Global keyboard shortcuts enabled."
+                        : "Global keyboard shortcuts disabled.",
+                      "polite",
                     );
                   }}
                   className="w-5 h-5 mt-0.5 rounded text-orange-600 border-2 border-slate-300 focus:ring-orange-500"
                 />
-                <span className="text-slate-200 text-xs font-medium">
-                  Receive SMS alerts (when available)
-                </span>
-              </label>
-
-              <div className="pt-2">
-                <label
-                  htmlFor="job-keywords-input"
-                  className="block text-xs font-bold text-slate-200 mb-1"
-                >
-                  Job Keywords of Interest:
-                </label>
-                <input
-                  id="job-keywords-input"
-                  type="text"
-                  value={jobInterests}
-                  onChange={(e) => setJobInterests(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white min-h-[44px] focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                />
-              </div>
                 <div>
                   <span className="text-sm font-bold text-slate-900 block">
                     Enable global keyboard shortcuts
@@ -837,23 +634,6 @@ export default function ProfilePage() {
         </div>
       </section>
 
-        {/* Right Column: Telegram Account Linking & Keyboard Shortcuts Help */}
-        <div className="space-y-6">
-          <section
-            aria-labelledby="telegram-link-heading"
-            className="p-6 bg-slate-900 border border-slate-700 rounded-3xl space-y-6 flex flex-col justify-between"
-          >
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <Send className="w-6 h-6 text-emerald-400" aria-hidden="true" />
-                <h2 id="telegram-link-heading" className="text-xl font-bold text-white">
-                  Telegram Assistant Linking
-                </h2>
-              </div>
-
-              <p className="text-xs text-slate-200 leading-relaxed">
-                Connect your account with <strong>@AblewayBot</strong> on Telegram to receive course
-                announcements and verified accessible job matches on your phone.
       {/* SECTION 3: Language */}
       <section aria-labelledby="heading-language" className="space-y-6">
         <div className="p-6 sm:p-8 bg-white border-2 border-slate-300 rounded-2xl space-y-6 shadow-sm">
@@ -862,17 +642,24 @@ export default function ProfilePage() {
               <Languages className="w-5 h-5 text-orange-600" aria-hidden="true" />
             </div>
             <div>
-              <h2 id="heading-language" className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+              <h2
+                id="heading-language"
+                className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight"
+              >
                 Language
               </h2>
               <p className="text-xs sm:text-sm text-slate-600 mt-0.5">
-                Select your primary language for courses, voice assistant, and Telegram notifications.
+                Select your primary language for courses, voice assistant, and Telegram
+                notifications.
               </p>
             </div>
           </div>
 
           <div className="pt-2 space-y-1.5 w-full">
-            <label htmlFor="profile-language-select" className="block text-sm font-bold text-slate-900">
+            <label
+              htmlFor="profile-language-select"
+              className="block text-sm font-bold text-slate-900"
+            >
               Preferred language
             </label>
             <p id="profile-lang-hint" className="text-xs text-slate-600">
@@ -902,42 +689,45 @@ export default function ProfilePage() {
               <Bell className="w-5 h-5 text-orange-600" aria-hidden="true" />
             </div>
             <div>
-              <h2 id="heading-alerts" className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+              <h2
+                id="heading-alerts"
+                className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight"
+              >
                 Alerts
               </h2>
               <p className="text-xs sm:text-sm text-slate-600 mt-0.5">
-                Set up job search alerts to receive notifications when verified accessible jobs match your interests.
+                Set up job search alerts to receive notifications when verified accessible jobs
+                match your interests.
               </p>
             </div>
           </div>
 
-              {/* Linking Scope Notice */}
-              <div className="p-4 bg-slate-950 rounded-2xl border border-slate-700 text-xs text-slate-200 space-y-1">
-                <span className="font-bold text-white flex items-center gap-1.5">
-                  <Shield className="w-4 h-4 text-emerald-400" aria-hidden="true" />
-                  <span>Privacy Notice</span>
-                </span>
-                <p>
-                  Linking allows the bot to send you your job updates. The bot{" "}
-                  <strong>CANNOT</strong> access or read your other private Telegram chats.
-                </p>
-              </div>
           <div className="space-y-8 pt-2">
             {/* Form to add a new alert */}
-            <form onSubmit={handleAddAlert} noValidate className="p-5 sm:p-6 bg-slate-50 border-2 border-slate-200 rounded-xl space-y-4">
+            <form
+              onSubmit={handleAddAlert}
+              noValidate
+              className="p-5 sm:p-6 bg-slate-50 border-2 border-slate-200 rounded-xl space-y-4"
+            >
               <h3 id="heading-add-alert" className="text-lg font-bold text-slate-900">
                 Add a job alert
               </h3>
 
               {alertFormError && (
-                <div role="alert" className="p-3 bg-red-50 border-2 border-red-300 rounded-xl text-red-900 text-sm font-medium">
+                <div
+                  role="alert"
+                  className="p-3 bg-red-50 border-2 border-red-300 rounded-xl text-red-900 text-sm font-medium"
+                >
                   {alertFormError}
                 </div>
               )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5 w-full">
-                  <label htmlFor="alert-keywords-input" className="block text-sm font-bold text-slate-900">
+                  <label
+                    htmlFor="alert-keywords-input"
+                    className="block text-sm font-bold text-slate-900"
+                  >
                     Keywords <span className="text-orange-600 font-semibold">(required)</span>
                   </label>
                   <p id="alert-keywords-hint" className="text-xs text-slate-600">
@@ -955,14 +745,21 @@ export default function ProfilePage() {
                     className="w-full bg-white border-2 border-slate-300 rounded-xl px-4 py-3 text-slate-900 text-base min-h-[44px] focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-200"
                   />
                   {alertFormError && (
-                    <p id="alert-keywords-error" className="text-xs text-red-700 font-medium pt-0.5" role="alert">
+                    <p
+                      id="alert-keywords-error"
+                      className="text-xs text-red-700 font-medium pt-0.5"
+                      role="alert"
+                    >
                       {alertFormError}
                     </p>
                   )}
                 </div>
 
                 <div className="space-y-1.5 w-full">
-                  <label htmlFor="alert-location-input" className="block text-sm font-bold text-slate-900">
+                  <label
+                    htmlFor="alert-location-input"
+                    className="block text-sm font-bold text-slate-900"
+                  >
                     Location
                   </label>
                   <p id="alert-location-hint" className="text-xs text-slate-600">
@@ -979,7 +776,10 @@ export default function ProfilePage() {
                 </div>
 
                 <div className="space-y-1.5 w-full">
-                  <label htmlFor="alert-job-type-select" className="block text-sm font-bold text-slate-900">
+                  <label
+                    htmlFor="alert-job-type-select"
+                    className="block text-sm font-bold text-slate-900"
+                  >
                     Job type
                   </label>
                   <select
@@ -997,7 +797,10 @@ export default function ProfilePage() {
                 </div>
 
                 <div className="space-y-1.5 w-full">
-                  <label htmlFor="alert-channel-select" className="block text-sm font-bold text-slate-900">
+                  <label
+                    htmlFor="alert-channel-select"
+                    className="block text-sm font-bold text-slate-900"
+                  >
                     Channel
                   </label>
                   <select
@@ -1040,43 +843,23 @@ export default function ProfilePage() {
                       key={sub.id}
                       className="p-4 bg-white border-2 border-slate-200 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm"
                     >
-                      <KeyRound className="w-4 h-4" aria-hidden="true" />
-                      <span>Generate One-Time Linking Code</span>
-                    </button>
-                  ) : (
-                    <div className="p-4 bg-slate-950 border border-emerald-500 rounded-2xl space-y-3 text-center">
-                      <span className="text-xs font-mono text-emerald-400 uppercase font-bold">
-                        Your 6-Digit Code:
-                      </span>
-                      <p className="text-3xl font-mono font-black text-white tracking-widest">
-                        {oneTimeCode}
-                      </p>
-                      <p className="text-xs text-slate-300">
-                        Send to <strong>@AblewayBot</strong> on Telegram:
-                        <br />
-                        <code className="text-emerald-300 font-bold font-mono">
-                          /link {oneTimeCode}
-                        </code>
-                      </p>
-                      {/* Rule 18: Extend time limit */}
-                      <div className="flex items-center justify-center gap-2 pt-1">
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
                           <span className="font-bold text-slate-900 text-base">{sub.keywords}</span>
                           <span
                             className={`text-xs px-2.5 py-0.5 rounded-full font-semibold border ${
                               sub.active
-                                ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
-                                : 'bg-amber-100 text-amber-900 border-amber-300'
+                                ? "bg-emerald-100 text-emerald-900 border-emerald-300"
+                                : "bg-amber-100 text-amber-900 border-amber-300"
                             }`}
                           >
-                            {sub.active ? 'Active' : 'Paused'}
+                            {sub.active ? "Active" : "Paused"}
                           </span>
                         </div>
                         <p className="text-xs text-slate-600">
-                          Location: <strong className="text-slate-900">{sub.location}</strong> &bull; Type:{' '}
-                          <strong className="text-slate-900">{sub.jobType}</strong> &bull; Channel:{' '}
-                          <strong className="text-slate-900">{sub.channel}</strong>
+                          Location: <strong className="text-slate-900">{sub.location}</strong>{" "}
+                          &bull; Type: <strong className="text-slate-900">{sub.jobType}</strong>{" "}
+                          &bull; Channel: <strong className="text-slate-900">{sub.channel}</strong>
                         </p>
                       </div>
 
@@ -1131,11 +914,15 @@ export default function ProfilePage() {
               <Send className="w-5 h-5 text-orange-600" aria-hidden="true" />
             </div>
             <div>
-              <h2 id="heading-telegram" className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+              <h2
+                id="heading-telegram"
+                className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight"
+              >
                 Telegram
               </h2>
               <p className="text-xs sm:text-sm text-slate-600 mt-0.5">
-                Connect your account to the Ableway Telegram bot for mobile job alerts and learning support.
+                Connect your account to the Ableway Telegram bot for mobile job alerts and learning
+                support.
               </p>
             </div>
           </div>
@@ -1150,13 +937,16 @@ export default function ProfilePage() {
                 </h3>
                 <ul className="list-disc pl-5 space-y-1 text-slate-700 text-sm">
                   <li>
-                    <strong>Job help:</strong> Ask questions, prepare for interviews, and get guidance directly on Telegram.
+                    <strong>Job help:</strong> Ask questions, prepare for interviews, and get
+                    guidance directly on Telegram.
                   </li>
                   <li>
-                    <strong>Alerts:</strong> Receive immediate notifications when new accessible jobs match your profile.
+                    <strong>Alerts:</strong> Receive immediate notifications when new accessible
+                    jobs match your profile.
                   </li>
                   <li>
-                    <strong>Help using Telegram:</strong> The assistant can guide you with step-by-step instructions.
+                    <strong>Help using Telegram:</strong> The assistant can guide you with
+                    step-by-step instructions.
                   </li>
                 </ul>
               </div>
@@ -1167,7 +957,9 @@ export default function ProfilePage() {
                   <span>What the bot cannot do:</span>
                 </h3>
                 <p className="text-slate-700 text-sm">
-                  The bot <strong>cannot see or read</strong> your other chats, personal messages, or contact lists in Telegram. It only reads messages you send directly to <strong>@AblewayBot</strong>.
+                  The bot <strong>cannot see or read</strong> your other chats, personal messages,
+                  or contact lists in Telegram. It only reads messages you send directly to{" "}
+                  <strong>@AblewayBot</strong>.
                 </p>
               </div>
             </div>
@@ -1200,7 +992,9 @@ export default function ProfilePage() {
                         <li>
                           Search for the bot <strong>@AblewayBot</strong>.
                         </li>
-                        <li>Press the <strong>Start</strong> button in the chat.</li>
+                        <li>
+                          Press the <strong>Start</strong> button in the chat.
+                        </li>
                         <li>Send this code to the bot.</li>
                       </ol>
                     </div>
@@ -1212,7 +1006,7 @@ export default function ProfilePage() {
                       </span>
                       <div
                         className="text-4xl sm:text-5xl font-mono font-black text-slate-900 tracking-widest"
-                        aria-label={`Linking code: ${linkCode.split('').join(' ')}`}
+                        aria-label={`Linking code: ${linkCode.split("").join(" ")}`}
                       >
                         {linkCode.slice(0, 3)} {linkCode.slice(3)}
                       </div>
@@ -1220,7 +1014,7 @@ export default function ProfilePage() {
                       {/* Expiry time as text */}
                       <p
                         className={`text-sm font-semibold ${
-                          isExpired ? 'text-red-700 font-bold' : 'text-slate-700'
+                          isExpired ? "text-red-700 font-bold" : "text-slate-700"
                         }`}
                         role="status"
                         aria-live="polite"
@@ -1238,7 +1032,7 @@ export default function ProfilePage() {
                         aria-label="Copy code to clipboard"
                       >
                         <Copy className="w-4 h-4 text-slate-700" aria-hidden="true" />
-                        <span>{isCopied ? 'Code copied!' : 'Copy code'}</span>
+                        <span>{isCopied ? "Code copied!" : "Copy code"}</span>
                       </button>
 
                       <button
@@ -1281,20 +1075,10 @@ export default function ProfilePage() {
                   <span>Status: Connected</span>
                 </div>
                 <p className="text-sm text-emerald-900">
-                  Your Telegram account is actively linked to <strong>@AblewayBot</strong>. You are receiving instant job alerts and course assistance.
+                  Your Telegram account is actively linked to <strong>@AblewayBot</strong>. You are
+                  receiving instant job alerts and course assistance.
                 </p>
 
-          {/* Rule 9 & Rule 24: Keyboard Shortcuts Reference (Accessible Data Table) */}
-          <section
-            id="help-shortcuts"
-            aria-labelledby="shortcuts-heading"
-            className="p-6 bg-slate-900 border border-slate-700 rounded-3xl space-y-4"
-          >
-            <div className="flex items-center gap-2">
-              <HelpCircle className="w-5 h-5 text-emerald-400" aria-hidden="true" />
-              <h2 id="shortcuts-heading" className="text-lg font-bold text-white">
-                Keyboard Shortcuts & Help
-              </h2>
                 <div className="pt-2">
                   <button
                     ref={unlinkTriggerRef}
@@ -1320,77 +1104,25 @@ export default function ProfilePage() {
               <Shield className="w-5 h-5 text-orange-600" aria-hidden="true" />
             </div>
             <div>
-              <h2 id="heading-privacy-data" className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+              <h2
+                id="heading-privacy-data"
+                className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight"
+              >
                 Privacy and data
               </h2>
               <p className="text-xs sm:text-sm text-slate-600 mt-0.5">
-                Export a complete copy of your personal data or permanently remove your account from our platform.
+                Export a complete copy of your personal data or permanently remove your account from
+                our platform.
               </p>
             </div>
           </div>
 
           <div className="space-y-6 pt-2">
             <p className="text-sm text-slate-700 leading-relaxed">
-              We respect your right to privacy and ownership of your personal information. You can download your data at any time or request account erasure.
+              We respect your right to privacy and ownership of your personal information. You can
+              download your data at any time or request account erasure.
             </p>
 
-            {/* Semantic Data Table (Rule 24) */}
-            <table className="w-full text-xs text-left border-collapse border border-slate-700">
-              <caption className="sr-only">
-                List of global keyboard shortcuts and their actions
-              </caption>
-              <thead>
-                <tr className="bg-slate-800 text-white">
-                  <th scope="col" className="p-2 border border-slate-700 font-bold">
-                    Shortcut
-                  </th>
-                  <th scope="col" className="p-2 border border-slate-700 font-bold">
-                    Action
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="text-slate-200">
-                <tr>
-                  <th
-                    scope="row"
-                    className="p-2 border border-slate-700 font-mono text-emerald-300"
-                  >
-                    Alt + Shift + V
-                  </th>
-                  <td className="p-2 border border-slate-700">Start / Stop Voice Input</td>
-                </tr>
-                <tr>
-                  <th
-                    scope="row"
-                    className="p-2 border border-slate-700 font-mono text-emerald-300"
-                  >
-                    Alt + Shift + A
-                  </th>
-                  <td className="p-2 border border-slate-700">Open / Close Web Assistant</td>
-                </tr>
-                <tr>
-                  <th
-                    scope="row"
-                    className="p-2 border border-slate-700 font-mono text-emerald-300"
-                  >
-                    Alt + Shift + T
-                  </th>
-                  <td className="p-2 border border-slate-700">Call Human Helper</td>
-                </tr>
-                <tr>
-                  <th
-                    scope="row"
-                    className="p-2 border border-slate-700 font-mono text-emerald-300"
-                  >
-                    Escape
-                  </th>
-                  <td className="p-2 border border-slate-700">
-                    Close active dialog and return focus
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </section>
             <div className="flex flex-wrap items-center gap-4">
               <button
                 ref={exportTriggerRef}
@@ -1426,21 +1158,14 @@ export default function ProfilePage() {
       >
         <div className="space-y-5">
           <p className="text-sm text-slate-700">
-            Disconnecting will stop all automated alerts and advice from being sent to your Telegram app. You can link your account again at any time.
+            Disconnecting will stop all automated alerts and advice from being sent to your Telegram
+            app. You can link your account again at any time.
           </p>
           <div className="flex items-center justify-end gap-3 pt-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setIsUnlinkDialogOpen(false)}
-            >
+            <Button type="button" variant="outline" onClick={() => setIsUnlinkDialogOpen(false)}>
               Cancel
             </Button>
-            <Button
-              type="button"
-              variant="danger"
-              onClick={handleConfirmUnlink}
-            >
+            <Button type="button" variant="danger" onClick={handleConfirmUnlink}>
               Yes, unlink Telegram
             </Button>
           </div>
@@ -1457,21 +1182,14 @@ export default function ProfilePage() {
       >
         <div className="space-y-5">
           <p className="text-sm text-slate-700">
-            Your file includes your profile information, course enrollments, active job search alerts, and accessibility preferences.
+            Your file includes your profile information, course enrollments, active job search
+            alerts, and accessibility preferences.
           </p>
           <div className="flex items-center justify-end gap-3 pt-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setIsExportDialogOpen(false)}
-            >
+            <Button type="button" variant="outline" onClick={() => setIsExportDialogOpen(false)}>
               Cancel
             </Button>
-            <Button
-              type="button"
-              variant="primary"
-              onClick={handleConfirmExport}
-            >
+            <Button type="button" variant="primary" onClick={handleConfirmExport}>
               Download my data
             </Button>
           </div>
@@ -1488,21 +1206,14 @@ export default function ProfilePage() {
       >
         <div className="space-y-5">
           <p className="text-sm text-red-900 bg-red-50 p-3.5 rounded-xl border-2 border-red-300 font-medium">
-            Warning: This will immediately delete all your saved course progress, certificate records, active job search alerts, and personal details.
+            Warning: This will immediately delete all your saved course progress, certificate
+            records, active job search alerts, and personal details.
           </p>
           <div className="flex items-center justify-end gap-3 pt-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setIsDeleteDialogOpen(false)}
-            >
+            <Button type="button" variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
               Cancel
             </Button>
-            <Button
-              type="button"
-              variant="danger"
-              onClick={handleConfirmDeleteAccount}
-            >
+            <Button type="button" variant="danger" onClick={handleConfirmDeleteAccount}>
               Yes, permanently delete my account
             </Button>
           </div>

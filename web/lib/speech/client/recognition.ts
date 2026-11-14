@@ -241,6 +241,21 @@ export class HybridSpeechRecognition {
  * window.SpeechRecognition / webkitSpeechRecognition.
  * undefined only when the device can neither record nor recognise speech.
  */
+/** What pages need from a recognizer: the browser's own or HybridSpeechRecognition. */
+export type RecognitionLike = Pick<
+  HybridSpeechRecognition,
+  | "lang"
+  | "continuous"
+  | "interimResults"
+  | "onstart"
+  | "onresult"
+  | "onerror"
+  | "onend"
+  | "start"
+  | "stop"
+  | "abort"
+>;
+
 export function getSpeechRecognitionConstructor(): typeof HybridSpeechRecognition | undefined {
   return microphoneAvailable() || browserRecognitionConstructor()
     ? HybridSpeechRecognition

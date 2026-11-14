@@ -145,7 +145,6 @@ export function AccessibleAudioPlayer({ title, audioSrc, transcript }: Accessibl
       {/* Synchronized Accessible Transcript */}
       <div className="border-t border-slate-800 pt-4 mt-2">
         <h3 className="text-sm font-semibold text-slate-300 mb-2">Lesson Transcript</h3>
-        {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex */}
         <div
           tabIndex={0}
           role="region"
@@ -158,4 +157,3 @@ export function AccessibleAudioPlayer({ title, audioSrc, transcript }: Accessibl
     </div>
   );
 }
-

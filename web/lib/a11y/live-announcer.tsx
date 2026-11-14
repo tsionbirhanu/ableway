@@ -14,20 +14,10 @@ export function LiveAnnouncer() {
 
   return (
     <>
-      <div
-        className="sr-only"
-        aria-live="polite"
-        aria-atomic="true"
-        id="ableway-live-polite"
-      >
+      <div className="sr-only" aria-live="polite" aria-atomic="true" id="ableway-live-polite">
         {lastAnnouncement}
       </div>
-      <div
-        className="sr-only"
-        aria-live="assertive"
-        aria-atomic="true"
-        id="ableway-live-assertive"
-      >
+      <div className="sr-only" aria-live="assertive" aria-atomic="true" id="ableway-live-assertive">
         {assertiveAnnouncement}
       </div>
     </>

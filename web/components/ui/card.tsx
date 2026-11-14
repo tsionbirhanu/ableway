@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 
 export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   as?: React.ElementType;
@@ -6,18 +6,18 @@ export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 export function Card({
-  as: Component = 'div',
+  as: Component = "div",
   interactive = false,
   children,
-  className = '',
+  className = "",
   ...props
 }: CardProps) {
   return (
     <Component
       className={`rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 text-[var(--color-text)] transition-shadow ${
         interactive
-          ? 'cursor-pointer hover:border-[var(--color-primary)] focus-within:outline focus-within:outline-3 focus-within:outline-[var(--color-focus)] focus-within:outline-offset-2'
-          : ''
+          ? "cursor-pointer hover:border-[var(--color-primary)] focus-within:outline focus-within:outline-3 focus-within:outline-[var(--color-focus)] focus-within:outline-offset-2"
+          : ""
       } ${className}`}
       {...props}
     >
@@ -28,7 +28,7 @@ export function Card({
 
 export function CardHeader({
   children,
-  className = '',
+  className = "",
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) {
   return (
@@ -39,13 +39,16 @@ export function CardHeader({
 }
 
 export function CardTitle({
-  as: Component = 'h3',
+  as: Component = "h3",
   children,
-  className = '',
+  className = "",
   ...props
 }: React.HTMLAttributes<HTMLHeadingElement> & { as?: React.ElementType }) {
   return (
-    <Component className={`text-xl font-bold tracking-tight text-[var(--color-text)] ${className}`} {...props}>
+    <Component
+      className={`text-xl font-bold tracking-tight text-[var(--color-text)] ${className}`}
+      {...props}
+    >
       {children}
     </Component>
   );
@@ -53,11 +56,14 @@ export function CardTitle({
 
 export function CardDescription({
   children,
-  className = '',
+  className = "",
   ...props
 }: React.HTMLAttributes<HTMLParagraphElement>) {
   return (
-    <p className={`text-[var(--font-size-base)] text-[var(--color-text-muted)] leading-relaxed ${className}`} {...props}>
+    <p
+      className={`text-[var(--font-size-base)] text-[var(--color-text-muted)] leading-relaxed ${className}`}
+      {...props}
+    >
       {children}
     </p>
   );
@@ -65,7 +71,7 @@ export function CardDescription({
 
 export function CardContent({
   children,
-  className = '',
+  className = "",
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) {
   return (
@@ -77,13 +83,15 @@ export function CardContent({
 
 export function CardFooter({
   children,
-  className = '',
+  className = "",
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={`mt-6 pt-4 border-t border-[var(--color-border)] flex items-center justify-between ${className}`} {...props}>
+    <div
+      className={`mt-6 pt-4 border-t border-[var(--color-border)] flex items-center justify-between ${className}`}
+      {...props}
+    >
       {children}
     </div>
   );
 }
-

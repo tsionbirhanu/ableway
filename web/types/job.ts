@@ -40,4 +40,3 @@ export interface CVProfile {
     year: string;
   }[];
 }
-

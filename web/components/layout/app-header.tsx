@@ -3,8 +3,9 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookOpen, Briefcase, Bot, User, SunMoon, Home } from "lucide-react";
+import { BookOpen, Briefcase, Bot, User, SunMoon, Home, Shield } from "lucide-react";
 import { useA11y } from "@/lib/a11y/a11y-context";
+import { useAssistant } from "@/lib/assistant/assistant-context";
 import { VoiceMicButton } from "../voice/voice-mic-button";
 import { useVoiceAssistant } from "@/hooks/use-voice-assistant";
 import { VoiceStatusBar } from "../voice/voice-status-bar";
@@ -14,11 +15,11 @@ function HeaderContent() {
   const pathname = usePathname();
   const { preferences, setContrastTheme, setInteractionMode } = useA11y();
   const { isListening, toggleListening, transcript, error } = useVoiceAssistant();
+  const assistant = useAssistant();
 
   const navLinks = [
-    { href: "/dashboard", label: "Dashboard", icon: Home },
     { href: "/learn", label: "Learn", icon: BookOpen },
-    { href: "/tutor", label: "AI Tutor", icon: Bot },
+    { href: "/courses", label: "Courses", icon: Home },
     { href: "/jobs", label: "Jobs", icon: Briefcase },
     { href: "/profile", label: "Profile", icon: User },
   ];
@@ -38,7 +39,7 @@ function HeaderContent() {
           {/* Logo */}
           <div className="flex items-center gap-3">
             <Link
-              href="/dashboard"
+              href="/learn"
               className="text-lg font-bold tracking-tight text-white hover:text-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400 rounded px-1"
             >
               Ableway <span className="text-emerald-400 font-normal">| Voice & Accessible</span>
@@ -51,8 +52,8 @@ function HeaderContent() {
                   preferences.interactionMode === "voice-first"
                     ? "screen-reader"
                     : preferences.interactionMode === "screen-reader"
-                    ? "hybrid"
-                    : "voice-first";
+                      ? "hybrid"
+                      : "voice-first";
                 setInteractionMode(nextMode);
               }}
               title="Click to switch interaction mode"
@@ -83,6 +84,30 @@ function HeaderContent() {
                 </Link>
               );
             })}
+
+            {/* AI Tutor Assistant Trigger */}
+            <button
+              type="button"
+              onClick={() => assistant?.setIsOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-emerald-300 hover:text-white hover:bg-slate-800 transition focus:outline-none focus:ring-2 focus:ring-emerald-400"
+            >
+              <Bot className="h-4 w-4 text-emerald-400" aria-hidden="true" />
+              <span>AI Tutor</span>
+            </button>
+
+            {/* Staff Queue Link */}
+            <Link
+              href="/staff/help-queue"
+              aria-current={pathname?.startsWith("/staff/help-queue") ? "page" : undefined}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-emerald-400 ${
+                pathname?.startsWith("/staff/help-queue")
+                  ? "bg-emerald-600 text-white shadow-sm"
+                  : "text-slate-400 hover:text-white hover:bg-slate-800"
+              }`}
+            >
+              <Shield className="h-4 w-4" aria-hidden="true" />
+              <span>Queue</span>
+            </Link>
           </nav>
 
           {/* Right Controls: High Contrast + Voice Button */}
