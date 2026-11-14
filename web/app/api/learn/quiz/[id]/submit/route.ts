@@ -1,13 +1,9 @@
 import { and, asc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { getDb } from "@/lib/db/client";
-import {
-  enrollments,
-  modules,
-  quizQuestions,
-  quizzes,
-} from "@/lib/db/schema";
-import { ForbiddenError, NotFoundError, withErrors } from "@/lib/auth/errors";
+import { enrollments, modules, quizQuestions, quizzes } from "@/lib/db/schema";
+import { ForbiddenError, NotFoundError } from "@/lib/auth/errors";
+import { withApi } from "@/lib/api/handler";
 import { readJson } from "@/lib/auth/params";
 import { requireActor } from "@/lib/auth/session";
 
@@ -15,14 +11,14 @@ interface RouteProps {
   params: Promise<{ id: string }>;
 }
 
-const submitSchema = z.object({
+const submitSchema = z.strictObject({
   answers: z.union([
     z.record(z.string(), z.number().int().min(0)),
     z.array(
-      z.object({
+      z.strictObject({
         questionId: z.string().uuid(),
         selectedChoice: z.number().int().min(0),
-      })
+      }),
     ),
   ]),
 });
@@ -32,7 +28,7 @@ const submitSchema = z.object({
  * Server-side grading of quiz questions.
  * Never exposes correct answers or explanations until after submission.
  */
-export const POST = withErrors(async (request: Request, props: RouteProps) => {
+export const POST = withApi({}, async (request: Request, props: RouteProps) => {
   const actor = await requireActor();
   const { id: quizId } = await props.params;
   const rawBody = await readJson(request);
@@ -125,7 +121,7 @@ export const POST = withErrors(async (request: Request, props: RouteProps) => {
 
   currentQuizResults[quiz.id] = {
     bestScore: Math.max(prior?.bestScore || 0, scorePercentage),
-    passed: (prior?.passed || false) || passed,
+    passed: prior?.passed || false || passed,
     attempts: (prior?.attempts || 0) + 1,
   };
 
@@ -155,4 +151,3 @@ export const POST = withErrors(async (request: Request, props: RouteProps) => {
     questions: gradedQuestions,
   });
 });
-

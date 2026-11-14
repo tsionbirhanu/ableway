@@ -1,14 +1,14 @@
 import { and, asc, eq, inArray } from "drizzle-orm";
 import { getDb } from "@/lib/db/client";
 import { courses, enrollments, lessons, modules } from "@/lib/db/schema";
-import { withErrors } from "@/lib/auth/errors";
+import { withApi } from "@/lib/api/handler";
 import { requireActor } from "@/lib/auth/session";
 
 /**
  * GET /api/learn/summary
  * Returns a short plain-language progress summary for the learner.
  */
-export const GET = withErrors(async () => {
+export const GET = withApi({}, async (_request: Request) => {
   const actor = await requireActor();
   const db = getDb();
 
@@ -26,7 +26,8 @@ export const GET = withErrors(async () => {
 
   if (activeEnrollments.length === 0) {
     return Response.json({
-      summary: "You are not currently enrolled in any active courses. Visit the courses page to get started.",
+      summary:
+        "You are not currently enrolled in any active courses. Visit the courses page to get started.",
       activeCourseCount: 0,
       totalCompletedLessons: 0,
       courses: [],
@@ -94,4 +95,3 @@ export const GET = withErrors(async () => {
     courses: courseSummaries,
   });
 });
-

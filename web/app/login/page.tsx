@@ -1,14 +1,14 @@
-'use client';
+"use client";
 
-import React, { useState, useRef, useEffect } from 'react';
-import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { Suspense } from 'react';
-import { useA11y } from '@/lib/a11y/a11y-context';
-import { playEarcon } from '@/lib/audio/earcons';
-import { getTranslation } from '@/lib/i18n/translations';
-import { signInWithPasswordAction } from '@/app/(auth)/passkey-actions';
-import { signInWithPasskey } from '@/lib/passkeys/client';
+import React, { useState, useRef, useEffect } from "react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense } from "react";
+import { useA11y } from "@/lib/a11y/a11y-context";
+import { playEarcon } from "@/lib/audio/earcons";
+import { getTranslation } from "@/lib/i18n/translations";
+import { signInWithPasswordAction } from "@/app/(auth)/passkey-actions";
+import { signInWithPasskey } from "@/lib/passkeys/client";
 
 function LoginContent() {
   const router = useRouter();
@@ -20,26 +20,26 @@ function LoginContent() {
 
   // Mode: standard login vs accessible experience
   const [isAccessibleMode, setIsAccessibleMode] = useState(
-    searchParams.get('mode') === 'accessible' || searchParams.get('accessible') === 'true'
+    searchParams.get("mode") === "accessible" || searchParams.get("accessible") === "true",
   );
 
   // Standard ALX login state
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Accessible OTP state
-  const [otpEmail, setOtpEmail] = useState('');
-  const [otpCode, setOtpCode] = useState('');
+  const [otpEmail, setOtpEmail] = useState("");
+  const [otpCode, setOtpCode] = useState("");
   const [otpSent, setOtpSent] = useState(false);
 
   useEffect(() => {
-    document.title = 'Sign In - ALX Learning Portal';
+    document.title = "Sign In - ALX Learning Portal";
     announce(
-      'Sign in page loaded. Sign in with your email and password, or switch to the accessible experience for one-time code sign in or voice registration.',
-      'polite'
+      "Sign in page loaded. Sign in with your email and password, or switch to the accessible experience for one-time code sign in or voice registration.",
+      "polite",
     );
     if (h1Ref.current) {
       h1Ref.current.focus();
@@ -50,16 +50,16 @@ function LoginContent() {
   const handleStandardSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      setError('Please enter a valid email address');
-      playEarcon('error');
-      announce('Please enter a valid email address', 'assertive');
+      setError("Please enter a valid email address");
+      playEarcon("error");
+      announce("Please enter a valid email address", "assertive");
       return;
     }
 
     if (!password.trim() || password.length < 6) {
-      setError('Please enter your password (at least 6 characters)');
-      playEarcon('error');
-      announce('Please enter your password', 'assertive');
+      setError("Please enter your password (at least 6 characters)");
+      playEarcon("error");
+      announce("Please enter your password", "assertive");
       return;
     }
 
@@ -69,13 +69,13 @@ function LoginContent() {
     if (!result.ok) {
       setIsSubmitting(false);
       setError(result.message);
-      playEarcon('error');
-      announce(result.message, 'assertive');
+      playEarcon("error");
+      announce(result.message, "assertive");
       return;
     }
-    playEarcon('success');
-    announce('Sign in successful. Redirecting to your learning portal...', 'polite');
-    router.push('/courses');
+    playEarcon("success");
+    announce("Sign in successful. Redirecting to your learning portal...", "polite");
+    router.push("/courses");
     router.refresh();
   };
 
@@ -83,18 +83,18 @@ function LoginContent() {
   const handlePasskeySignIn = async () => {
     setIsSubmitting(true);
     setError(null);
-    announce('Your device will ask you to unlock it.', 'polite');
+    announce("Your device will ask you to unlock it.", "polite");
     const result = await signInWithPasskey();
     if (!result.ok) {
       setIsSubmitting(false);
       setError(result.message);
-      playEarcon('error');
-      announce(result.message, 'assertive');
+      playEarcon("error");
+      announce(result.message, "assertive");
       return;
     }
-    playEarcon('success');
-    announce('Sign in successful. Going to courses...', 'polite');
-    router.push('/courses');
+    playEarcon("success");
+    announce("Sign in successful. Going to courses...", "polite");
+    router.push("/courses");
     router.refresh();
   };
 
@@ -102,31 +102,31 @@ function LoginContent() {
   const handleSendOtp = (e: React.FormEvent) => {
     e.preventDefault();
     if (!otpEmail.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(otpEmail.trim())) {
-      setError('Please enter a valid email address for one-time code delivery');
-      playEarcon('error');
-      announce('Please enter a valid email address for code delivery', 'assertive');
+      setError("Please enter a valid email address for one-time code delivery");
+      playEarcon("error");
+      announce("Please enter a valid email address for code delivery", "assertive");
       return;
     }
     setError(null);
     setOtpSent(true);
-    playEarcon('success');
-    announce(`One-time code sent to ${otpEmail}. For demonstration, enter 123456.`, 'polite');
+    playEarcon("success");
+    announce(`One-time code sent to ${otpEmail}. For demonstration, enter 123456.`, "polite");
   };
 
   // Handle Accessible OTP verify code
   const handleVerifyOtp = (e: React.FormEvent) => {
     e.preventDefault();
     if (!otpCode.trim() || otpCode.trim().length < 4) {
-      setError('Please enter the 6-digit one-time code sent to your email');
-      playEarcon('error');
-      announce('Please enter your one-time code', 'assertive');
+      setError("Please enter the 6-digit one-time code sent to your email");
+      playEarcon("error");
+      announce("Please enter your one-time code", "assertive");
       return;
     }
     setIsSubmitting(true);
-    playEarcon('success');
-    announce('Accessible sign in successful. Loading courses...', 'polite');
+    playEarcon("success");
+    announce("Accessible sign in successful. Loading courses...", "polite");
     setTimeout(() => {
-      router.push('/courses');
+      router.push("/courses");
     }, 1200);
   };
 
@@ -137,7 +137,7 @@ function LoginContent() {
         className="absolute inset-0 pointer-events-none opacity-40"
         style={{
           backgroundImage:
-            'radial-gradient(circle at 50% 25%, rgba(147, 51, 234, 0.25) 0%, rgba(37, 99, 235, 0.15) 35%, transparent 70%)',
+            "radial-gradient(circle at 50% 25%, rgba(147, 51, 234, 0.25) 0%, rgba(37, 99, 235, 0.15) 35%, transparent 70%)",
         }}
       />
 
@@ -159,17 +159,21 @@ function LoginContent() {
             tabIndex={-1}
             className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight focus:outline-none"
           >
-            {t.login?.title || 'Sign in to your account'}
+            {t.login?.title || "Sign in to your account"}
           </h1>
           <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
             {isAccessibleMode
-              ? 'Accessible portal for voice registration and password-free login.'
-              : t.login?.subtitle || 'Welcome back! Enter your details to access your portal.'}
+              ? "Accessible portal for voice registration and password-free login."
+              : t.login?.subtitle || "Welcome back! Enter your details to access your portal."}
           </p>
         </header>
 
         {/* Mode Selector Tabs (No stroke, clean surface) */}
-        <div className="bg-slate-100 p-1 rounded-2xl flex text-xs font-semibold" role="tablist" aria-label="Sign In Method">
+        <div
+          className="bg-slate-100 p-1 rounded-2xl flex text-xs font-semibold"
+          role="tablist"
+          aria-label="Sign In Method"
+        >
           <button
             type="button"
             role="tab"
@@ -180,8 +184,8 @@ function LoginContent() {
             }}
             className={`flex-1 py-2.5 rounded-xl transition-all text-center font-bold cursor-pointer min-h-[40px] ${
               !isAccessibleMode
-                ? 'bg-white text-slate-900 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
+                ? "bg-white text-slate-900 shadow-sm"
+                : "text-slate-600 hover:text-slate-900"
             }`}
           >
             Standard Sign In
@@ -196,8 +200,8 @@ function LoginContent() {
             }}
             className={`flex-1 py-2.5 rounded-xl transition-all text-center font-bold cursor-pointer min-h-[40px] ${
               isAccessibleMode
-                ? 'bg-orange-500 text-white shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
+                ? "bg-orange-500 text-white shadow-sm"
+                : "text-slate-600 hover:text-slate-900"
             }`}
           >
             Accessible Experience
@@ -220,8 +224,12 @@ function LoginContent() {
             <form onSubmit={handleStandardSubmit} noValidate className="space-y-4">
               {/* Email Address */}
               <div className="space-y-1.5">
-                <label htmlFor="login-email" className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                  {t.login?.emailLabel || 'Email address'} <span className="text-orange-700 font-normal normal-case">(required)</span>
+                <label
+                  htmlFor="login-email"
+                  className="block text-xs font-bold uppercase tracking-wider text-slate-700"
+                >
+                  {t.login?.emailLabel || "Email address"}{" "}
+                  <span className="text-orange-700 font-normal normal-case">(required)</span>
                 </label>
                 <input
                   id="login-email"
@@ -242,14 +250,18 @@ function LoginContent() {
               {/* Password */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <label htmlFor="login-password" className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                    {t.login?.passwordLabel || 'Password'} <span className="text-orange-700 font-normal normal-case">(required)</span>
+                  <label
+                    htmlFor="login-password"
+                    className="block text-xs font-bold uppercase tracking-wider text-slate-700"
+                  >
+                    {t.login?.passwordLabel || "Password"}{" "}
+                    <span className="text-orange-700 font-normal normal-case">(required)</span>
                   </label>
                   <a
                     href="#forgot-password"
                     className="text-xs font-semibold text-orange-700 hover:text-orange-900 underline focus:outline-none focus:ring-2 focus:ring-orange-400 rounded"
                   >
-                    {t.login?.forgotPassword || 'Forgot password?'}
+                    {t.login?.forgotPassword || "Forgot password?"}
                   </a>
                 </div>
                 <input
@@ -270,7 +282,10 @@ function LoginContent() {
 
               {/* Remember Me */}
               <div className="flex items-center pt-1">
-                <label htmlFor="remember-me" className="flex items-center gap-2 cursor-pointer text-xs text-slate-600 min-h-[44px]">
+                <label
+                  htmlFor="remember-me"
+                  className="flex items-center gap-2 cursor-pointer text-xs text-slate-600 min-h-[44px]"
+                >
                   <input
                     id="remember-me"
                     name="rememberMe"
@@ -279,7 +294,7 @@ function LoginContent() {
                     onChange={(e) => setRememberMe(e.target.checked)}
                     className="w-4 h-4 rounded border-slate-300 text-orange-600 accent-orange-500 focus:ring-orange-400"
                   />
-                  <span>{t.login?.rememberMe || 'Remember me for 30 days'}</span>
+                  <span>{t.login?.rememberMe || "Remember me for 30 days"}</span>
                 </label>
               </div>
 
@@ -289,7 +304,11 @@ function LoginContent() {
                 disabled={isSubmitting}
                 className="w-full min-h-[48px] bg-orange-500 hover:bg-orange-400 text-white font-bold py-3.5 px-6 rounded-xl shadow-md hover:shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 cursor-pointer text-sm"
               >
-                <span>{isSubmitting ? t.login?.signingIn || 'Signing in...' : t.login?.signInBtn || 'Sign In'}</span>
+                <span>
+                  {isSubmitting
+                    ? t.login?.signingIn || "Signing in..."
+                    : t.login?.signInBtn || "Sign In"}
+                </span>
               </button>
 
               {/* Divider */}
@@ -298,7 +317,9 @@ function LoginContent() {
                   <div className="w-full border-t border-slate-200" />
                 </div>
                 <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-white px-3 text-slate-400 font-semibold">{t.login?.orContinueWith || 'Or continue with'}</span>
+                  <span className="bg-white px-3 text-slate-400 font-semibold">
+                    {t.login?.orContinueWith || "Or continue with"}
+                  </span>
                 </div>
               </div>
 
@@ -306,29 +327,41 @@ function LoginContent() {
               <button
                 type="button"
                 onClick={() => {
-                  announce('Redirecting to Google authentication...', 'polite');
-                  setTimeout(() => router.push('/courses'), 1000);
+                  announce("Redirecting to Google authentication...", "polite");
+                  setTimeout(() => router.push("/courses"), 1000);
                 }}
                 className="w-full min-h-[44px] bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2.5 transition-all focus:outline-none focus:ring-2 focus:ring-slate-400 cursor-pointer"
               >
                 <svg className="w-4 h-4" viewBox="0 0 24 24" aria-hidden="true">
-                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
-                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+                  <path
+                    fill="#4285F4"
+                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                  />
+                  <path
+                    fill="#34A853"
+                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                  />
+                  <path
+                    fill="#FBBC05"
+                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                  />
+                  <path
+                    fill="#EA4335"
+                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                  />
                 </svg>
-                <span>{t.login?.googleSignIn || 'Continue with Google'}</span>
+                <span>{t.login?.googleSignIn || "Continue with Google"}</span>
               </button>
             </form>
 
             {/* Direct Gateway to Accessible Experience */}
             <div className="bg-slate-50 rounded-2xl p-5 text-center space-y-3">
               <h2 className="text-sm font-bold text-slate-900">
-                {t.login?.a11yCalloutTitle || 'Need an Accessible Experience?'}
+                {t.login?.a11yCalloutTitle || "Need an Accessible Experience?"}
               </h2>
               <p className="text-xs text-slate-600 leading-relaxed">
                 {t.login?.a11yCalloutDesc ||
-                  'Ableway provides blind and visually impaired learners with hands-free spoken voice dialog, screen reader optimization, and zero CAPTCHAs.'}
+                  "Ableway provides blind and visually impaired learners with hands-free spoken voice dialog, screen reader optimization, and zero CAPTCHAs."}
               </p>
               <button
                 type="button"
@@ -355,14 +388,15 @@ function LoginContent() {
                 Create an Account with Voice
               </h2>
               <p className="text-xs text-slate-600 leading-relaxed">
-                Our spoken assistant guides you hands-free step-by-step. Speak your details naturally, spell if needed, and confirm before saving. No CAPTCHAs.
+                Our spoken assistant guides you hands-free step-by-step. Speak your details
+                naturally, spell if needed, and confirm before saving. No CAPTCHAs.
               </p>
               <Link
                 href="/register"
                 id="link-to-register"
                 className="w-full py-3 px-4 rounded-xl bg-orange-500 hover:bg-orange-400 text-white font-bold text-sm shadow-md transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 min-h-[44px] flex items-center justify-center cursor-pointer"
               >
-                {t.login?.a11yRegisterBtn || 'Create Account'}
+                {t.login?.a11yRegisterBtn || "Create Account"}
               </Link>
             </section>
 
@@ -378,14 +412,19 @@ function LoginContent() {
                 Sign In with One-Time Code
               </h2>
               <p className="text-xs text-slate-600 leading-relaxed">
-                Password-free accessible login. Enter your email and we will send a 6-digit one-time code. No passwords or visual puzzles to solve.
+                Password-free accessible login. Enter your email and we will send a 6-digit one-time
+                code. No passwords or visual puzzles to solve.
               </p>
 
               {!otpSent ? (
                 <form onSubmit={handleSendOtp} noValidate className="space-y-3">
                   <div className="space-y-1">
-                    <label htmlFor="otp-email" className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                      Email address <span className="text-orange-700 font-normal normal-case">(required)</span>
+                    <label
+                      htmlFor="otp-email"
+                      className="block text-xs font-bold uppercase tracking-wider text-slate-700"
+                    >
+                      Email address{" "}
+                      <span className="text-orange-700 font-normal normal-case">(required)</span>
                     </label>
                     <input
                       id="otp-email"
@@ -408,11 +447,16 @@ function LoginContent() {
               ) : (
                 <form onSubmit={handleVerifyOtp} noValidate className="space-y-3">
                   <div className="bg-white rounded-xl p-3 text-xs text-slate-700">
-                    Code sent to <strong>{otpEmail}</strong>. (For demonstration, enter <strong>123456</strong>)
+                    Code sent to <strong>{otpEmail}</strong>. (For demonstration, enter{" "}
+                    <strong>123456</strong>)
                   </div>
                   <div className="space-y-1">
-                    <label htmlFor="otp-code" className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                      6-Digit Code <span className="text-orange-700 font-normal normal-case">(required)</span>
+                    <label
+                      htmlFor="otp-code"
+                      className="block text-xs font-bold uppercase tracking-wider text-slate-700"
+                    >
+                      6-Digit Code{" "}
+                      <span className="text-orange-700 font-normal normal-case">(required)</span>
                     </label>
                     <input
                       id="otp-code"
@@ -431,7 +475,7 @@ function LoginContent() {
                     disabled={isSubmitting}
                     className="w-full min-h-[44px] bg-orange-500 hover:bg-orange-400 text-white font-bold py-2.5 px-4 rounded-xl text-xs shadow-md transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 cursor-pointer"
                   >
-                    {isSubmitting ? 'Verifying...' : 'Verify & Sign In'}
+                    {isSubmitting ? "Verifying..." : "Verify & Sign In"}
                   </button>
                 </form>
               )}
@@ -461,7 +505,13 @@ function LoginContent() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#050B17] flex items-center justify-center text-white">Loading...</div>}>
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[#050B17] flex items-center justify-center text-white">
+          Loading...
+        </div>
+      }
+    >
       <LoginContent />
     </Suspense>
   );

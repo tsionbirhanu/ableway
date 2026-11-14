@@ -1,13 +1,10 @@
-import { mkdtemp, readdir, utimes } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { detectAudioFormat } from "@/lib/speech/audio";
 import { normalizeLanguage, resolveVoice, speechLanguage } from "@/lib/speech/languages";
 import { AzureTextToSpeech } from "@/lib/speech/providers/azure";
 import { GeminiTextToSpeech } from "@/lib/speech/providers/gemini";
-import { MockSpeechToText, MockTextToSpeech, silentWav } from "@/lib/speech/providers/mock";
-import { pruneRetainedAudio, retainAudio } from "@/lib/speech/retention";
+import { MockSpeechToText, MockTextToSpeech } from "@/lib/speech/providers/mock";
+import type { RecordingOwner, RetentionPolicy } from "@/lib/speech/retention";
 import {
   MAX_TTS_CHARS,
   synthesizeSpeech,
@@ -29,7 +26,6 @@ function deps(overrides: Partial<SpeechDeps> = {}): SpeechDeps & {
     tts: new MockTextToSpeech(),
     cache: new TtsCache(),
     lowConfidenceThreshold: 0.65,
-    retention: { enabled: false, dir: "unused", days: 30 },
     ...overrides,
   } as SpeechDeps & { stt: MockSpeechToText; tts: MockTextToSpeech };
 }
@@ -60,26 +56,37 @@ describe("transcribeRecording", () => {
     expect((await transcribeRecording(strict, toneWav(1), "en")).lowConfidence).toBe(true);
   });
 
-  it("does not store audio by default", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "ableway-retention-off-"));
-    await transcribeRecording(
-      deps({ retention: { enabled: false, dir, days: 30 } }),
-      toneWav(1),
-      "en",
-    );
-    expect(await readdir(dir)).toEqual([]);
+  it("keeps no audio by default (no retention policy given)", async () => {
+    // Nothing to observe except that it works without a policy; the default keeps nothing.
+    const result = await transcribeRecording(deps(), toneWav(1), "en");
+    expect(result.text).toBeTruthy();
   });
 
-  it("stores the converted WAV only when retention is switched on", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "ableway-retention-on-"));
-    await transcribeRecording(
-      deps({ retention: { enabled: true, dir, days: 30 } }),
-      toneWav(1),
-      "en",
-    );
-    const files = await readdir(dir);
-    expect(files).toHaveLength(1);
-    expect(files[0]).toMatch(/^\d{4}-\d{2}-\d{2}_[0-9a-f-]{36}\.wav$/);
+  it("offers the converted WAV and its owner to the retention policy", async () => {
+    const seen: { bytes: number; owner: RecordingOwner }[] = [];
+    const policy: RetentionPolicy = {
+      async retain(wav, owner) {
+        seen.push({ bytes: wav.length, owner });
+        return false;
+      },
+    };
+    await transcribeRecording(deps({ retention: policy }), toneWav(1), "en", {
+      profileId: "p1",
+    });
+    expect(seen).toHaveLength(1);
+    expect(seen[0]?.owner).toEqual({ profileId: "p1" });
+    // 16 kHz mono 16-bit WAV, not the raw upload.
+    expect(seen[0]?.bytes).toBeGreaterThan(30_000);
+  });
+
+  it("still returns the transcript when keeping the recording fails", async () => {
+    const policy: RetentionPolicy = {
+      async retain() {
+        throw new Error("disk full");
+      },
+    };
+    const result = await transcribeRecording(deps({ retention: policy }), toneWav(1), "en");
+    expect(result.text).toBeTruthy();
   });
 
   it("transcribes Telegram voice notes the same way", async () => {
@@ -207,26 +214,5 @@ describe("TtsCache", () => {
     ]) {
       expect(ttsCacheKey({ ...base, ...change })).not.toBe(key);
     }
-  });
-});
-
-describe("pruneRetainedAudio", () => {
-  it("deletes retained recordings older than the retention period", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "ableway-prune-"));
-    const config = { enabled: true, dir, days: 30 };
-    const old = await retainAudio(config, silentWav(0.1));
-    await retainAudio(config, silentWav(0.1));
-    const fortyDaysAgo = new Date(Date.now() - 40 * 24 * 60 * 60 * 1000);
-    await utimes(join(dir, old!), fortyDaysAgo, fortyDaysAgo);
-
-    expect(await pruneRetainedAudio(config)).toBe(1);
-    expect(await readdir(dir)).toHaveLength(1);
-  });
-
-  it("does nothing when the folder does not exist", async () => {
-    vi.spyOn(console, "error").mockImplementation(() => {});
-    expect(
-      await pruneRetainedAudio({ enabled: true, dir: join(tmpdir(), "missing-dir-xyz"), days: 1 }),
-    ).toBe(0);
   });
 });

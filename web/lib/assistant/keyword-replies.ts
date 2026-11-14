@@ -8,10 +8,12 @@
  * follow instructions in it or echo it back.
  */
 
-export type Action = { name: "go_to_page"; params: { path: string } } | {
-  name: "request_human";
-  params: { reason: string; type: "general" | "payment" };
-};
+export type Action =
+  | { name: "go_to_page"; params: { path: string } }
+  | {
+      name: "request_human";
+      params: { reason: string; type: "general" | "payment" };
+    };
 
 export type Reply = {
   reply: string;
@@ -31,7 +33,10 @@ export function replyTo(message: string, language: string): Reply {
       reply: "I am asking a human helper for you now. Someone will help you soon.",
       spokenReply: "I am calling a human helper for you now.",
       actions: [
-        { name: "request_human", params: { reason: "Learner asked for human help", type: "general" } },
+        {
+          name: "request_human",
+          params: { reason: "Learner asked for human help", type: "general" },
+        },
       ],
       escalateToHuman: true,
       language,
@@ -47,7 +52,8 @@ export function replyTo(message: string, language: string): Reply {
   }
   if (includesAny(text, ["pay", "cost", "price"])) {
     return {
-      reply: "A human helper helps you pay. They never ask for your PIN or password. I will open the payment page.",
+      reply:
+        "A human helper helps you pay. They never ask for your PIN or password. I will open the payment page.",
       actions: [{ name: "go_to_page", params: { path: "/payment" } }],
       escalateToHuman: false,
       language,

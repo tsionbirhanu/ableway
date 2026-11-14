@@ -49,4 +49,3 @@ export function splitIntoChunks(text: string, options: ChunkOptions = {}): strin
 
   return chunks;
 }
-

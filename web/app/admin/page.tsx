@@ -1,30 +1,26 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect, useCallback, useId } from 'react';
-import { 
-  ShieldAlert, 
-  BookOpen, 
-  HelpCircle, 
-  CheckCircle2, 
-  Trash2, 
-  Send, 
-  PlusCircle, 
-  FileText, 
-  AlertTriangle,
-  Globe,
+import React, { useState, useEffect, useCallback } from "react";
+import {
+  ShieldAlert,
+  BookOpen,
+  HelpCircle,
+  CheckCircle2,
+  Trash2,
+  Send,
+  PlusCircle,
+  FileText,
   Loader2,
   RefreshCw,
-  Eye,
   CheckSquare,
-  XSquare
-} from 'lucide-react';
-import { useA11y } from '@/lib/a11y/a11y-context';
+} from "lucide-react";
+import { useA11y } from "@/lib/a11y/a11y-context";
 
 export interface UnansweredQuestion {
   id: string;
   text: string;
   language: string;
-  channel: 'web' | 'telegram';
+  channel: "web" | "telegram";
   resolved: boolean;
   createdAt: string;
 }
@@ -35,47 +31,50 @@ export interface KnowledgeItem {
   title: string;
   text: string;
   language: string;
-  status: 'draft' | 'published' | 'archived';
+  status: "draft" | "published" | "archived";
   version: number;
   updatedAt: string;
 }
 
+type AdminCourse = { id: string; title: string; status: string; currency?: string | null };
+
 export default function AdminDashboardPage() {
   const { announce } = useA11y();
 
-  const [activeTab, setActiveTab] = useState<'unanswered' | 'knowledge' | 'checklist'>('unanswered');
+  const [activeTab, setActiveTab] = useState<"unanswered" | "knowledge" | "checklist">(
+    "unanswered",
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // Unanswered Questions State
   const [unanswered, setUnanswered] = useState<UnansweredQuestion[]>([]);
   const [selectedQuestion, setSelectedQuestion] = useState<UnansweredQuestion | null>(null);
-  const [answerTitle, setAnswerTitle] = useState('');
-  const [answerText, setAnswerText] = useState('');
-  const [answerSourceType, setAnswerSourceType] = useState('platform_help');
+  const [answerTitle, setAnswerTitle] = useState("");
+  const [answerText, setAnswerText] = useState("");
+  const [answerSourceType, setAnswerSourceType] = useState("platform_help");
   const [isSubmittingAnswer, setIsSubmittingAnswer] = useState(false);
 
   // Knowledge Base State
   const [knowledgeList, setKnowledgeList] = useState<KnowledgeItem[]>([]);
   const [isCreatingKnowledge, setIsCreatingKnowledge] = useState(false);
-  const [newTitle, setNewTitle] = useState('');
-  const [newText, setNewText] = useState('');
-  const [newSourceType, setNewSourceType] = useState('platform_help');
-  const [newLang, setNewLang] = useState('en');
+  const [newTitle, setNewTitle] = useState("");
+  const [newText, setNewText] = useState("");
+  const [newSourceType, setNewSourceType] = useState("platform_help");
+  const newLang = "en";
 
   // Checklist state
-  const [courseList, setCourseList] = useState<any[]>([]);
+  const [courseList, setCourseList] = useState<AdminCourse[]>([]);
 
   // Fetch Unanswered
   const fetchUnanswered = useCallback(async () => {
     try {
-      setLoading(true);
-      const res = await fetch('/api/admin/unanswered?resolved=false');
-      if (!res.ok) throw new Error('Failed to load unanswered questions');
+      const res = await fetch("/api/admin/unanswered?resolved=false");
+      if (!res.ok) throw new Error("Failed to load unanswered questions");
       const data = await res.json();
       setUnanswered(data.questions || []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error fetching unanswered');
+      setError(err instanceof Error ? err.message : "Error fetching unanswered");
     } finally {
       setLoading(false);
     }
@@ -84,13 +83,12 @@ export default function AdminDashboardPage() {
   // Fetch Knowledge
   const fetchKnowledge = useCallback(async () => {
     try {
-      setLoading(true);
-      const res = await fetch('/api/admin/knowledge?limit=50');
-      if (!res.ok) throw new Error('Failed to load knowledge entries');
+      const res = await fetch("/api/admin/knowledge?limit=50");
+      if (!res.ok) throw new Error("Failed to load knowledge entries");
       const data = await res.json();
       setKnowledgeList(data.chunks || []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error fetching knowledge');
+      setError(err instanceof Error ? err.message : "Error fetching knowledge");
     } finally {
       setLoading(false);
     }
@@ -99,23 +97,31 @@ export default function AdminDashboardPage() {
   // Fetch Courses for checklist
   const fetchCourses = useCallback(async () => {
     try {
-      setLoading(true);
-      const res = await fetch('/api/admin/content/courses');
-      if (!res.ok) throw new Error('Failed to load courses checklist');
+      const res = await fetch("/api/admin/content/courses");
+      if (!res.ok) throw new Error("Failed to load courses checklist");
       const data = await res.json();
       setCourseList(data.courses || []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error fetching courses');
+      setError(err instanceof Error ? err.message : "Error fetching courses");
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    if (activeTab === 'unanswered') fetchUnanswered();
-    else if (activeTab === 'knowledge') fetchKnowledge();
-    else if (activeTab === 'checklist') fetchCourses();
+    // State is only set after the fetch resolves; the rule cannot see past the await.
+    /* eslint-disable react-hooks/set-state-in-effect */
+    if (activeTab === "unanswered") fetchUnanswered();
+    else if (activeTab === "knowledge") fetchKnowledge();
+    else if (activeTab === "checklist") fetchCourses();
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [activeTab, fetchUnanswered, fetchKnowledge, fetchCourses]);
+
+  const selectTab = (tab: typeof activeTab) => {
+    if (tab === activeTab) return;
+    setLoading(true);
+    setActiveTab(tab);
+  };
 
   // Handle Answer Submission & Ingestion
   const handleAnswerSubmit = async (e: React.FormEvent) => {
@@ -125,35 +131,35 @@ export default function AdminDashboardPage() {
     setIsSubmittingAnswer(true);
     try {
       // 1. Ingest into knowledge chunks
-      const kbRes = await fetch('/api/admin/knowledge', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const kbRes = await fetch("/api/admin/knowledge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: answerTitle.trim(),
           text: answerText.trim(),
           sourceType: answerSourceType,
-          language: selectedQuestion.language || 'en',
-          status: 'published',
+          language: selectedQuestion.language || "en",
+          status: "published",
         }),
       });
 
-      if (!kbRes.ok) throw new Error('Failed to ingest knowledge answer');
+      if (!kbRes.ok) throw new Error("Failed to ingest knowledge answer");
 
       // 2. Mark unanswered question resolved
       await fetch(`/api/admin/unanswered/${selectedQuestion.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ resolved: true }),
       });
 
-      announce(`Answer successfully ingested and question marked resolved!`, 'polite');
+      announce(`Answer successfully ingested and question marked resolved!`, "polite");
       setSelectedQuestion(null);
-      setAnswerTitle('');
-      setAnswerText('');
+      setAnswerTitle("");
+      setAnswerText("");
       fetchUnanswered();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Error submitting answer';
-      announce(`Failed: ${msg}`, 'assertive');
+      const msg = err instanceof Error ? err.message : "Error submitting answer";
+      announce(`Failed: ${msg}`, "assertive");
     } finally {
       setIsSubmittingAnswer(false);
     }
@@ -162,11 +168,11 @@ export default function AdminDashboardPage() {
   // Handle Dismiss Question
   const handleDismissQuestion = async (id: string) => {
     try {
-      await fetch(`/api/admin/unanswered/${id}`, { method: 'DELETE' });
+      await fetch(`/api/admin/unanswered/${id}`, { method: "DELETE" });
       setUnanswered((prev) => prev.filter((q) => q.id !== id));
-      announce('Question dismissed', 'polite');
-    } catch (err) {
-      announce('Failed to dismiss question', 'assertive');
+      announce("Question dismissed", "polite");
+    } catch {
+      announce("Failed to dismiss question", "assertive");
     }
   };
 
@@ -176,37 +182,37 @@ export default function AdminDashboardPage() {
     if (!newTitle.trim() || !newText.trim()) return;
 
     try {
-      const res = await fetch('/api/admin/knowledge', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/admin/knowledge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: newTitle.trim(),
           text: newText.trim(),
           sourceType: newSourceType,
           language: newLang,
-          status: 'published',
+          status: "published",
         }),
       });
-      if (!res.ok) throw new Error('Failed to create knowledge entry');
-      announce('New knowledge entry published and vector indexed', 'polite');
+      if (!res.ok) throw new Error("Failed to create knowledge entry");
+      announce("New knowledge entry published and vector indexed", "polite");
       setIsCreatingKnowledge(false);
-      setNewTitle('');
-      setNewText('');
+      setNewTitle("");
+      setNewText("");
       fetchKnowledge();
     } catch (err) {
-      announce(`Error creating knowledge: ${err instanceof Error ? err.message : ''}`, 'assertive');
+      announce(`Error creating knowledge: ${err instanceof Error ? err.message : ""}`, "assertive");
     }
   };
 
   // Handle Unpublish Knowledge
   const handleUnpublishKnowledge = async (id: string) => {
     try {
-      const res = await fetch(`/api/admin/knowledge/${id}/unpublish`, { method: 'POST' });
-      if (!res.ok) throw new Error('Failed to unpublish chunk');
-      announce('Knowledge entry unpublished and removed from active vector search', 'polite');
+      const res = await fetch(`/api/admin/knowledge/${id}/unpublish`, { method: "POST" });
+      if (!res.ok) throw new Error("Failed to unpublish chunk");
+      announce("Knowledge entry unpublished and removed from active vector search", "polite");
       fetchKnowledge();
-    } catch (err) {
-      announce('Could not unpublish entry', 'assertive');
+    } catch {
+      announce("Could not unpublish entry", "assertive");
     }
   };
 
@@ -219,19 +225,23 @@ export default function AdminDashboardPage() {
           <span>Content Management & Knowledge Administration</span>
         </h1>
         <p className="text-slate-300 text-sm max-w-3xl leading-relaxed">
-          Manage platform knowledge chunks, answer questions the assistant was unsure about, and audit lesson accessibility publish checklists.
+          Manage platform knowledge chunks, answer questions the assistant was unsure about, and
+          audit lesson accessibility publish checklists.
         </p>
       </header>
 
       {/* Tabs */}
-      <nav aria-label="Admin Navigation Tabs" className="flex flex-wrap gap-2 border-b border-slate-800 pb-3">
+      <nav
+        aria-label="Admin Navigation Tabs"
+        className="flex flex-wrap gap-2 border-b border-slate-800 pb-3"
+      >
         <button
           type="button"
-          onClick={() => setActiveTab('unanswered')}
+          onClick={() => selectTab("unanswered")}
           className={`px-4 py-2.5 rounded-xl text-xs font-bold min-h-[44px] flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-emerald-400 transition-colors ${
-            activeTab === 'unanswered'
-              ? 'bg-emerald-600 text-white shadow-md'
-              : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700'
+            activeTab === "unanswered"
+              ? "bg-emerald-600 text-white shadow-md"
+              : "bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700"
           }`}
         >
           <HelpCircle className="w-4 h-4" aria-hidden="true" />
@@ -240,11 +250,11 @@ export default function AdminDashboardPage() {
 
         <button
           type="button"
-          onClick={() => setActiveTab('knowledge')}
+          onClick={() => selectTab("knowledge")}
           className={`px-4 py-2.5 rounded-xl text-xs font-bold min-h-[44px] flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-emerald-400 transition-colors ${
-            activeTab === 'knowledge'
-              ? 'bg-emerald-600 text-white shadow-md'
-              : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700'
+            activeTab === "knowledge"
+              ? "bg-emerald-600 text-white shadow-md"
+              : "bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700"
           }`}
         >
           <FileText className="w-4 h-4" aria-hidden="true" />
@@ -253,11 +263,11 @@ export default function AdminDashboardPage() {
 
         <button
           type="button"
-          onClick={() => setActiveTab('checklist')}
+          onClick={() => selectTab("checklist")}
           className={`px-4 py-2.5 rounded-xl text-xs font-bold min-h-[44px] flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-emerald-400 transition-colors ${
-            activeTab === 'checklist'
-              ? 'bg-emerald-600 text-white shadow-md'
-              : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700'
+            activeTab === "checklist"
+              ? "bg-emerald-600 text-white shadow-md"
+              : "bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700"
           }`}
         >
           <BookOpen className="w-4 h-4" aria-hidden="true" />
@@ -266,16 +276,22 @@ export default function AdminDashboardPage() {
       </nav>
 
       {error && (
-        <div role="alert" className="p-4 bg-red-950/80 border border-red-700 rounded-2xl text-red-200 text-sm">
+        <div
+          role="alert"
+          className="p-4 bg-red-950/80 border border-red-700 rounded-2xl text-red-200 text-sm"
+        >
           {error}
         </div>
       )}
 
       {/* Tab 1: Unanswered Questions */}
-      {activeTab === 'unanswered' && (
+      {activeTab === "unanswered" && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <section aria-labelledby="unanswered-list-heading" className="lg:col-span-2 space-y-4">
-            <h2 id="unanswered-list-heading" className="text-xl font-bold text-white flex items-center justify-between">
+            <h2
+              id="unanswered-list-heading"
+              className="text-xl font-bold text-white flex items-center justify-between"
+            >
               <span>Learner Questions Needing Grounded Answers</span>
               <button
                 type="button"
@@ -299,8 +315,8 @@ export default function AdminDashboardPage() {
                     key={q.id}
                     className={`p-5 rounded-2xl border transition-all bg-slate-900 ${
                       selectedQuestion?.id === q.id
-                        ? 'border-emerald-500 ring-2 ring-emerald-500'
-                        : 'border-slate-700 hover:border-slate-600'
+                        ? "border-emerald-500 ring-2 ring-emerald-500"
+                        : "border-slate-700 hover:border-slate-600"
                     }`}
                   >
                     <div className="flex items-center justify-between gap-2 border-b border-slate-800 pb-3">
@@ -315,7 +331,9 @@ export default function AdminDashboardPage() {
                       </span>
                     </div>
 
-                    <p className="py-3 text-sm text-white font-medium leading-relaxed">&ldquo;{q.text}&rdquo;</p>
+                    <p className="py-3 text-sm text-white font-medium leading-relaxed">
+                      &ldquo;{q.text}&rdquo;
+                    </p>
 
                     <div className="pt-2 border-t border-slate-800 flex items-center justify-between">
                       <button
@@ -332,7 +350,7 @@ export default function AdminDashboardPage() {
                         onClick={() => {
                           setSelectedQuestion(q);
                           setAnswerTitle(`FAQ: ${q.text.slice(0, 60)}...`);
-                          announce(`Drafting answer for question: ${q.text}`, 'polite');
+                          announce(`Drafting answer for question: ${q.text}`, "polite");
                         }}
                         className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl min-h-[44px] flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-400"
                       >
@@ -345,9 +363,14 @@ export default function AdminDashboardPage() {
 
                 {unanswered.length === 0 && (
                   <li className="p-12 text-center bg-slate-900 border border-slate-700 rounded-3xl text-slate-300 text-sm">
-                    <CheckCircle2 className="w-10 h-10 text-emerald-400 mx-auto mb-2" aria-hidden="true" />
+                    <CheckCircle2
+                      className="w-10 h-10 text-emerald-400 mx-auto mb-2"
+                      aria-hidden="true"
+                    />
                     <p className="font-bold text-white text-base">All clear!</p>
-                    <p className="text-xs text-slate-400">No unanswered questions currently recorded.</p>
+                    <p className="text-xs text-slate-400">
+                      No unanswered questions currently recorded.
+                    </p>
                   </li>
                 )}
               </ul>
@@ -356,17 +379,27 @@ export default function AdminDashboardPage() {
 
           {/* Form to Answer and Ingest Knowledge */}
           <section aria-labelledby="answer-form-heading" className="space-y-4">
-            <h2 id="answer-form-heading" className="text-xl font-bold text-white">Answer Grounding Tool</h2>
+            <h2 id="answer-form-heading" className="text-xl font-bold text-white">
+              Answer Grounding Tool
+            </h2>
 
             {selectedQuestion ? (
-              <form onSubmit={handleAnswerSubmit} className="p-6 bg-slate-900 border border-slate-700 rounded-3xl space-y-4 shadow-xl">
+              <form
+                onSubmit={handleAnswerSubmit}
+                className="p-6 bg-slate-900 border border-slate-700 rounded-3xl space-y-4 shadow-xl"
+              >
                 <div className="border-b border-slate-800 pb-3">
                   <span className="text-xs font-bold text-emerald-400">Answering Question</span>
-                  <p className="text-xs text-slate-200 mt-1 font-medium">&ldquo;{selectedQuestion.text}&rdquo;</p>
+                  <p className="text-xs text-slate-200 mt-1 font-medium">
+                    &ldquo;{selectedQuestion.text}&rdquo;
+                  </p>
                 </div>
 
                 <div className="space-y-1">
-                  <label htmlFor="answer-title-input" className="block text-xs font-bold text-slate-200">
+                  <label
+                    htmlFor="answer-title-input"
+                    className="block text-xs font-bold text-slate-200"
+                  >
                     Knowledge Document Title
                   </label>
                   <input
@@ -380,7 +413,10 @@ export default function AdminDashboardPage() {
                 </div>
 
                 <div className="space-y-1">
-                  <label htmlFor="answer-type-select" className="block text-xs font-bold text-slate-200">
+                  <label
+                    htmlFor="answer-type-select"
+                    className="block text-xs font-bold text-slate-200"
+                  >
                     Knowledge Source Category
                   </label>
                   <select
@@ -398,7 +434,10 @@ export default function AdminDashboardPage() {
                 </div>
 
                 <div className="space-y-1">
-                  <label htmlFor="answer-text-area" className="block text-xs font-bold text-slate-200">
+                  <label
+                    htmlFor="answer-text-area"
+                    className="block text-xs font-bold text-slate-200"
+                  >
                     Grounded Answer / Content Body
                   </label>
                   <textarea
@@ -425,14 +464,19 @@ export default function AdminDashboardPage() {
                     disabled={isSubmittingAnswer}
                     className="w-2/3 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 text-white font-bold rounded-xl text-xs min-h-[44px] flex items-center justify-center gap-2"
                   >
-                    {isSubmittingAnswer ? <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" /> : <Send className="w-3.5 h-3.5" aria-hidden="true" />}
+                    {isSubmittingAnswer ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />
+                    ) : (
+                      <Send className="w-3.5 h-3.5" aria-hidden="true" />
+                    )}
                     <span>Ingest & Ground</span>
                   </button>
                 </div>
               </form>
             ) : (
               <div className="p-8 bg-slate-900 border border-slate-700 rounded-3xl text-center text-slate-400 text-xs">
-                Select an unanswered question from the list to write and ingest an authoritative answer.
+                Select an unanswered question from the list to write and ingest an authoritative
+                answer.
               </div>
             )}
           </section>
@@ -440,7 +484,7 @@ export default function AdminDashboardPage() {
       )}
 
       {/* Tab 2: Knowledge Base Management */}
-      {activeTab === 'knowledge' && (
+      {activeTab === "knowledge" && (
         <section aria-labelledby="knowledge-heading" className="space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <h2 id="knowledge-heading" className="text-xl font-bold text-white">
@@ -459,7 +503,10 @@ export default function AdminDashboardPage() {
 
           {/* Modal / Section to add knowledge */}
           {isCreatingKnowledge && (
-            <form onSubmit={handleCreateKnowledge} className="p-6 bg-slate-900 border border-slate-700 rounded-3xl space-y-4 shadow-xl">
+            <form
+              onSubmit={handleCreateKnowledge}
+              className="p-6 bg-slate-900 border border-slate-700 rounded-3xl space-y-4 shadow-xl"
+            >
               <div className="flex items-center justify-between border-b border-slate-800 pb-3">
                 <h3 className="font-bold text-white text-base">New Grounded Knowledge Chunk</h3>
                 <button
@@ -473,7 +520,9 @@ export default function AdminDashboardPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div className="space-y-1 md:col-span-2">
-                  <label htmlFor="new-kb-title" className="block text-xs font-bold text-slate-200">Title</label>
+                  <label htmlFor="new-kb-title" className="block text-xs font-bold text-slate-200">
+                    Title
+                  </label>
                   <input
                     id="new-kb-title"
                     type="text"
@@ -485,7 +534,9 @@ export default function AdminDashboardPage() {
                 </div>
 
                 <div className="space-y-1">
-                  <label htmlFor="new-kb-type" className="block text-xs font-bold text-slate-200">Source Category</label>
+                  <label htmlFor="new-kb-type" className="block text-xs font-bold text-slate-200">
+                    Source Category
+                  </label>
                   <select
                     id="new-kb-type"
                     value={newSourceType}
@@ -502,7 +553,9 @@ export default function AdminDashboardPage() {
               </div>
 
               <div className="space-y-1">
-                <label htmlFor="new-kb-text" className="block text-xs font-bold text-slate-200">Knowledge Content (300-500 words chunks)</label>
+                <label htmlFor="new-kb-text" className="block text-xs font-bold text-slate-200">
+                  Knowledge Content (300-500 words chunks)
+                </label>
                 <textarea
                   id="new-kb-text"
                   required
@@ -533,14 +586,21 @@ export default function AdminDashboardPage() {
 
           <ul className="space-y-3 list-none p-0 m-0">
             {knowledgeList.map((item) => (
-              <li key={item.id} className="p-5 bg-slate-900 border border-slate-700 rounded-2xl space-y-2">
+              <li
+                key={item.id}
+                className="p-5 bg-slate-900 border border-slate-700 rounded-2xl space-y-2"
+              >
                 <div className="flex items-center justify-between border-b border-slate-800 pb-2">
                   <div className="flex items-center gap-2">
                     <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase bg-emerald-950 text-emerald-300 border border-emerald-700">
                       {item.sourceType}
                     </span>
-                    <span className="text-xs text-slate-400 font-mono">v{item.version} ({item.language})</span>
-                    <span className={`text-xs font-bold ${item.status === 'published' ? 'text-emerald-400' : 'text-amber-400'}`}>
+                    <span className="text-xs text-slate-400 font-mono">
+                      v{item.version} ({item.language})
+                    </span>
+                    <span
+                      className={`text-xs font-bold ${item.status === "published" ? "text-emerald-400" : "text-amber-400"}`}
+                    >
                       {item.status}
                     </span>
                   </div>
@@ -563,27 +623,38 @@ export default function AdminDashboardPage() {
       )}
 
       {/* Tab 3: Publish Checklist Auditor */}
-      {activeTab === 'checklist' && (
+      {activeTab === "checklist" && (
         <section aria-labelledby="checklist-heading" className="space-y-6">
           <h2 id="checklist-heading" className="text-xl font-bold text-white">
             Accessible Course & Lesson Publish Checklist
           </h2>
 
           <div className="p-4 bg-blue-950 border border-blue-700 rounded-2xl text-xs text-blue-200 leading-relaxed">
-            <strong>Publishing Quality Rule:</strong> No lesson can be published to learners without a full text transcript, audio/text media, and explicit text descriptions for every visual graphic.
+            <strong>Publishing Quality Rule:</strong> No lesson can be published to learners without
+            a full text transcript, audio/text media, and explicit text descriptions for every
+            visual graphic.
           </div>
 
           <div className="space-y-4">
             {courseList.map((course) => (
-              <div key={course.id} className="p-6 bg-slate-900 border border-slate-700 rounded-3xl space-y-4">
+              <div
+                key={course.id}
+                className="p-6 bg-slate-900 border border-slate-700 rounded-3xl space-y-4"
+              >
                 <div className="flex items-center justify-between border-b border-slate-800 pb-3">
                   <div>
                     <h3 className="text-lg font-bold text-white">{course.title}</h3>
-                    <p className="text-xs text-slate-400">Status: {course.status} | Currency: {course.currency}</p>
+                    <p className="text-xs text-slate-400">
+                      Status: {course.status} | Currency: {course.currency}
+                    </p>
                   </div>
-                  <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${
-                    course.status === 'published' ? 'bg-emerald-950 text-emerald-300 border border-emerald-700' : 'bg-amber-950 text-amber-300'
-                  }`}>
+                  <span
+                    className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${
+                      course.status === "published"
+                        ? "bg-emerald-950 text-emerald-300 border border-emerald-700"
+                        : "bg-amber-950 text-amber-300"
+                    }`}
+                  >
                     {course.status}
                   </span>
                 </div>

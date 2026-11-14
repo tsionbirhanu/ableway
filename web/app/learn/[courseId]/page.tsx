@@ -12,8 +12,8 @@ export default function CourseDetailPage() {
       i === 9
         ? "Deliverables & Core Verbal Delivery"
         : i < 9
-        ? "Foundational Communication Concepts"
-        : "Advanced Workplace Application"
+          ? "Foundational Communication Concepts"
+          : "Advanced Workplace Application"
     }`,
     completed: i < 9,
     current: i === 9,
@@ -23,7 +23,10 @@ export default function CourseDetailPage() {
     <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100">
       <AppHeader />
 
-      <main id="main-content" className="flex-1 max-w-5xl w-full mx-auto px-4 py-8 sm:px-6 lg:px-8 space-y-8">
+      <main
+        id="main-content"
+        className="flex-1 max-w-5xl w-full mx-auto px-4 py-8 sm:px-6 lg:px-8 space-y-8"
+      >
         <Link
           href="/learn"
           className="inline-flex items-center gap-1.5 text-sm text-emerald-400 hover:text-emerald-300 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-400 rounded px-1"
@@ -36,7 +39,9 @@ export default function CourseDetailPage() {
           <span className="text-xs font-mono font-semibold text-emerald-400 uppercase tracking-wider">
             WR 100 &bull; Cohort F26
           </span>
-          <h1 className="text-3xl font-extrabold text-white">Fundamentals of Effective Communication</h1>
+          <h1 className="text-3xl font-extrabold text-white">
+            Fundamentals of Effective Communication
+          </h1>
           <p className="text-slate-400 text-sm">
             15 weeks curriculum. Pre-rendered and accessible via voice or keyboard navigation.
           </p>
@@ -50,8 +55,8 @@ export default function CourseDetailPage() {
                 w.current
                   ? "bg-emerald-950/40 border-emerald-500 shadow-lg ring-1 ring-emerald-500"
                   : w.completed
-                  ? "bg-slate-900 border-slate-800 text-slate-300"
-                  : "bg-slate-900/60 border-slate-800 text-slate-400"
+                    ? "bg-slate-900 border-slate-800 text-slate-300"
+                    : "bg-slate-900/60 border-slate-800 text-slate-400"
               }`}
             >
               <div className="flex items-center gap-3">
@@ -86,4 +91,3 @@ export default function CourseDetailPage() {
     </div>
   );
 }
-

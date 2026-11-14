@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect, useRef } from 'react';
-import { Clock, ShieldAlert, CheckCircle2 } from 'lucide-react';
-import { useA11y } from '@/lib/a11y/a11y-context';
-import { playEarcon } from '@/lib/audio/earcons';
+import React, { useState, useEffect, useEffectEvent, useRef } from "react";
+import { ShieldAlert, CheckCircle2 } from "lucide-react";
+import { useA11y } from "@/lib/a11y/a11y-context";
+import { playEarcon } from "@/lib/audio/earcons";
 
 export function SessionTimeoutWarning() {
   const { announce, speak } = useA11y();
@@ -14,37 +14,41 @@ export function SessionTimeoutWarning() {
   const extendButtonRef = useRef<HTMLButtonElement | null>(null);
   const previousActiveElement = useRef<HTMLElement | null>(null);
 
-  // Inactivity / session timer monitoring (Rule 18)
-  useEffect(() => {
-    // For demonstration and compliance, set a session expiration warning timer
-    // (e.g. 15 minutes in production, or testable via custom event)
-    const warningTimer = setTimeout(() => {
-      triggerWarning();
-    }, 15 * 60 * 1000); // 15 minutes
-
-    const handleManualTest = () => triggerWarning();
-    window.addEventListener('trigger-session-warning', handleManualTest);
-
-    return () => {
-      clearTimeout(warningTimer);
-      window.removeEventListener('trigger-session-warning', handleManualTest);
-    };
-  }, []);
-
-  const triggerWarning = () => {
+  const triggerWarning = useEffectEvent(() => {
     previousActiveElement.current = document.activeElement as HTMLElement;
     setShowWarning(true);
     setRemainingSeconds(120);
 
-    playEarcon('warning');
-    const msg = 'Notice: Your session will expire in 2 minutes to protect your privacy. Press Extend to stay signed in.';
-    announce(msg, 'assertive');
+    playEarcon("warning");
+    const msg =
+      "Notice: Your session will expire in 2 minutes to protect your privacy. Press Extend to stay signed in.";
+    announce(msg, "assertive");
     speak(msg);
 
     setTimeout(() => {
       extendButtonRef.current?.focus();
     }, 50);
-  };
+  });
+
+  // Inactivity / session timer monitoring (Rule 18)
+  useEffect(() => {
+    // For demonstration and compliance, set a session expiration warning timer
+    // (e.g. 15 minutes in production, or testable via custom event)
+    const warningTimer = setTimeout(
+      () => {
+        triggerWarning();
+      },
+      15 * 60 * 1000,
+    ); // 15 minutes
+
+    const handleManualTest = () => triggerWarning();
+    window.addEventListener("trigger-session-warning", handleManualTest);
+
+    return () => {
+      clearTimeout(warningTimer);
+      window.removeEventListener("trigger-session-warning", handleManualTest);
+    };
+  }, []);
 
   // Countdown timer when warning is active
   useEffect(() => {
@@ -55,7 +59,7 @@ export function SessionTimeoutWarning() {
         if (prev <= 1) {
           clearInterval(interval);
           setShowWarning(false);
-          announce('Your session has expired. Please sign in again.', 'assertive');
+          announce("Your session has expired. Please sign in again.", "assertive");
           return 0;
         }
         return prev - 1;
@@ -67,8 +71,8 @@ export function SessionTimeoutWarning() {
 
   const handleExtend = () => {
     setShowWarning(false);
-    playEarcon('success');
-    announce('Session extended successfully. You remain signed in.', 'polite');
+    playEarcon("success");
+    announce("Session extended successfully. You remain signed in.", "polite");
     previousActiveElement.current?.focus();
   };
 
@@ -76,7 +80,7 @@ export function SessionTimeoutWarning() {
 
   const minutes = Math.floor(remainingSeconds / 60);
   const seconds = remainingSeconds % 60;
-  const timeFormatted = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+  const timeFormatted = `${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
 
   return (
     <div
@@ -106,7 +110,8 @@ export function SessionTimeoutWarning() {
         </div>
 
         <p id="timeout-desc" className="text-sm text-slate-200 leading-relaxed">
-          To protect your privacy and security, your session will expire soon. You can extend your session anytime without losing your work.
+          To protect your privacy and security, your session will expire soon. You can extend your
+          session anytime without losing your work.
         </p>
 
         <div className="pt-2 flex flex-col sm:flex-row gap-3">
@@ -124,4 +129,3 @@ export function SessionTimeoutWarning() {
     </div>
   );
 }
-

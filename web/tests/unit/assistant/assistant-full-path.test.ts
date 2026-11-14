@@ -63,12 +63,12 @@ describe("End-to-End Learner Journey: Register -> Enroll -> Request Help -> Help
     const coursesRes = await coursesRoute.GET(new Request("http://localhost/api/courses"));
     expect(coursesRes.status).toBe(200);
     const { courses } = await coursesRes.json();
-    expect(courses.some((c: any) => c.slug === "data-analytics")).toBe(true);
+    expect(courses.some((c: { slug: string }) => c.slug === "data-analytics")).toBe(true);
 
     // Verify GET /api/courses/[id] returns the published course
     const singleCourseRes = await singleCourseRoute.GET(
       new Request("http://localhost/api/courses/data-analytics"),
-      { params: Promise.resolve({ id: "data-analytics" }) }
+      { params: Promise.resolve({ id: "data-analytics" }) },
     );
     expect(singleCourseRes.status).toBe(200);
     const { course: fetchedCourse } = await singleCourseRes.json();
@@ -94,7 +94,7 @@ describe("End-to-End Learner Journey: Register -> Enroll -> Request Help -> Help
         name: "Tsion Birhanu",
         password: "ValidPass123!Secure",
       },
-      { ip: "127.0.0.1" }
+      { ip: "127.0.0.1" },
     );
 
     expect(learnerAccount).toBeDefined();
@@ -177,7 +177,7 @@ describe("End-to-End Learner Journey: Register -> Enroll -> Request Help -> Help
     const queueRes = await queueRoute.GET(new Request("http://localhost/api/helper/queue"));
     expect(queueRes.status).toBe(200);
     const queueData = await queueRes.json();
-    expect(queueData.queue.some((r: any) => r.id === helpRequestId)).toBe(true);
+    expect(queueData.queue.some((r: { id: string }) => r.id === helpRequestId)).toBe(true);
 
     // POST /api/helper/requests/[id]/accept
     const acceptReq = new Request(`http://localhost/api/helper/requests/${helpRequestId}/accept`, {
@@ -258,9 +258,12 @@ describe("End-to-End Learner Journey: Register -> Enroll -> Request Help -> Help
     // -------------------------------------------------------------
     // Step 7: Helper Handback -> Assistant Resumes
     // -------------------------------------------------------------
-    const handbackReq = new Request(`http://localhost/api/helper/requests/${helpRequestId}/handback`, {
-      method: "POST",
-    });
+    const handbackReq = new Request(
+      `http://localhost/api/helper/requests/${helpRequestId}/handback`,
+      {
+        method: "POST",
+      },
+    );
     const handbackRes = await handbackRoute.POST(handbackReq, {
       params: Promise.resolve({ id: helpRequestId }),
     });

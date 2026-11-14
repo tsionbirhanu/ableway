@@ -1,4 +1,5 @@
 import "server-only";
+import { logger } from "@/lib/log";
 import { z } from "zod";
 
 /**
@@ -49,7 +50,13 @@ export const envSchema = z.object({
     }),
   ),
   SMS_API_KEY: z.preprocess(emptyToUndefined, z.string().optional()),
-  SMS_ENABLED: z.preprocess(emptyToUndefined, z.enum(["true", "false"]).default("false").transform((v) => v === "true")),
+  SMS_ENABLED: z.preprocess(
+    emptyToUndefined,
+    z
+      .enum(["true", "false"])
+      .default("false")
+      .transform((v) => v === "true"),
+  ),
   CRON_SECRET: secret(16),
   APP_URL: required(
     z
@@ -79,7 +86,11 @@ export const envSchema = z.object({
       .max(1, { error: "must be a number from 0 to 1" })
       .default(0.65),
   ),
-  /** Opt-in. Off by default: uploaded audio is never stored. */
+  /**
+   * Operator switch for keeping voice recordings. Off by default: audio is
+   * never stored. Even when on, a recording is kept only for a learner who
+   * has opted in (voice_retention consent), and only for SPEECH_RETENTION_DAYS.
+   */
   SPEECH_RETAIN_AUDIO: z.preprocess(
     emptyToUndefined,
     z
@@ -87,18 +98,31 @@ export const envSchema = z.object({
       .default("false")
       .transform((value) => value === "true"),
   ),
-  /** Where retained audio goes, if SPEECH_RETAIN_AUDIO=true. */
-  SPEECH_RETENTION_DIR: z.preprocess(
-    emptyToUndefined,
-    z.string().default(".data/speech-retention"),
-  ),
-  /** Days to keep retained audio before deleting it. */
-  /** Optional path to ffmpeg. Read directly by lib/speech/ffmpeg.ts (not a secret). */
-  FFMPEG_PATH: optional(z.string()),
+  /** Days to keep an opted-in voice recording before the retention cron deletes it. 1-90. */
   SPEECH_RETENTION_DAYS: z.preprocess(
     emptyToUndefined,
-    z.coerce.number().int().min(1).max(365).default(30),
+    z.coerce
+      .number({ error: "must be a whole number of days from 1 to 90" })
+      .int({ error: "must be a whole number of days from 1 to 90" })
+      .min(1, { error: "must be a whole number of days from 1 to 90" })
+      .max(90, { error: "must be a whole number of days from 1 to 90" })
+      .default(30),
   ),
+  /**
+   * Days to keep assistant conversations (web and Telegram) after their last
+   * message. The retention cron deletes older ones. 1-730.
+   */
+  CONVERSATION_RETENTION_DAYS: z.preprocess(
+    emptyToUndefined,
+    z.coerce
+      .number({ error: "must be a whole number of days from 1 to 730" })
+      .int({ error: "must be a whole number of days from 1 to 730" })
+      .min(1, { error: "must be a whole number of days from 1 to 730" })
+      .max(730, { error: "must be a whole number of days from 1 to 730" })
+      .default(90),
+  ),
+  /** Optional path to ffmpeg. Read directly by lib/speech/ffmpeg.ts (not a secret). */
+  FFMPEG_PATH: optional(z.string()),
 });
 
 /**
@@ -214,13 +238,11 @@ export function getEnv(): Env {
     cached = parseEnv(process.env);
     const mocked = usedMockSecrets(cached);
     if (mocked.length > 0) {
-      console.warn(`Development mode: using mock values for ${mocked.join(", ")}.`);
+      logger.warn("env.dev_mock_secrets", { keys: mocked });
     }
     const missing = missingFeatureKeys(cached);
     if (missing.length > 0) {
-      console.warn(
-        `Development mode: these features are off until you set their keys: ${missing.join(", ")}.`,
-      );
+      logger.warn("env.features_off", { keys: missing });
     }
   }
   return cached;

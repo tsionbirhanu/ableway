@@ -20,6 +20,26 @@ export const LIMITS = {
   // Passkeys: starting a ceremony is cheap, so allow more; finishing is where guessing would happen.
   passkeyStartPerIp: { max: 30, windowSeconds: 15 * 60 },
   passkeyFinishPerIp: { max: 30, windowSeconds: 15 * 60 },
+  // Telegram link codes are 6 digits: few guesses per Telegram account.
+  telegramLinkPerAccount: { max: 5, windowSeconds: 15 * 60 },
+
+  // ---------- Every API route (lib/api/handler.ts) ----------
+  // Reads: pages poll some of these (help status, helper queue).
+  apiReadPerIp: { max: 600, windowSeconds: 5 * 60 },
+  apiReadPerUser: { max: 600, windowSeconds: 5 * 60 },
+  // Writes.
+  apiWritePerIp: { max: 120, windowSeconds: 5 * 60 },
+  apiWritePerUser: { max: 120, windowSeconds: 5 * 60 },
+  // The assistant calls Gemini, so it costs money: lower.
+  assistantPerIp: { max: 40, windowSeconds: 5 * 60 },
+  assistantPerUser: { max: 40, windowSeconds: 5 * 60 },
+  // Personal data export builds a large file.
+  exportPerUser: { max: 5, windowSeconds: 60 * 60 },
+  accountDeletePerUser: { max: 5, windowSeconds: 60 * 60 },
+  // Telegram webhook: many learners arrive from Telegram's few IPs.
+  telegramWebhookPerIp: { max: 3000, windowSeconds: 5 * 60 },
+  // Cron routes are called a few times an hour at most.
+  cronPerIp: { max: 30, windowSeconds: 5 * 60 },
 } satisfies Record<string, Limit>;
 
 /** Rate-limit keys never contain personal data in clear text. */
@@ -78,10 +98,7 @@ export async function enforce(
   }
 }
 
-/**
- * Delete expired windows.
- * TODO: call this from a cron route protected by CRON_SECRET (not built yet).
- */
+/** Delete expired windows. Called by the retention cron (lib/privacy/retention.ts). */
 export async function pruneRateLimits(db: Db, olderThan: Date): Promise<number> {
   const deleted = await db
     .delete(rateLimits)

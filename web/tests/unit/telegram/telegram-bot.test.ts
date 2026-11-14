@@ -22,12 +22,15 @@ const { createTelegramBot, setTelegramBotForTests } = await import("@/lib/telegr
 const { generateLinkCode, getTelegramLink } = await import("@/lib/telegram/linking");
 const { relayHelperMessage, resolveHelperSession } = await import("@/lib/telegram/relay");
 const { setMockSynthesizer, setMockTranscriber } = await import("@/lib/speech");
-const { POST, isUpdateProcessed, resetProcessedUpdatesForTests } =
-  await import("@/app/api/telegram/route");
+const { POST } = await import("@/app/api/telegram/route");
+const { isUpdateProcessed, resetProcessedUpdatesForTests } = await import("@/lib/telegram/webhook");
 const linkCodeRoute = await import("@/app/api/telegram/link-code/route");
 
 let t: TestDb;
 let f: AuthFixtures;
+
+const linkCodeRequest = (method: string) =>
+  new Request("http://test.local/api/telegram/link-code", { method });
 let sentApiCalls: Array<{ method: string; payload: Record<string, unknown> }>;
 
 beforeAll(async () => {
@@ -61,6 +64,16 @@ beforeEach(() => {
 
   mockBot.api.config.use(async (_prev, method, payload) => {
     sentApiCalls.push({ method, payload: payload as Record<string, unknown> });
+    if (method === "getFile") {
+      return {
+        ok: true,
+        result: {
+          file_id: (payload as any).file_id,
+          file_unique_id: "u",
+          file_path: "voice/a.oga",
+        },
+      } as any;
+    }
     return {
       ok: true,
       result: {
@@ -514,6 +527,9 @@ describe("Telegram Webhook Route & Bot", () => {
 
     setMockTranscriber(async () => "How do I choose a course?");
     setMockSynthesizer(async () => Buffer.from("RIFFmock-audio-data"));
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response(new Uint8Array([0x4f, 0x67, 0x67, 0x53])));
 
     sentApiCalls = [];
     const update = createMockUpdate({
@@ -533,6 +549,34 @@ describe("Telegram Webhook Route & Bot", () => {
     expect(voiceCall).toBeDefined();
     expect(textCall).toBeDefined();
     expect(textCall?.payload.text as string).toContain("courses");
+    expect(String(fetchSpy.mock.calls[0]?.[0])).toContain("/voice/a.oga");
+  });
+
+  it("does not invent a transcript when the voice note cannot be downloaded", async () => {
+    const telegramId = 555014;
+    const [p] = await t.db
+      .insert(s.profiles)
+      .values({ name: "Voice Learner Two", role: "learner", phone: "+15555550299" })
+      .returning();
+    await t.db.insert(s.telegramLinks).values({
+      profileId: p!.id,
+      telegramId,
+      language: "en",
+      consentAt: new Date(),
+    });
+    const transcriber = vi.fn(async () => "should not be called");
+    setMockTranscriber(transcriber);
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("nope", { status: 404 }));
+
+    sentApiCalls = [];
+    const { getTelegramBot } = await import("@/lib/telegram/bot");
+    await getTelegramBot().handleUpdate(
+      createMockUpdate({ updateId: 6011, userId: telegramId, voiceFileId: "voice-missing" }),
+    );
+
+    expect(transcriber).not.toHaveBeenCalled();
+    const reply = sentApiCalls.find((c) => c.method === "sendMessage");
+    expect(reply?.payload.text as string).toMatch(/could not understand/i);
   });
 
   it("handles forwarded messages: treats as untrusted data, summarizes and reads aloud with voice and text", async () => {
@@ -859,13 +903,13 @@ describe("Telegram Webhook Route & Bot", () => {
   describe("Web Profile Link Code Route (/api/telegram/link-code)", () => {
     it("rejects unauthorized callers with 401", async () => {
       state.userId = null;
-      const resPost = await linkCodeRoute.POST();
+      const resPost = await linkCodeRoute.POST(linkCodeRequest("POST"));
       expect(resPost.status).toBe(401);
 
-      const resGet = await linkCodeRoute.GET();
+      const resGet = await linkCodeRoute.GET(linkCodeRequest("GET"));
       expect(resGet.status).toBe(401);
 
-      const resDelete = await linkCodeRoute.DELETE();
+      const resDelete = await linkCodeRoute.DELETE(linkCodeRequest("DELETE"));
       expect(resDelete.status).toBe(401);
     });
 
@@ -873,7 +917,7 @@ describe("Telegram Webhook Route & Bot", () => {
       state.userId = f.learnerA.id;
 
       // 1. POST generates one-time code
-      const resPost = await linkCodeRoute.POST();
+      const resPost = await linkCodeRoute.POST(linkCodeRequest("POST"));
       expect(resPost.status).toBe(200);
       const postData = await resPost.json();
       expect(postData.code).toMatch(/^\d{6}$/);
@@ -890,7 +934,7 @@ describe("Telegram Webhook Route & Bot", () => {
       // Delete any leftover link for learnerA from previous tests to test fresh state
       await t.db.delete(s.telegramLinks).where(eq(s.telegramLinks.profileId, f.learnerA.id));
 
-      const resGetUnlinked = await linkCodeRoute.GET();
+      const resGetUnlinked = await linkCodeRoute.GET(linkCodeRequest("GET"));
       expect(resGetUnlinked.status).toBe(200);
       const getUnlinkedData = await resGetUnlinked.json();
       expect(getUnlinkedData.isLinked).toBe(false);
@@ -904,14 +948,14 @@ describe("Telegram Webhook Route & Bot", () => {
       });
 
       // GET returns linked status
-      const resGetLinked = await linkCodeRoute.GET();
+      const resGetLinked = await linkCodeRoute.GET(linkCodeRequest("GET"));
       expect(resGetLinked.status).toBe(200);
       const getLinkedData = await resGetLinked.json();
       expect(getLinkedData.isLinked).toBe(true);
       expect(getLinkedData.telegramId).toBe(888123);
 
       // 3. DELETE unlinks via web profile
-      const resDelete = await linkCodeRoute.DELETE();
+      const resDelete = await linkCodeRoute.DELETE(linkCodeRequest("DELETE"));
       expect(resDelete.status).toBe(200);
       const deleteData = await resDelete.json();
       expect(deleteData.success).toBe(true);

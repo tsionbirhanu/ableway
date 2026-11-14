@@ -1,4 +1,5 @@
 import { ZodError } from "zod";
+import { logger } from "@/lib/log";
 
 /**
  * Errors that route handlers turn into HTTP responses.
@@ -46,6 +47,18 @@ export class BadRequestError extends HttpError {
   }
 }
 
+export class PayloadTooLargeError extends HttpError {
+  constructor(message = "That is too much to send at once. Please send less.") {
+    super(413, "payload_too_large", message);
+  }
+}
+
+export class UnsupportedMediaTypeError extends HttpError {
+  constructor(message = "Please send JSON.") {
+    super(415, "unsupported_media_type", message);
+  }
+}
+
 export class RateLimitError extends HttpError {
   constructor(public readonly retryAfterSeconds: number) {
     super(429, "rate_limited", "Too many tries. Please wait a few minutes, then try again.", {
@@ -65,7 +78,7 @@ export function errorResponse(error: unknown): Response {
   if (error instanceof ZodError) {
     return errorResponse(new BadRequestError());
   }
-  console.error(error);
+  logger.error("api.unhandled_error", { error });
   return Response.json(
     { error: { code: "server_error", message: "Something went wrong. Please try again." } },
     { status: 500 },

@@ -1,3 +1,4 @@
+import { logger } from "@/lib/log";
 import { resolveVoice, speechLanguage } from "../languages";
 import {
   SpeechError,
@@ -41,7 +42,7 @@ async function call(config: AzureConfig, url: string, init: RequestInit): Promis
   }
   if (!res.ok) {
     // 401/403 bad key, 429 provider quota, 5xx outage: the learner hears the same plain message.
-    console.error(`Azure speech request failed: ${res.status} ${url.split("?")[0]}`);
+    logger.error("speech.azure.http_error", { status: res.status, path: url.split("?")[0] });
     throw new SpeechError("speech_unavailable");
   }
   return res;

@@ -75,7 +75,7 @@ export const GLOBAL_VOICE_COMMANDS: VoiceCommandDefinition[] = [
 
 export function parseVoiceCommand(
   transcript: string,
-  customCommands: VoiceCommandDefinition[] = []
+  customCommands: VoiceCommandDefinition[] = [],
 ): { intent: VoiceCommandIntent; matchedPhrase?: string } {
   const clean = transcript.toLowerCase().trim();
   const allCommands = [...GLOBAL_VOICE_COMMANDS, ...customCommands];
@@ -90,4 +90,3 @@ export function parseVoiceCommand(
 
   return { intent: "UNKNOWN" };
 }
-

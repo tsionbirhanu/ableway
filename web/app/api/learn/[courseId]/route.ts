@@ -1,14 +1,8 @@
 import { and, asc, eq, inArray, or } from "drizzle-orm";
 import { getDb } from "@/lib/db/client";
-import {
-  courses,
-  enrollments,
-  lessons,
-  modules,
-  quizQuestions,
-  quizzes,
-} from "@/lib/db/schema";
-import { ForbiddenError, NotFoundError, withErrors } from "@/lib/auth/errors";
+import { courses, enrollments, lessons, modules, quizQuestions, quizzes } from "@/lib/db/schema";
+import { ForbiddenError, NotFoundError } from "@/lib/auth/errors";
+import { withApi } from "@/lib/api/handler";
 import { requireActor } from "@/lib/auth/session";
 
 interface RouteProps {
@@ -20,7 +14,7 @@ interface RouteProps {
  * Retrieves modules, lessons, and quizzes with progress, ONLY for active enrollments.
  * Correct answers and explanations for quizzes are strictly omitted for server-side grading.
  */
-export const GET = withErrors(async (_request: Request, props: RouteProps) => {
+export const GET = withApi({}, async (_request: Request, props: RouteProps) => {
   const actor = await requireActor();
   const { courseId } = await props.params;
   const db = getDb();
@@ -62,7 +56,7 @@ export const GET = withErrors(async (_request: Request, props: RouteProps) => {
 
   if (!enrollment || enrollment.status !== "active") {
     throw new ForbiddenError(
-      "You must have an active enrollment to access course lessons and quizzes. Please complete your enrollment."
+      "You must have an active enrollment to access course lessons and quizzes. Please complete your enrollment.",
     );
   }
 
@@ -157,4 +151,3 @@ export const GET = withErrors(async (_request: Request, props: RouteProps) => {
     lastPosition: enrollment.lastPosition,
   });
 });
-

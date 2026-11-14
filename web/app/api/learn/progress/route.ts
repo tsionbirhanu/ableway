@@ -2,11 +2,12 @@ import { and, asc, eq, inArray, or } from "drizzle-orm";
 import { z } from "zod";
 import { getDb } from "@/lib/db/client";
 import { courses, enrollments, lessons, modules } from "@/lib/db/schema";
-import { ForbiddenError, NotFoundError, withErrors } from "@/lib/auth/errors";
+import { ForbiddenError, NotFoundError } from "@/lib/auth/errors";
+import { withApi } from "@/lib/api/handler";
 import { readJson } from "@/lib/auth/params";
 import { requireActor } from "@/lib/auth/session";
 
-const progressInputSchema = z.object({
+const progressInputSchema = z.strictObject({
   courseId: z.string().trim().min(1),
   lastPosition: z
     .object({
@@ -28,12 +29,14 @@ const progressInputSchema = z.object({
  * POST /api/learn/progress
  * Saves learner position, completed lessons, and quiz scores.
  */
-export const POST = withErrors(async (request: Request) => {
+export const POST = withApi({}, async (request: Request) => {
   const actor = await requireActor();
   const body = progressInputSchema.parse(await readJson(request));
   const db = getDb();
 
-  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(body.courseId);
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+    body.courseId,
+  );
   const courseCond = isUuid
     ? or(eq(courses.id, body.courseId), eq(courses.slug, body.courseId))
     : eq(courses.slug, body.courseId);
@@ -70,7 +73,7 @@ export const POST = withErrors(async (request: Request) => {
     const existing = quizResults[body.quizResult.quizId];
     quizResults[body.quizResult.quizId] = {
       bestScore: Math.max(existing?.bestScore || 0, body.quizResult.bestScore),
-      passed: (existing?.passed || false) || body.quizResult.passed,
+      passed: existing?.passed || false || body.quizResult.passed,
       attempts: (existing?.attempts || 0) + 1,
     };
   }
@@ -103,7 +106,7 @@ export const POST = withErrors(async (request: Request) => {
  * GET /api/learn/progress
  * Returns where to resume and current completion status.
  */
-export const GET = withErrors(async (request: Request) => {
+export const GET = withApi({}, async (request: Request) => {
   const actor = await requireActor();
   const { searchParams } = new URL(request.url);
   const courseIdParam = searchParams.get("courseId");
@@ -125,7 +128,9 @@ export const GET = withErrors(async (request: Request) => {
     .where(eq(enrollments.profileId, actor.id));
 
   if (courseIdParam) {
-    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(courseIdParam);
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+      courseIdParam,
+    );
     const cond = isUuid
       ? or(eq(courses.id, courseIdParam), eq(courses.slug, courseIdParam))
       : eq(courses.slug, courseIdParam);
@@ -207,4 +212,3 @@ export const GET = withErrors(async (request: Request) => {
     isCompleted: allLessons.length > 0 && completedIds.size >= allLessons.length,
   });
 });
-

@@ -84,7 +84,9 @@ function signInFailure(error: unknown, fallback: string): Failure {
 
 export async function startPasskeyRegistrationAction(
   details: unknown,
-): Promise<{ ok: true; challengeId: string; options: PublicKeyCredentialCreationOptionsJSON } | Failure> {
+): Promise<
+  { ok: true; challengeId: string; options: PublicKeyCredentialCreationOptionsJSON } | Failure
+> {
   try {
     const result = await startPasskeyRegistration(getDb(), details, await context());
     return { ok: true, ...result };

@@ -77,6 +77,18 @@ export const messageFlags = [
   "handoff_triggered",
   /** The assistant could not answer. */
   "unanswered",
+  /** A helper took over the conversation. */
+  "handover_accepted",
+  /** A helper gave the conversation back to the assistant. */
+  "handback",
+  /** A helper closed the help request. */
+  "request_closed",
+  /** A helper confirmed a payment. */
+  "payment_confirmed",
+  /** The assistant was not sure of its answer. */
+  "low_confidence",
+  /** The assistant handed this conversation to a human. */
+  "escalated",
 ] as const;
 
 export const messageFlagsSchema = z.array(z.enum(messageFlags)).max(messageFlags.length);

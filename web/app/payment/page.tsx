@@ -1,40 +1,30 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect, useRef, useCallback, Suspense } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
+import React, { useState, useEffect, useRef, useCallback, Suspense } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   PhoneCall,
   ShieldCheck,
   CheckCircle2,
-  Clock,
   AlertCircle,
-  ArrowRight,
-  MessageSquare,
   Send,
-  User,
   Globe,
   Mic,
   MicOff,
   Headphones,
   ArrowLeft,
-  RotateCcw,
-} from 'lucide-react';
-import { useA11y } from '@/lib/a11y/a11y-context';
-import { playEarcon } from '@/lib/audio/earcons';
+} from "lucide-react";
+import { useA11y } from "@/lib/a11y/a11y-context";
+import type { RecognitionLike, RecognitionResultEvent } from "@/lib/speech/client/recognition";
+import { playEarcon } from "@/lib/audio/earcons";
 
 export type PaymentFlowStatus =
-  | 'idle'
-  | 'waiting'
-  | 'assigned'
-  | 'in_progress'
-  | 'done'
-  | 'callback_requested'
-  | 'failure';
+  "idle" | "waiting" | "assigned" | "in_progress" | "done" | "callback_requested" | "failure";
 
 interface ChatMessage {
   id: string;
-  sender: 'staff' | 'learner';
+  sender: "staff" | "learner";
   senderName: string;
   text: string;
   timestamp: string;
@@ -47,47 +37,46 @@ function PaymentContent() {
   const h1Ref = useRef<HTMLHeadingElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  const isAmharic = language === 'am-ET';
+  const isAmharic = language === "am-ET";
 
-  const courseId = searchParams.get('courseId') || 'data-analytics';
-  const courseTitle = searchParams.get('title') || 'Data Analytics';
-  const price = searchParams.get('price') || '500 ETB';
+  const courseId = searchParams.get("courseId") || "data-analytics";
+  const courseTitle = searchParams.get("title") || "Data Analytics";
+  const price = searchParams.get("price") || "500 ETB";
 
   // Contact Method & Details (F0 Rule 1, 15)
-  const [contactMethod, setContactMethod] = useState<'phone' | 'sms' | 'telegram'>('phone');
-  const [phoneNumber, setPhoneNumber] = useState('');
+  const [contactMethod, setContactMethod] = useState<"phone" | "sms" | "telegram">("phone");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [phoneError, setPhoneError] = useState<string | null>(null);
 
   // Status Machine: idle -> waiting -> assigned -> in_progress -> done (or callback_requested / failure)
-  const [status, setStatus] = useState<PaymentFlowStatus>('idle');
-  const [ticketId, setTicketId] = useState<string>('TICKET-' + Math.floor(1000 + Math.random() * 9000));
-  const [estimatedWait, setEstimatedWait] = useState<string>('2 minutes');
-  const [isOperatingHours, setIsOperatingHours] = useState(true);
+  const [status, setStatus] = useState<PaymentFlowStatus>("idle");
+  // The real help request id, once /api/help returns it.
+  const [ticketId, setTicketId] = useState<string>("");
+  const estimatedWait = "2 minutes";
   const [callbackSlots, setCallbackSlots] = useState<string[]>([]);
-  const [selectedCallbackSlot, setSelectedCallbackSlot] = useState<string>('');
-  const [assignedHelperName, setAssignedHelperName] = useState<string>('Meron Kebede');
+  const [selectedCallbackSlot, setSelectedCallbackSlot] = useState<string>("");
 
   // Track announcements so each change is announced strictly ONCE
-  const lastAnnouncedStatusRef = useRef<string>('');
+  const lastAnnouncedStatusRef = useRef<string>("");
 
   // Chat Log (role="log")
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [chatInput, setChatInput] = useState('');
+  const [chatInput, setChatInput] = useState("");
 
   // Voice command state for "Call a helper"
   const [isListeningVoice, setIsListeningVoice] = useState(false);
-  const recognitionRef = useRef<any>(null);
+  const recognitionRef = useRef<RecognitionLike | null>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
 
   // Safe Announcement Helper (Announces each change ONCE)
   const announceOnce = useCallback(
-    (key: string, text: string, politeness: 'polite' | 'assertive' = 'polite') => {
+    (key: string, text: string, politeness: "polite" | "assertive" = "polite") => {
       if (lastAnnouncedStatusRef.current !== key) {
         lastAnnouncedStatusRef.current = key;
         announce(text, politeness);
       }
     },
-    [announce]
+    [announce],
   );
 
   // Clean up SSE on unmount
@@ -101,12 +90,12 @@ function PaymentContent() {
 
   // Focus h1 on mount (F0 Rule 7)
   useEffect(() => {
-    document.title = isAmharic ? 'ክፍያ - Ableway' : 'Payment - Ableway';
+    document.title = isAmharic ? "ክፍያ - Ableway" : "Payment - Ableway";
     announceOnce(
-      'page_loaded',
+      "page_loaded",
       isAmharic
         ? `የክፍያ ገጽ ተከፍቷል። የኮርሱ ዋጋ ${price} ነው። የሰው አጋዥ እንዲረዳዎት ጥሪ ማድረግ ይችላሉ።`
-        : `Payment page loaded. Amount is ${price}. A helper will contact you to pay safely. Nobody will ever ask for a PIN or password.`
+        : `Payment page loaded. Amount is ${price}. A helper will contact you to pay safely. Nobody will ever ask for a PIN or password.`,
     );
     if (h1Ref.current) {
       h1Ref.current.focus();
@@ -115,74 +104,94 @@ function PaymentContent() {
 
   // Scroll chat into view
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Confirm payment and navigate to /learn/[courseId]
+  const handleConfirmPayment = useCallback(() => {
+    setStatus("done");
+    playEarcon("success");
+    const confirmedMsg = "Payment confirmed. Opening your course";
+    announceOnce("status_done", confirmedMsg, "polite");
+
+    setTimeout(() => {
+      router.push(`/learn/${courseId}`);
+    }, 1500);
+  }, [announceOnce, courseId, router]);
+
   // Subscribe to live status updates from SSE / polling
-  const subscribeToStatus = useCallback((realTicketId: string) => {
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close();
-    }
+  const subscribeToStatus = useCallback(
+    (realTicketId: string) => {
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+      }
 
-    try {
-      const es = new EventSource(`/api/help/${realTicketId}/status?stream=true`);
-      eventSourceRef.current = es;
+      try {
+        const es = new EventSource(`/api/help/${realTicketId}/status?stream=true`);
+        eventSourceRef.current = es;
 
-      es.onmessage = (event) => {
-        try {
-          const payload = JSON.parse(event.data);
-          if (payload.assignedHelper?.fullName) {
-            setAssignedHelperName(payload.assignedHelper.fullName);
-          }
-          if (payload.status === 'assigned') {
-            setStatus('assigned');
-            announceOnce('status_assigned', `Helper assigned: ${payload.assignedHelper?.fullName || 'Staff Helper'}.`, 'polite');
-          } else if (payload.status === 'in_progress') {
-            setStatus('in_progress');
-            announceOnce('status_in_progress', `In progress: Helper is connected in chat.`, 'polite');
-          } else if (payload.status === 'done') {
-            handleConfirmPayment();
-          }
-        } catch {}
-      };
+        es.onmessage = (event) => {
+          try {
+            const payload = JSON.parse(event.data);
+            if (payload.status === "assigned") {
+              setStatus("assigned");
+              announceOnce(
+                "status_assigned",
+                `Helper assigned: ${payload.assignedHelper?.fullName || "Staff Helper"}.`,
+                "polite",
+              );
+            } else if (payload.status === "in_progress") {
+              setStatus("in_progress");
+              announceOnce(
+                "status_in_progress",
+                `In progress: Helper is connected in chat.`,
+                "polite",
+              );
+            } else if (payload.status === "done") {
+              handleConfirmPayment();
+            }
+          } catch {}
+        };
 
-      es.onerror = () => {
-        es.close();
-      };
-    } catch {}
-  }, [announceOnce]);
+        es.onerror = () => {
+          es.close();
+        };
+      } catch {}
+    },
+    [announceOnce, handleConfirmPayment],
+  );
 
   // Handle "Call a helper" action
   const handleCallHelper = useCallback(() => {
     // Validate phone number if phone or sms selected
-    if ((contactMethod === 'phone' || contactMethod === 'sms') && !phoneNumber.trim()) {
+    if ((contactMethod === "phone" || contactMethod === "sms") && !phoneNumber.trim()) {
       const err = isAmharic
-        ? 'እባክዎ የስልክ ቁጥርዎን ያስገቡ።'
-        : 'Please enter a phone number so the helper can contact you.';
+        ? "እባክዎ የስልክ ቁጥርዎን ያስገቡ።"
+        : "Please enter a phone number so the helper can contact you.";
       setPhoneError(err);
-      announceOnce('phone_error', err, 'assertive');
+      announceOnce("phone_error", err, "assertive");
       return;
     }
 
     setPhoneError(null);
-    setStatus('waiting');
-    playEarcon('success');
+    setStatus("waiting");
+    playEarcon("success");
 
     const waitMsg = isAmharic
       ? `የእርዳታ ጥያቄ ቀርቧል። አጋዥ በመጠባበቅ ላይ... የሚገመተው የጥበቃ ጊዜ ${estimatedWait} ነው።`
       : `Help request created. Waiting for an available helper... Estimated wait: ${estimatedWait}.`;
-    announceOnce('status_waiting', waitMsg, 'polite');
+    announceOnce("status_waiting", waitMsg, "polite");
 
     // Real backend help request to /api/help
-    fetch('/api/help', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    fetch("/api/help", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        type: 'payment',
+        type: "payment",
         reason: `Payment assistance for ${courseTitle} (${price})`,
         summary: `Learner requesting assistance paying ${price} for course ${courseTitle}`,
-        channel: contactMethod === 'phone' || contactMethod === 'sms' ? 'phone' : 'telegram',
-        page: '/payment',
+        channel: contactMethod === "phone" || contactMethod === "sms" ? "phone" : "telegram",
+        page: "/payment",
       }),
     })
       .then((res) => (res.ok ? res.json() : null))
@@ -190,7 +199,6 @@ function PaymentContent() {
         if (data?.id) {
           setTicketId(data.id);
           if (data.isOperatingHours === false) {
-            setIsOperatingHours(false);
             if (Array.isArray(data.availableCallbackSlots)) {
               setCallbackSlots(data.availableCallbackSlots);
               if (data.availableCallbackSlots[0]) {
@@ -206,13 +214,13 @@ function PaymentContent() {
     // Fallback simulation timer for tests or instant mock progress
     const assignTimer = setTimeout(() => {
       setStatus((current) => {
-        if (current === 'waiting') {
-          playEarcon('command-recognized');
+        if (current === "waiting") {
+          playEarcon("command-recognized");
           const assignedMsg = isAmharic
-            ? 'አጋዥ ተመድቧል፦ ሜሮን ከበደ የእርስዎን ጥያቄ ተቀብላለች።'
-            : 'Helper assigned: Meron Kebede is ready to help you.';
-          announceOnce('status_assigned', assignedMsg, 'polite');
-          return 'assigned';
+            ? "አጋዥ ተመድቧል፦ ሜሮን ከበደ የእርስዎን ጥያቄ ተቀብላለች።"
+            : "Helper assigned: Meron Kebede is ready to help you.";
+          announceOnce("status_assigned", assignedMsg, "polite");
+          return "assigned";
         }
         return current;
       });
@@ -220,24 +228,24 @@ function PaymentContent() {
 
     const progressTimer = setTimeout(() => {
       setStatus((current) => {
-        if (current === 'assigned' || current === 'waiting') {
-          playEarcon('command-recognized');
+        if (current === "assigned" || current === "waiting") {
+          playEarcon("command-recognized");
           const inProgMsg = isAmharic
-            ? 'ሂደት ላይ፦ አጋዥ ሜሮን በቀጥታ የውይይት መስመር ተገናኝታለች።'
-            : 'In progress: Helper Meron is connected in chat.';
-          announceOnce('status_in_progress', inProgMsg, 'polite');
+            ? "ሂደት ላይ፦ አጋዥ ሜሮን በቀጥታ የውይይት መስመር ተገናኝታለች።"
+            : "In progress: Helper Meron is connected in chat.";
+          announceOnce("status_in_progress", inProgMsg, "polite");
 
           const welcomeStaffMsg: ChatMessage = {
-            id: 'msg-init',
-            sender: 'staff',
-            senderName: isAmharic ? 'ሜሮን ከበደ (የሰው አጋዥ)' : 'Meron Kebede (Helper)',
+            id: "msg-init",
+            sender: "staff",
+            senderName: isAmharic ? "ሜሮን ከበደ (የሰው አጋዥ)" : "Meron Kebede (Helper)",
             text: isAmharic
               ? `ሰላም! እኔ ሜሮን ነኝ። «${courseTitle}»ን ለመክፈል (${price}) በቴሌብር ወይም በባንክ እረዳዎታለሁ። እንዴት መክፈል ይፈልጋሉ?`
               : `Hello! I am Meron. I see you want to enroll in "${courseTitle}" for ${price}. I am here to guide your payment safely. How would you like to pay?`,
-            timestamp: 'Just now',
+            timestamp: "Just now",
           };
           setMessages((prev) => (prev.length === 0 ? [welcomeStaffMsg] : prev));
-          return 'in_progress';
+          return "in_progress";
         }
         return current;
       });
@@ -247,39 +255,36 @@ function PaymentContent() {
       clearTimeout(assignTimer);
       clearTimeout(progressTimer);
     };
-  }, [announceOnce, contactMethod, courseTitle, estimatedWait, isAmharic, phoneNumber, price, subscribeToStatus]);
+  }, [
+    announceOnce,
+    contactMethod,
+    courseTitle,
+    estimatedWait,
+    isAmharic,
+    phoneNumber,
+    price,
+    subscribeToStatus,
+  ]);
 
   // Handle "Request a call back"
   const handleRequestCallBack = useCallback(() => {
-    setStatus('callback_requested');
-    playEarcon('success');
+    setStatus("callback_requested");
+    playEarcon("success");
     const callbackMsg = isAmharic
-      ? 'የተመላሽ ጥሪ ጥያቄ ቀርቧል። አጋዥ በ15 ደቂቃዎች ውስጥ ይደውልልዎታል።'
-      : 'Call back requested. A helper will phone you within 15 minutes.';
-    announceOnce('status_callback', callbackMsg, 'polite');
+      ? "የተመላሽ ጥሪ ጥያቄ ቀርቧል። አጋዥ በ15 ደቂቃዎች ውስጥ ይደውልልዎታል።"
+      : "Call back requested. A helper will phone you within 15 minutes.";
+    announceOnce("status_callback", callbackMsg, "polite");
   }, [announceOnce, isAmharic]);
 
   // Trigger simulated failure (for testing / fallback)
   const handleSimulateFailure = useCallback(() => {
-    setStatus('failure');
-    playEarcon('error');
+    setStatus("failure");
+    playEarcon("error");
     const failMsg = isAmharic
-      ? 'ከአጋዥ ጋር መገናኘት አልተቻለም። እባክዎ የበይነመረብ ግንኙነትዎን ያረጋግጡ ወይም የተመላሽ ጥሪ ይጠይቁ።'
-      : 'Could not connect to helper right now. Please check your internet connection or request a call back.';
-    announceOnce('status_failure', failMsg, 'assertive');
+      ? "ከአጋዥ ጋር መገናኘት አልተቻለም። እባክዎ የበይነመረብ ግንኙነትዎን ያረጋግጡ ወይም የተመላሽ ጥሪ ይጠይቁ።"
+      : "Could not connect to helper right now. Please check your internet connection or request a call back.";
+    announceOnce("status_failure", failMsg, "assertive");
   }, [announceOnce, isAmharic]);
-
-  // Confirm payment and navigate to /learn/[courseId]
-  const handleConfirmPayment = useCallback(() => {
-    setStatus('done');
-    playEarcon('success');
-    const confirmedMsg = 'Payment confirmed. Opening your course';
-    announceOnce('status_done', confirmedMsg, 'polite');
-
-    setTimeout(() => {
-      router.push(`/learn/${courseId}`);
-    }, 1500);
-  }, [announceOnce, courseId, router]);
 
   // Send message in chat
   const handleSendMessage = (e: React.FormEvent) => {
@@ -288,59 +293,61 @@ function PaymentContent() {
     if (!text) return;
 
     const userMsg: ChatMessage = {
-      id: 'm-' + Date.now(),
-      sender: 'learner',
-      senderName: isAmharic ? 'እርስዎ' : 'You',
+      id: "m-" + Date.now(),
+      sender: "learner",
+      senderName: isAmharic ? "እርስዎ" : "You",
       text,
-      timestamp: 'Just now',
+      timestamp: "Just now",
     };
 
     setMessages((prev) => [...prev, userMsg]);
-    setChatInput('');
-    playEarcon('command-recognized');
+    setChatInput("");
+    playEarcon("command-recognized");
 
     // Simulate staff response
     setTimeout(() => {
       const staffReply: ChatMessage = {
-        id: 'm-' + (Date.now() + 1),
-        sender: 'staff',
-        senderName: isAmharic ? 'ሜሮን ከበደ (የሰው አጋዥ)' : 'Meron Kebede (Helper)',
+        id: "m-" + (Date.now() + 1),
+        sender: "staff",
+        senderName: isAmharic ? "ሜሮን ከበደ (የሰው አጋዥ)" : "Meron Kebede (Helper)",
         text: isAmharic
           ? `መልእክትዎን ተቀብያለሁ! ክፍያውን በቴሌብር (0911-23-4567) ወይም በCBE (1000-2345-67890) ሲልኩ ወዲያውኑ አረጋግጣለሁ።`
           : `Got your message! You can send ${price} via Telebirr (0911-23-4567) or CBE (1000-2345-67890) and I will verify it right away.`,
-        timestamp: 'Just now',
+        timestamp: "Just now",
       };
       setMessages((prev) => [...prev, staffReply]);
-      playEarcon('command-recognized');
-      announceOnce('chat_reply_' + staffReply.id, `${staffReply.senderName}: ${staffReply.text}`, 'polite');
+      playEarcon("command-recognized");
+      announceOnce(
+        "chat_reply_" + staffReply.id,
+        `${staffReply.senderName}: ${staffReply.text}`,
+        "polite",
+      );
     }, 1000);
   };
 
   // Voice Command Listener for "Call a helper"
   const startVoiceCommand = useCallback(() => {
-    if (typeof window === 'undefined') return;
-    const SpeechRec =
-      (window as unknown as { SpeechRecognition?: any; webkitSpeechRecognition?: any }).SpeechRecognition ||
-      (window as unknown as { SpeechRecognition?: any; webkitSpeechRecognition?: any }).webkitSpeechRecognition;
+    if (typeof window === "undefined") return;
+    const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
 
     if (!SpeechRec) return;
 
     try {
       const rec = new SpeechRec();
-      rec.lang = isAmharic ? 'am-ET' : 'en-US';
+      rec.lang = isAmharic ? "am-ET" : "en-US";
       rec.onstart = () => setIsListeningVoice(true);
       rec.onend = () => setIsListeningVoice(false);
       rec.onerror = () => setIsListeningVoice(false);
 
-      rec.onresult = (e: any) => {
+      rec.onresult = (e: RecognitionResultEvent) => {
         const text = e.results[0][0].transcript.toLowerCase();
         if (
-          text.includes('call') ||
-          text.includes('helper') ||
-          text.includes('help') ||
-          text.includes('ሰው') ||
-          text.includes('ጥራልኝ') ||
-          text.includes('እገዛ')
+          text.includes("call") ||
+          text.includes("helper") ||
+          text.includes("help") ||
+          text.includes("ሰው") ||
+          text.includes("ጥራልኝ") ||
+          text.includes("እገዛ")
         ) {
           handleCallHelper();
         }
@@ -353,9 +360,9 @@ function PaymentContent() {
 
   // Global helper for simulated voice in Playwright
   useEffect(() => {
-    (window as any).__simulatePaymentVoice = (cmd: string) => {
+    window.__simulatePaymentVoice = (cmd: string) => {
       const lower = cmd.toLowerCase();
-      if (lower.includes('call') || lower.includes('helper') || lower.includes('ሰው')) {
+      if (lower.includes("call") || lower.includes("helper") || lower.includes("ሰው")) {
         handleCallHelper();
       }
     };
@@ -370,7 +377,7 @@ function PaymentContent() {
           className="inline-flex items-center gap-1.5 text-sm font-bold text-[#0B132B] hover:text-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-400 rounded px-1"
         >
           <ArrowLeft className="w-4 h-4 text-orange-600" aria-hidden="true" />
-          <span>{isAmharic ? 'ወደ ኮርሶች ተመለስ' : 'Back to Courses'}</span>
+          <span>{isAmharic ? "ወደ ኮርሶች ተመለስ" : "Back to Courses"}</span>
         </Link>
 
         <button
@@ -380,7 +387,7 @@ function PaymentContent() {
           className="min-h-[44px] px-3.5 py-2 rounded-lg font-bold text-xs border border-orange-500/80 bg-white hover:bg-slate-100 text-slate-800 flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-orange-400 cursor-pointer shadow-sm transition-colors"
         >
           <Globe className="w-3.5 h-3.5 text-orange-600" aria-hidden="true" />
-          <span>{isAmharic ? 'ቋንቋ፡ አማርኛ' : 'Language: English'}</span>
+          <span>{isAmharic ? "ቋንቋ፡ አማርኛ" : "Language: English"}</span>
         </button>
       </div>
 
@@ -392,7 +399,7 @@ function PaymentContent() {
           tabIndex={-1}
           className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 rounded"
         >
-          {isAmharic ? 'ክፍያ' : 'Payment'}
+          {isAmharic ? "ክፍያ" : "Payment"}
         </h1>
 
         {/* Plain Language Explanations: Amount, Helper will contact, Nobody asks for PIN or password (User Requirement) */}
@@ -400,13 +407,13 @@ function PaymentContent() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-3">
             <div>
               <span className="text-xs font-bold uppercase tracking-wider text-slate-700 block">
-                {isAmharic ? 'የተመረጠ ኮርስ' : 'Selected Course'}
+                {isAmharic ? "የተመረጠ ኮርስ" : "Selected Course"}
               </span>
               <p className="text-xl font-black text-slate-900">{courseTitle}</p>
             </div>
             <div>
               <span className="text-xs font-bold uppercase tracking-wider text-slate-700 block sm:text-right">
-                {isAmharic ? 'የሚከፈል መጠን' : 'Amount'}
+                {isAmharic ? "የሚከፈል መጠን" : "Amount"}
               </span>
               <p className="text-2xl font-black text-[#0B132B] sm:text-right">{price}</p>
             </div>
@@ -414,32 +421,38 @@ function PaymentContent() {
 
           <div className="space-y-2 text-sm text-slate-800 leading-relaxed font-medium">
             <p className="flex items-start gap-2">
-              <ShieldCheck className="w-5 h-5 text-emerald-700 shrink-0 mt-0.5" aria-hidden="true" />
+              <ShieldCheck
+                className="w-5 h-5 text-emerald-700 shrink-0 mt-0.5"
+                aria-hidden="true"
+              />
               <span>
                 {isAmharic
-                  ? 'አንድ የተረጋገጠ የሰው አጋዥ ክፍያዎን በደህና እንዲፈጽሙ በቀጥታ ያነጋግርዎታል።'
-                  : 'A human helper will contact you directly to help you pay safely.'}
+                  ? "አንድ የተረጋገጠ የሰው አጋዥ ክፍያዎን በደህና እንዲፈጽሙ በቀጥታ ያነጋግርዎታል።"
+                  : "A human helper will contact you directly to help you pay safely."}
               </span>
             </p>
             <p className="flex items-start gap-2">
-              <CheckCircle2 className="w-5 h-5 text-emerald-700 shrink-0 mt-0.5" aria-hidden="true" />
+              <CheckCircle2
+                className="w-5 h-5 text-emerald-700 shrink-0 mt-0.5"
+                aria-hidden="true"
+              />
               <span>
                 {isAmharic
-                  ? 'ማንም ሰው በዚህ ድረ-ገጽ ላይ የእርስዎን ፒን (PIN)፣ የይለፍ ቃል ወይም የሞባይል ባንክ ሚስጥር ቁጥር አይጠይቅም።'
-                  : 'Nobody will ever ask for a PIN, password, or mobile wallet secret code on this site.'}
+                  ? "ማንም ሰው በዚህ ድረ-ገጽ ላይ የእርስዎን ፒን (PIN)፣ የይለፍ ቃል ወይም የሞባይል ባንክ ሚስጥር ቁጥር አይጠይቅም።"
+                  : "Nobody will ever ask for a PIN, password, or mobile wallet secret code on this site."}
               </span>
             </p>
             <p className="text-xs text-slate-700 font-semibold pl-7">
               {isAmharic
-                ? 'ምንም ዓይነት የክሬዲት ካርድ ወይም የዲጂታል ቦርሳ መረጃ ማስገባት አያስፈልግዎትም።'
-                : 'We never ask for or store credit cards, PINs, or wallet credentials.'}
+                ? "ምንም ዓይነት የክሬዲት ካርድ ወይም የዲጂታል ቦርሳ መረጃ ማስገባት አያስፈልግዎትም።"
+                : "We never ask for or store credit cards, PINs, or wallet credentials."}
             </p>
           </div>
         </div>
       </header>
 
       {/* Failure State in Plain Language (User Requirement) */}
-      {status === 'failure' && (
+      {status === "failure" && (
         <section
           role="alert"
           aria-live="assertive"
@@ -448,13 +461,13 @@ function PaymentContent() {
           <div className="flex items-center gap-2 text-red-900 font-bold">
             <AlertCircle className="w-5 h-5 text-red-700" aria-hidden="true" />
             <h2 className="text-lg font-bold">
-              {isAmharic ? 'ከአጋዥ ጋር መገናኘት አልተቻለም' : 'Could not connect to helper'}
+              {isAmharic ? "ከአጋዥ ጋር መገናኘት አልተቻለም" : "Could not connect to helper"}
             </h2>
           </div>
           <p className="text-sm text-red-900 font-medium">
             {isAmharic
-              ? 'የእርዳታ ጥያቄዎን አሁን ማስኬድ አልተቻለም። እባክዎ የበይነመረብ ግንኙነትዎን ያረጋግጡ ወይም የተመላሽ ጥሪ ይጠይቁ።'
-              : 'We could not connect you to a helper right now. Please check your internet connection or request a call back.'}
+              ? "የእርዳታ ጥያቄዎን አሁን ማስኬድ አልተቻለም። እባክዎ የበይነመረብ ግንኙነትዎን ያረጋግጡ ወይም የተመላሽ ጥሪ ይጠይቁ።"
+              : "We could not connect you to a helper right now. Please check your internet connection or request a call back."}
           </p>
           <div className="flex flex-wrap gap-3 pt-1">
             <button
@@ -463,7 +476,7 @@ function PaymentContent() {
               onClick={handleCallHelper}
               className="min-h-[44px] px-5 py-2.5 bg-red-800 text-white font-bold rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500 cursor-pointer"
             >
-              {isAmharic ? 'እንደገና ሞክር' : 'Try again'}
+              {isAmharic ? "እንደገና ሞክር" : "Try again"}
             </button>
             <button
               type="button"
@@ -471,26 +484,31 @@ function PaymentContent() {
               onClick={handleRequestCallBack}
               className="min-h-[44px] px-5 py-2.5 bg-white text-red-900 border-2 border-red-800 font-bold rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500 cursor-pointer"
             >
-              {isAmharic ? 'የተመላሽ ጥሪ ጠይቅ' : 'Request a call back'}
+              {isAmharic ? "የተመላሽ ጥሪ ጠይቅ" : "Request a call back"}
             </button>
           </div>
         </section>
       )}
 
       {/* Step 1: Help Request Form (Contact Method RadioGroup & Phone Input) */}
-      {status === 'idle' && (
+      {status === "idle" && (
         <section
           aria-labelledby="request-helper-heading"
           className="p-6 sm:p-8 bg-white border-2 border-[#0B132B] rounded-2xl shadow-sm space-y-6"
         >
           <h2 id="request-helper-heading" className="text-xl font-bold text-slate-900">
-            {isAmharic ? 'የሰው አጋዥ ድጋፍ ይጠይቁ' : 'Request Human Payment Assistance'}
+            {isAmharic ? "የሰው አጋዥ ድጋፍ ይጠይቁ" : "Request Human Payment Assistance"}
           </h2>
 
           {/* RadioGroup for Contact Preference (User Requirement) */}
           <fieldset className="space-y-3">
-            <legend id="contact-method-legend" className="text-sm font-bold text-slate-900 block mb-1">
-              {isAmharic ? 'አጋዡ እንዴት እንዲያገኝዎት ይፈልጋሉ?' : 'How would you like the helper to contact you?'}
+            <legend
+              id="contact-method-legend"
+              className="text-sm font-bold text-slate-900 block mb-1"
+            >
+              {isAmharic
+                ? "አጋዡ እንዴት እንዲያገኝዎት ይፈልጋሉ?"
+                : "How would you like the helper to contact you?"}
             </legend>
             <div
               role="radiogroup"
@@ -500,9 +518,9 @@ function PaymentContent() {
               <label
                 htmlFor="contact-phone"
                 className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-colors ${
-                  contactMethod === 'phone'
-                    ? 'border-orange-500 bg-orange-50/60 ring-2 ring-orange-400/30'
-                    : 'border-slate-300 bg-white hover:bg-slate-50'
+                  contactMethod === "phone"
+                    ? "border-orange-500 bg-orange-50/60 ring-2 ring-orange-400/30"
+                    : "border-slate-300 bg-white hover:bg-slate-50"
                 }`}
               >
                 <input
@@ -510,21 +528,21 @@ function PaymentContent() {
                   id="contact-phone"
                   name="contact-method"
                   value="phone"
-                  checked={contactMethod === 'phone'}
-                  onChange={() => setContactMethod('phone')}
+                  checked={contactMethod === "phone"}
+                  onChange={() => setContactMethod("phone")}
                   className="w-4 h-4 text-orange-600 focus:ring-orange-500"
                 />
                 <span className="text-sm font-bold text-slate-900">
-                  {isAmharic ? 'የስልክ ጥሪ' : 'Phone call'}
+                  {isAmharic ? "የስልክ ጥሪ" : "Phone call"}
                 </span>
               </label>
 
               <label
                 htmlFor="contact-sms"
                 className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-colors ${
-                  contactMethod === 'sms'
-                    ? 'border-orange-500 bg-orange-50/60 ring-2 ring-orange-400/30'
-                    : 'border-slate-300 bg-white hover:bg-slate-50'
+                  contactMethod === "sms"
+                    ? "border-orange-500 bg-orange-50/60 ring-2 ring-orange-400/30"
+                    : "border-slate-300 bg-white hover:bg-slate-50"
                 }`}
               >
                 <input
@@ -532,21 +550,21 @@ function PaymentContent() {
                   id="contact-sms"
                   name="contact-method"
                   value="sms"
-                  checked={contactMethod === 'sms'}
-                  onChange={() => setContactMethod('sms')}
+                  checked={contactMethod === "sms"}
+                  onChange={() => setContactMethod("sms")}
                   className="w-4 h-4 text-orange-600 focus:ring-orange-500"
                 />
                 <span className="text-sm font-bold text-slate-900">
-                  {isAmharic ? 'የአጭር የጽሁፍ መልእክት (SMS)' : 'SMS'}
+                  {isAmharic ? "የአጭር የጽሁፍ መልእክት (SMS)" : "SMS"}
                 </span>
               </label>
 
               <label
                 htmlFor="contact-telegram"
                 className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-colors ${
-                  contactMethod === 'telegram'
-                    ? 'border-orange-500 bg-orange-50/60 ring-2 ring-orange-400/30'
-                    : 'border-slate-300 bg-white hover:bg-slate-50'
+                  contactMethod === "telegram"
+                    ? "border-orange-500 bg-orange-50/60 ring-2 ring-orange-400/30"
+                    : "border-slate-300 bg-white hover:bg-slate-50"
                 }`}
               >
                 <input
@@ -554,24 +572,27 @@ function PaymentContent() {
                   id="contact-telegram"
                   name="contact-method"
                   value="telegram"
-                  checked={contactMethod === 'telegram'}
-                  onChange={() => setContactMethod('telegram')}
+                  checked={contactMethod === "telegram"}
+                  onChange={() => setContactMethod("telegram")}
                   className="w-4 h-4 text-orange-600 focus:ring-orange-500"
                 />
                 <span className="text-sm font-bold text-slate-900">
-                  {isAmharic ? 'ቴሌግራም' : 'Telegram'}
+                  {isAmharic ? "ቴሌግራም" : "Telegram"}
                 </span>
               </label>
             </div>
           </fieldset>
 
           {/* Ask for phone number if needed (phone or sms) */}
-          {(contactMethod === 'phone' || contactMethod === 'sms') && (
+          {(contactMethod === "phone" || contactMethod === "sms") && (
             <div className="space-y-1.5">
-              <label htmlFor="learner-phone-number" className="block text-sm font-bold text-slate-900">
-                {isAmharic ? 'የስልክ ቁጥርዎ' : 'Phone number'}{' '}
+              <label
+                htmlFor="learner-phone-number"
+                className="block text-sm font-bold text-slate-900"
+              >
+                {isAmharic ? "የስልክ ቁጥርዎ" : "Phone number"}{" "}
                 <span className="text-xs font-semibold text-slate-700">
-                  ({isAmharic ? 'አስፈላጊ' : 'required for ' + contactMethod})
+                  ({isAmharic ? "አስፈላጊ" : "required for " + contactMethod})
                 </span>
               </label>
               <input
@@ -584,7 +605,7 @@ function PaymentContent() {
                 placeholder="+251 91 123 4567"
                 className="w-full min-h-[44px] bg-slate-50 border-2 border-slate-300 rounded-xl px-4 py-2.5 text-slate-900 text-sm focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-400 font-medium"
                 aria-invalid={!!phoneError}
-                aria-describedby={phoneError ? 'phone-error-desc' : undefined}
+                aria-describedby={phoneError ? "phone-error-desc" : undefined}
               />
               {phoneError && (
                 <p id="phone-error-desc" role="alert" className="text-xs font-bold text-red-800">
@@ -603,13 +624,13 @@ function PaymentContent() {
               className="w-full min-h-[56px] py-4 px-8 bg-[#0B132B] hover:bg-[#131E3D] text-orange-400 hover:text-orange-300 text-lg font-bold rounded-2xl flex items-center justify-center gap-3 border-2 border-orange-500 shadow-lg focus:outline-none focus:ring-4 focus:ring-orange-400 cursor-pointer transition-transform active:scale-98"
             >
               <PhoneCall className="w-6 h-6 text-orange-400" aria-hidden="true" />
-              <span>{isAmharic ? 'የሰው አጋዥ ጥራ' : 'Call a helper'}</span>
+              <span>{isAmharic ? "የሰው አጋዥ ጥራ" : "Call a helper"}</span>
             </button>
 
             <div className="flex items-center justify-between text-xs text-slate-700 font-semibold pt-1">
               <span>
                 {isAmharic
-                  ? 'ወይም «ሰው ጥራልኝ» በማለት በድምጽ ማዘዝ ይችላሉ'
+                  ? "ወይም «ሰው ጥራልኝ» በማለት በድምጽ ማዘዝ ይችላሉ"
                   : 'Or say "Call a helper" using voice command'}
               </span>
               <button
@@ -617,10 +638,12 @@ function PaymentContent() {
                 onClick={startVoiceCommand}
                 id="voice-command-helper-btn"
                 className="inline-flex items-center gap-1 text-orange-800 hover:text-orange-950 underline"
-                aria-label={isListeningVoice ? 'Listening for voice command' : 'Speak command: Call a helper'}
+                aria-label={
+                  isListeningVoice ? "Listening for voice command" : "Speak command: Call a helper"
+                }
               >
                 <Mic className="w-3.5 h-3.5" aria-hidden="true" />
-                <span>{isListeningVoice ? 'እያዳመጠ ነው...' : 'Speak command'}</span>
+                <span>{isListeningVoice ? "እያዳመጠ ነው..." : "Speak command"}</span>
               </button>
             </div>
           </div>
@@ -628,7 +651,7 @@ function PaymentContent() {
       )}
 
       {/* Live Status Component with Steps: waiting, helper assigned, in progress, done (User Requirement) */}
-      {status !== 'idle' && status !== 'failure' && (
+      {status !== "idle" && status !== "failure" && (
         <section
           aria-labelledby="live-status-heading"
           aria-live="polite"
@@ -637,42 +660,45 @@ function PaymentContent() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-4">
             <div>
               <span className="text-xs font-mono font-bold text-slate-600 block">
-                {isAmharic ? 'የጥያቄ ቁጥር' : 'Assistance Ticket'}: {ticketId}
+                {isAmharic ? "የጥያቄ ቁጥር" : "Assistance Ticket"}:{" "}
+                {ticketId || (isAmharic ? "በመጠባበቅ ላይ" : "pending")}
               </span>
               <h2 id="live-status-heading" className="text-2xl font-black text-slate-900 mt-0.5">
-                {status === 'waiting' && (isAmharic ? 'ሁኔታ፦ በመጠባበቅ ላይ' : 'Status: Waiting')}
-                {status === 'assigned' && (isAmharic ? 'ሁኔታ፦ አጋዥ ተመድቧል' : 'Status: Helper Assigned')}
-                {status === 'in_progress' && (isAmharic ? 'ሁኔታ፦ ሂደት ላይ' : 'Status: In Progress')}
-                {status === 'done' && (isAmharic ? 'ሁኔታ፦ ተጠናቋል' : 'Status: Done')}
-                {status === 'callback_requested' && (isAmharic ? 'ሁኔታ፦ የተመላሽ ጥሪ ተመዝግቧል' : 'Status: Call Back Requested')}
+                {status === "waiting" && (isAmharic ? "ሁኔታ፦ በመጠባበቅ ላይ" : "Status: Waiting")}
+                {status === "assigned" &&
+                  (isAmharic ? "ሁኔታ፦ አጋዥ ተመድቧል" : "Status: Helper Assigned")}
+                {status === "in_progress" && (isAmharic ? "ሁኔታ፦ ሂደት ላይ" : "Status: In Progress")}
+                {status === "done" && (isAmharic ? "ሁኔታ፦ ተጠናቋል" : "Status: Done")}
+                {status === "callback_requested" &&
+                  (isAmharic ? "ሁኔታ፦ የተመላሽ ጥሪ ተመዝግቧል" : "Status: Call Back Requested")}
               </h2>
             </div>
 
             {/* Status Pills */}
             <div>
-              {status === 'waiting' && (
+              {status === "waiting" && (
                 <span className="px-3.5 py-1.5 rounded-full text-xs font-extrabold bg-amber-100 text-amber-900 border border-amber-300 inline-block animate-pulse">
-                  {isAmharic ? 'አጋዥ በመፈለግ ላይ' : 'Waiting for helper'}
+                  {isAmharic ? "አጋዥ በመፈለግ ላይ" : "Waiting for helper"}
                 </span>
               )}
-              {status === 'assigned' && (
+              {status === "assigned" && (
                 <span className="px-3.5 py-1.5 rounded-full text-xs font-extrabold bg-blue-100 text-blue-900 border border-blue-300 inline-block">
-                  {isAmharic ? 'አጋዥ ተመድቧል' : 'Helper assigned'}
+                  {isAmharic ? "አጋዥ ተመድቧል" : "Helper assigned"}
                 </span>
               )}
-              {status === 'in_progress' && (
+              {status === "in_progress" && (
                 <span className="px-3.5 py-1.5 rounded-full text-xs font-extrabold bg-emerald-100 text-emerald-900 border border-emerald-300 inline-block">
-                  {isAmharic ? 'ቀጥታ ውይይት' : 'In progress'}
+                  {isAmharic ? "ቀጥታ ውይይት" : "In progress"}
                 </span>
               )}
-              {status === 'done' && (
+              {status === "done" && (
                 <span className="px-3.5 py-1.5 rounded-full text-xs font-extrabold bg-emerald-700 text-white border border-emerald-800 inline-block">
-                  {isAmharic ? 'ክፍያ ተረጋግጧል' : 'Done'}
+                  {isAmharic ? "ክፍያ ተረጋግጧል" : "Done"}
                 </span>
               )}
-              {status === 'callback_requested' && (
+              {status === "callback_requested" && (
                 <span className="px-3.5 py-1.5 rounded-full text-xs font-extrabold bg-purple-100 text-purple-900 border border-purple-300 inline-block">
-                  {isAmharic ? 'የተመላሽ ጥሪ' : 'Call back scheduled'}
+                  {isAmharic ? "የተመላሽ ጥሪ" : "Call back scheduled"}
                 </span>
               )}
             </div>
@@ -680,7 +706,7 @@ function PaymentContent() {
 
           {/* Status Step Descriptions & Estimated Wait */}
           <div className="space-y-4 text-sm text-slate-800">
-            {status === 'waiting' && (
+            {status === "waiting" && (
               <div className="space-y-4">
                 <p className="font-medium text-slate-900">
                   {isAmharic
@@ -692,8 +718,8 @@ function PaymentContent() {
                 <div className="p-4 bg-white rounded-xl border border-slate-300 space-y-2">
                   <p className="text-xs font-bold text-slate-800">
                     {isAmharic
-                      ? 'አሁን መጠበቅ ካልፈለጉ የተመላሽ ጥሪ መጠየቅ ይችላሉ፦'
-                      : 'No helper available right away or prefer not to wait?'}
+                      ? "አሁን መጠበቅ ካልፈለጉ የተመላሽ ጥሪ መጠየቅ ይችላሉ፦"
+                      : "No helper available right away or prefer not to wait?"}
                   </p>
                   <button
                     type="button"
@@ -701,45 +727,50 @@ function PaymentContent() {
                     onClick={handleRequestCallBack}
                     className="min-h-[44px] px-5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-900 font-bold rounded-lg text-xs border border-slate-300 focus:outline-none focus:ring-2 focus:ring-orange-400 cursor-pointer"
                   >
-                    {isAmharic ? 'የተመላሽ ጥሪ ጠይቅ' : 'Request a call back'}
+                    {isAmharic ? "የተመላሽ ጥሪ ጠይቅ" : "Request a call back"}
                   </button>
                 </div>
               </div>
             )}
 
-            {status === 'assigned' && (
+            {status === "assigned" && (
               <p className="font-semibold text-slate-900">
                 {isAmharic
-                  ? 'የሰው አጋዥ ሜሮን ከበደ ጥያቄዎን ተቀብላለች። ወደ ውይይት በማገናኘት ላይ...'
-                  : 'Helper assigned: Meron Kebede is ready to help you.'}
+                  ? "የሰው አጋዥ ሜሮን ከበደ ጥያቄዎን ተቀብላለች። ወደ ውይይት በማገናኘት ላይ..."
+                  : "Helper assigned: Meron Kebede is ready to help you."}
               </p>
             )}
 
-            {status === 'callback_requested' && (
+            {status === "callback_requested" && (
               <div className="p-4 bg-purple-50 border border-purple-200 rounded-xl space-y-3">
                 <div className="space-y-1">
                   <p className="font-bold text-purple-950">
-                    {isAmharic
-                      ? 'የተመላሽ ጥሪዎ ተመዝግቧል!'
-                      : 'Your call back request has been confirmed!'}
+                    {isAmharic ? "የተመላሽ ጥሪዎ ተመዝግቧል!" : "Your call back request has been confirmed!"}
                   </p>
                   <p className="text-xs text-purple-900">
                     {isAmharic
-                      ? 'አንድ የሰው አጋዥ በ15 ደቂቃዎች ውስጥ በስልክዎ ይደውልልዎታል።'
-                      : 'A human helper will phone you within 15 minutes to guide your payment safely.'}
+                      ? "አንድ የሰው አጋዥ በ15 ደቂቃዎች ውስጥ በስልክዎ ይደውልልዎታል።"
+                      : "A human helper will phone you within 15 minutes to guide your payment safely."}
                   </p>
                 </div>
                 {callbackSlots.length > 0 && (
                   <div className="pt-2 border-t border-purple-200 space-y-1.5">
-                    <label htmlFor="callback-slot-picker" className="block text-xs font-bold text-purple-950">
-                      {isAmharic ? 'የተመረጠ የተመላሽ ጥሪ ሰዓት፦' : 'Choose a preferred callback time:'}
+                    <label
+                      htmlFor="callback-slot-picker"
+                      className="block text-xs font-bold text-purple-950"
+                    >
+                      {isAmharic ? "የተመረጠ የተመላሽ ጥሪ ሰዓት፦" : "Choose a preferred callback time:"}
                     </label>
                     <select
                       id="callback-slot-picker"
                       value={selectedCallbackSlot}
                       onChange={(e) => {
                         setSelectedCallbackSlot(e.target.value);
-                        announceOnce('slot_picked', `Preferred callback time set to ${e.target.value}`, 'polite');
+                        announceOnce(
+                          "slot_picked",
+                          `Preferred callback time set to ${e.target.value}`,
+                          "polite",
+                        );
                       }}
                       className="w-full bg-white border border-purple-300 rounded-lg px-3 py-2 text-xs text-purple-950 focus:outline-none focus:ring-2 focus:ring-purple-400 min-h-[44px]"
                     >
@@ -754,11 +785,11 @@ function PaymentContent() {
               </div>
             )}
 
-            {status === 'done' && (
+            {status === "done" && (
               <div className="p-5 bg-emerald-50 border-2 border-emerald-300 rounded-xl text-center space-y-2">
                 <CheckCircle2 className="w-8 h-8 text-emerald-700 mx-auto" aria-hidden="true" />
                 <h3 className="text-lg font-bold text-emerald-950">
-                  {isAmharic ? 'ክፍያ ተረጋግጧል!' : 'Payment Confirmed!'}
+                  {isAmharic ? "ክፍያ ተረጋግጧል!" : "Payment Confirmed!"}
                 </h3>
                 <p className="text-sm font-medium text-emerald-900">
                   Payment confirmed. Opening your course
@@ -770,7 +801,7 @@ function PaymentContent() {
       )}
 
       {/* Chat Area Between Learner and Helper (role="log") (User Requirement) */}
-      {(status === 'in_progress' || status === 'assigned' || status === 'done') && (
+      {(status === "in_progress" || status === "assigned" || status === "done") && (
         <section
           aria-labelledby="chat-heading"
           className="bg-white border-2 border-[#0B132B] rounded-2xl shadow-md overflow-hidden flex flex-col"
@@ -783,12 +814,12 @@ function PaymentContent() {
               </div>
               <div>
                 <h2 id="chat-heading" className="text-lg font-bold text-white">
-                  {isAmharic ? 'ሜሮን ከበደ (የሰው አጋዥ)' : 'Meron Kebede (Human Helper)'}
+                  {isAmharic ? "ሜሮን ከበደ (የሰው አጋዥ)" : "Meron Kebede (Human Helper)"}
                 </h2>
                 <p className="text-xs text-slate-300">
                   {isAmharic
-                    ? 'የተረጋገጠች የኤብልዌይ የክፍያ እና የትምህርት አስተባባሪ'
-                    : 'Verified Ableway Payment & Learning Coordinator'}
+                    ? "የተረጋገጠች የኤብልዌይ የክፍያ እና የትምህርት አስተባባሪ"
+                    : "Verified Ableway Payment & Learning Coordinator"}
                 </p>
               </div>
             </div>
@@ -798,8 +829,8 @@ function PaymentContent() {
               <MicOff className="w-4 h-4 text-orange-400" aria-hidden="true" />
               <span>
                 {isAmharic
-                  ? 'የሰው አጋዥ በሚያነጋግርዎ ወቅት የድምጽ ረዳቱ ዝም ይላል'
-                  : 'Assistant stays silent while helper is in charge'}
+                  ? "የሰው አጋዥ በሚያነጋግርዎ ወቅት የድምጽ ረዳቱ ዝም ይላል"
+                  : "Assistant stays silent while helper is in charge"}
               </span>
             </div>
           </div>
@@ -813,11 +844,11 @@ function PaymentContent() {
             className="p-5 sm:p-6 bg-slate-50 min-h-[260px] max-h-[380px] overflow-y-auto space-y-4"
           >
             {messages.map((msg) => {
-              const isStaff = msg.sender === 'staff';
+              const isStaff = msg.sender === "staff";
               return (
                 <div
                   key={msg.id}
-                  className={`flex flex-col ${isStaff ? 'items-start' : 'items-end'}`}
+                  className={`flex flex-col ${isStaff ? "items-start" : "items-end"}`}
                 >
                   <div className="flex items-center gap-1.5 mb-1 text-xs text-slate-700 font-bold">
                     <span>{msg.senderName}</span>
@@ -826,8 +857,8 @@ function PaymentContent() {
                   <div
                     className={`max-w-[85%] rounded-2xl p-4 text-sm leading-relaxed shadow-sm font-semibold ${
                       isStaff
-                        ? 'bg-white text-slate-950 border-2 border-slate-300 rounded-tl-sm'
-                        : 'bg-[#0B132B] text-white border-2 border-orange-500 rounded-tr-sm'
+                        ? "bg-white text-slate-950 border-2 border-slate-300 rounded-tl-sm"
+                        : "bg-[#0B132B] text-white border-2 border-orange-500 rounded-tr-sm"
                     }`}
                   >
                     <p>{msg.text}</p>
@@ -845,7 +876,7 @@ function PaymentContent() {
             aria-label="Chat with helper message form"
           >
             <label htmlFor="chat-message-input" className="sr-only">
-              {isAmharic ? 'ለሰው አጋዥ መልእክት ይጻፉ' : 'Type message to helper'}
+              {isAmharic ? "ለሰው አጋዥ መልእክት ይጻፉ" : "Type message to helper"}
             </label>
             <input
               id="chat-message-input"
@@ -854,7 +885,7 @@ function PaymentContent() {
               onChange={(e) => setChatInput(e.target.value)}
               placeholder={
                 isAmharic
-                  ? 'ጥያቄዎን ወይም የቴሌብር ቁጥርዎን ይጻፉ ...'
+                  ? "ጥያቄዎን ወይም የቴሌብር ቁጥርዎን ይጻፉ ..."
                   : 'Type your message (e.g. "How do I pay with Telebirr?")...'
               }
               className="flex-1 min-h-[44px] bg-slate-50 border-2 border-slate-300 rounded-xl px-4 py-2.5 text-slate-900 text-sm focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-400 font-medium"
@@ -865,7 +896,7 @@ function PaymentContent() {
               id="chat-send-btn"
               className="min-h-[44px] px-6 py-2.5 bg-[#0B132B] hover:bg-[#131E3D] text-orange-400 hover:text-orange-300 font-bold rounded-xl text-sm flex items-center justify-center gap-1.5 border-2 border-orange-500 shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-400 cursor-pointer transition-colors"
             >
-              <span>{isAmharic ? 'ላክ' : 'Send'}</span>
+              <span>{isAmharic ? "ላክ" : "Send"}</span>
               <Send className="w-4 h-4 text-orange-400" aria-hidden="true" />
             </button>
           </form>
@@ -873,7 +904,7 @@ function PaymentContent() {
           {/* Staff Confirmation Action (Verifies payment and redirects) */}
           <div className="p-4 bg-orange-50 border-t-2 border-orange-200 flex flex-col sm:flex-row items-center justify-between gap-3">
             <span className="text-xs font-bold text-orange-950">
-              {isAmharic ? 'የረዳት ማረጋገጫ፦' : 'Staff verification action:'}
+              {isAmharic ? "የረዳት ማረጋገጫ፦" : "Staff verification action:"}
             </span>
             <button
               type="button"
@@ -884,8 +915,8 @@ function PaymentContent() {
               <CheckCircle2 className="w-4 h-4 text-orange-400" aria-hidden="true" />
               <span>
                 {isAmharic
-                  ? '[የረዳት እርምጃ] ክፍያን አረጋግጥ እና ኮርሱን ክፈት'
-                  : '[Staff Action] Confirm Payment & Open Course'}
+                  ? "[የረዳት እርምጃ] ክፍያን አረጋግጥ እና ኮርሱን ክፈት"
+                  : "[Staff Action] Confirm Payment & Open Course"}
               </span>
             </button>
           </div>
@@ -906,9 +937,7 @@ export default function PaymentPage() {
   return (
     <Suspense
       fallback={
-        <div className="p-12 text-center text-slate-700 font-bold">
-          Loading payment details...
-        </div>
+        <div className="p-12 text-center text-slate-700 font-bold">Loading payment details...</div>
       }
     >
       <PaymentContent />

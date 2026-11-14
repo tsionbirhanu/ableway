@@ -22,7 +22,7 @@ export const DEFAULT_HELPER_SCHEDULE: HelperSchedule = {
  */
 export function isHelperAvailable(
   now: Date = new Date(),
-  schedule: HelperSchedule = DEFAULT_HELPER_SCHEDULE
+  schedule: HelperSchedule = DEFAULT_HELPER_SCHEDULE,
 ): boolean {
   const day = now.getUTCDay();
   const hour = now.getUTCHours();
@@ -37,7 +37,7 @@ export function isHelperAvailable(
 /**
  * Returns available callback time slots for learners outside operating hours.
  */
-export function getAvailableCallbackSlots(now: Date = new Date()): string[] {
+export function getAvailableCallbackSlots(_now: Date = new Date()): string[] {
   return [
     "Today at 2:00 PM",
     "Today at 4:00 PM",
@@ -46,4 +46,3 @@ export function getAvailableCallbackSlots(now: Date = new Date()): string[] {
     "Tomorrow at 2:00 PM",
   ];
 }
-

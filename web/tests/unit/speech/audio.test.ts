@@ -37,16 +37,20 @@ describe("toProviderWav", () => {
     ["wav (44.1 kHz)", async () => toneWav(2, 44_100)],
     ["webm/opus (browser recording)", async () => toWebm(toneWav(2))],
     ["ogg/opus (Telegram voice note)", async () => toOggOpus(toneWav(2))],
-  ])("converts %s to 16 kHz mono WAV and measures it", async (_name, make) => {
-    const { wav, seconds } = await toProviderWav(await make());
-    expect(detectAudioFormat(wav)).toBe("wav");
-    const view = new DataView(wav.buffer, wav.byteOffset);
-    expect(view.getUint16(22, true)).toBe(1); // mono
-    expect(view.getUint32(24, true)).toBe(16_000);
-    expect(seconds).toBeGreaterThan(1.8);
-    expect(seconds).toBeLessThan(2.2);
-    expect(pcmWavSeconds(wav)).toBeCloseTo(seconds);
-  }, 30_000);
+  ])(
+    "converts %s to 16 kHz mono WAV and measures it",
+    async (_name, make) => {
+      const { wav, seconds } = await toProviderWav(await make());
+      expect(detectAudioFormat(wav)).toBe("wav");
+      const view = new DataView(wav.buffer, wav.byteOffset);
+      expect(view.getUint16(22, true)).toBe(1); // mono
+      expect(view.getUint32(24, true)).toBe(16_000);
+      expect(seconds).toBeGreaterThan(1.8);
+      expect(seconds).toBeLessThan(2.2);
+      expect(pcmWavSeconds(wav)).toBeCloseTo(seconds);
+    },
+    30_000,
+  );
 
   it("refuses recordings longer than 60 seconds", async () => {
     await expectSpeechError(toProviderWav(toneWav(61.5, 8_000)), "audio_too_long");

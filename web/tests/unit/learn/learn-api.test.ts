@@ -22,7 +22,6 @@ const quizSubmitRoute = await import("@/app/api/learn/quiz/[id]/submit/route");
 const summaryRoute = await import("@/app/api/learn/summary/route");
 const adminLessonsRoute = await import("@/app/api/admin/content/lessons/route");
 const adminLessonDetailRoute = await import("@/app/api/admin/content/lessons/[id]/route");
-const adminQuizzesRoute = await import("@/app/api/admin/content/quizzes/route");
 
 describe("Learning System End-to-End: Access Control, Grading, Resume, Checklist, and Assistant", () => {
   let t: TestDb;
@@ -108,7 +107,8 @@ describe("Learning System End-to-End: Access Control, Grading, Resume, Checklist
       .values({
         moduleId: mod.id,
         title: "Lesson 1: Modifier Keys",
-        transcript: "In screen reader keyboard navigation, NVDA and JAWS use the Insert or CapsLock key as the primary modifier. Headings are jumped with the H key.",
+        transcript:
+          "In screen reader keyboard navigation, NVDA and JAWS use the Insert or CapsLock key as the primary modifier. Headings are jumped with the H key.",
         audioUrl: "https://storage.example.com/audio/les-1.mp3",
         durationSeconds: 300,
         position: 1,
@@ -122,7 +122,8 @@ describe("Learning System End-to-End: Access Control, Grading, Resume, Checklist
       .values({
         moduleId: mod.id,
         title: "Lesson 2: ARIA Landmarks",
-        transcript: "ARIA landmarks such as main, nav, and banner allow learners to jump between distinct document regions using the D shortcut.",
+        transcript:
+          "ARIA landmarks such as main, nav, and banner allow learners to jump between distinct document regions using the D shortcut.",
         audioUrl: "https://storage.example.com/audio/les-2.mp3",
         durationSeconds: 420,
         position: 2,
@@ -186,7 +187,7 @@ describe("Learning System End-to-End: Access Control, Grading, Resume, Checklist
           transcript: "   ",
           audioUrl: "https://example.com/audio.mp3",
           status: "published",
-        })
+        }),
       ).toThrowError(/transcript/i);
     });
 
@@ -223,7 +224,7 @@ describe("Learning System End-to-End: Access Control, Grading, Resume, Checklist
           imageDescriptions: {
             "diagram1.png": "",
           },
-        })
+        }),
       ).toThrowError(/diagram1.png/i);
     });
 
@@ -249,7 +250,7 @@ describe("Learning System End-to-End: Access Control, Grading, Resume, Checklist
           imageDescriptions: {
             "keyboard.png": "Diagram showing the CapsLock modifier key.",
           },
-        })
+        }),
       ).not.toThrow();
     });
 
@@ -268,7 +269,7 @@ describe("Learning System End-to-End: Access Control, Grading, Resume, Checklist
             status: "published",
             transcript: "",
           }),
-        })
+        }),
       );
       expect(failRes.status).toBe(400);
 
@@ -283,7 +284,7 @@ describe("Learning System End-to-End: Access Control, Grading, Resume, Checklist
             position: 3,
             status: "draft",
           }),
-        })
+        }),
       );
       expect(draftRes.status).toBe(201);
       const { lesson: draftLesson } = await draftRes.json();
@@ -297,7 +298,7 @@ describe("Learning System End-to-End: Access Control, Grading, Resume, Checklist
             status: "published",
           }),
         }),
-        { params: Promise.resolve({ id: draftLesson.id }) }
+        { params: Promise.resolve({ id: draftLesson.id }) },
       );
       expect(publishFailRes.status).toBe(400);
     });
@@ -312,7 +313,7 @@ describe("Learning System End-to-End: Access Control, Grading, Resume, Checklist
 
       const res = await learnCourseRoute.GET(
         new Request(`http://localhost/api/learn/${courseId}`),
-        { params: Promise.resolve({ courseId }) }
+        { params: Promise.resolve({ courseId }) },
       );
       expect(res.status).toBe(403);
       const data = await res.json();
@@ -331,7 +332,7 @@ describe("Learning System End-to-End: Access Control, Grading, Resume, Checklist
 
       const res = await learnCourseRoute.GET(
         new Request(`http://localhost/api/learn/${courseId}`),
-        { params: Promise.resolve({ courseId }) }
+        { params: Promise.resolve({ courseId }) },
       );
       expect(res.status).toBe(403);
       const data = await res.json();
@@ -349,7 +350,7 @@ describe("Learning System End-to-End: Access Control, Grading, Resume, Checklist
 
       const res = await learnCourseRoute.GET(
         new Request(`http://localhost/api/learn/${courseId}`),
-        { params: Promise.resolve({ courseId }) }
+        { params: Promise.resolve({ courseId }) },
       );
       expect(res.status).toBe(200);
       const data = await res.json();
@@ -365,18 +366,20 @@ describe("Learning System End-to-End: Access Control, Grading, Resume, Checklist
 
       const res = await learnCourseRoute.GET(
         new Request(`http://localhost/api/learn/${courseId}`),
-        { params: Promise.resolve({ courseId }) }
+        { params: Promise.resolve({ courseId }) },
       );
       const data = await res.json();
       const firstQuiz = data.modules[0].quizzes[0];
       const firstQ = firstQuiz.questions[0];
 
-      expect(firstQ.prompt).toBe("Which key is pressed in NVDA to jump between headings on a webpage?");
+      expect(firstQ.prompt).toBe(
+        "Which key is pressed in NVDA to jump between headings on a webpage?",
+      );
       expect(firstQ.choices).toHaveLength(4);
 
       // Verify that correctChoice and explanation are NEVER sent to the client
-      expect((firstQ as any).correctChoice).toBeUndefined();
-      expect((firstQ as any).explanation).toBeUndefined();
+      expect(firstQ).not.toHaveProperty("correctChoice");
+      expect(firstQ).not.toHaveProperty("explanation");
     });
   });
 
@@ -395,7 +398,7 @@ describe("Learning System End-to-End: Access Control, Grading, Resume, Checklist
             answers: { [questionId]: 1 },
           }),
         }),
-        { params: Promise.resolve({ id: quizId }) }
+        { params: Promise.resolve({ id: quizId }) },
       );
       expect(res.status).toBe(403);
     });
@@ -411,7 +414,7 @@ describe("Learning System End-to-End: Access Control, Grading, Resume, Checklist
             answers: { [questionId]: 0 }, // wrong answer (Tab key)
           }),
         }),
-        { params: Promise.resolve({ id: quizId }) }
+        { params: Promise.resolve({ id: quizId }) },
       );
 
       expect(res.status).toBe(200);
@@ -423,7 +426,9 @@ describe("Learning System End-to-End: Access Control, Grading, Resume, Checklist
       expect(data.feedback).toMatch(/scored 0%/i);
       expect(data.questions[0].isCorrect).toBe(false);
       expect(data.questions[0].correctChoice).toBe(1);
-      expect(data.questions[0].explanation).toBe("Pressing 'H' navigates sequentially through headings on the page.");
+      expect(data.questions[0].explanation).toBe(
+        "Pressing 'H' navigates sequentially through headings on the page.",
+      );
     });
 
     it("grades correct answer on server, returns 100%, and updates progress in database", async () => {
@@ -437,7 +442,7 @@ describe("Learning System End-to-End: Access Control, Grading, Resume, Checklist
             answers: { [questionId]: 1 }, // correct answer (H key)
           }),
         }),
-        { params: Promise.resolve({ id: quizId }) }
+        { params: Promise.resolve({ id: quizId }) },
       );
 
       expect(res.status).toBe(200);
@@ -479,7 +484,7 @@ describe("Learning System End-to-End: Access Control, Grading, Resume, Checklist
               audioSeconds: 125,
             },
           }),
-        })
+        }),
       );
 
       expect(saveRes.status).toBe(200);
@@ -494,7 +499,7 @@ describe("Learning System End-to-End: Access Control, Grading, Resume, Checklist
       signIn(learnerId);
 
       const resumeRes = await progressRoute.GET(
-        new Request(`http://localhost/api/learn/progress?courseId=${courseId}`)
+        new Request(`http://localhost/api/learn/progress?courseId=${courseId}`),
       );
       expect(resumeRes.status).toBe(200);
       const data = await resumeRes.json();
@@ -514,7 +519,7 @@ describe("Learning System End-to-End: Access Control, Grading, Resume, Checklist
     it("returns short listening-friendly progress summary", async () => {
       signIn(learnerId);
 
-      const res = await summaryRoute.GET();
+      const res = await summaryRoute.GET(new Request("http://test.local/api/learn/summary"));
       expect(res.status).toBe(200);
       const data = await res.json();
 
@@ -548,8 +553,8 @@ describe("Learning System End-to-End: Access Control, Grading, Resume, Checklist
       // The answer must mention the modifier key from lesson 1 transcript
       expect(
         result.reply.toLowerCase().includes("insert") ||
-        result.reply.toLowerCase().includes("modifier") ||
-        result.reply.toLowerCase().includes("lesson")
+          result.reply.toLowerCase().includes("modifier") ||
+          result.reply.toLowerCase().includes("lesson"),
       ).toBe(true);
       // Sources must include the lesson chunk
       expect(result.sources.some((s) => s.sourceType === "lesson")).toBe(true);

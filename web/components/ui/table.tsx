@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 
 export interface TableColumn<T> {
   header: string;
@@ -24,10 +24,9 @@ export function Table<T>({
   columns,
   data,
   keyExtractor,
-  className = '',
+  className = "",
   summary,
 }: TableProps<T>) {
-  // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
   return (
     <div
       tabIndex={0}
@@ -38,16 +37,16 @@ export function Table<T>({
       <table className="w-full border-collapse text-left text-[var(--font-size-base)]">
         <caption className="p-3 text-left font-bold text-[var(--color-text)] bg-[var(--color-surface)] border-b border-[var(--color-border)]">
           {caption}
-          {summary && <span className="block text-sm font-normal text-[var(--color-text-muted)] mt-1">{summary}</span>}
+          {summary && (
+            <span className="block text-sm font-normal text-[var(--color-text-muted)] mt-1">
+              {summary}
+            </span>
+          )}
         </caption>
         <thead className="bg-[var(--color-surface)] border-b-2 border-[var(--color-border)]">
           <tr>
             {columns.map((col, index) => (
-              <th
-                key={index}
-                scope="col"
-                className="px-4 py-3 font-bold text-[var(--color-text)]"
-              >
+              <th key={index} scope="col" className="px-4 py-3 font-bold text-[var(--color-text)]">
                 {col.header}
               </th>
             ))}
@@ -71,11 +70,11 @@ export function Table<T>({
               >
                 {columns.map((col, colIndex) => {
                   const content =
-                    typeof col.accessor === 'function'
+                    typeof col.accessor === "function"
                       ? col.accessor(row)
                       : col.accessor
-                      ? (row[col.accessor] as unknown as React.ReactNode)
-                      : null;
+                        ? (row[col.accessor] as unknown as React.ReactNode)
+                        : null;
 
                   if (col.isRowHeader) {
                     return (
@@ -90,10 +89,7 @@ export function Table<T>({
                   }
 
                   return (
-                    <td
-                      key={colIndex}
-                      className="px-4 py-3 text-[var(--color-text)]"
-                    >
+                    <td key={colIndex} className="px-4 py-3 text-[var(--color-text)]">
                       {content}
                     </td>
                   );

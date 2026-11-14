@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import React from 'react';
+import React from "react";
 
 export interface LiveRegionProps extends React.HTMLAttributes<HTMLDivElement> {
-  mode?: 'polite' | 'assertive' | 'off';
-  role?: 'status' | 'alert' | 'log';
+  mode?: "polite" | "assertive" | "off";
+  role?: "status" | "alert" | "log";
   atomic?: boolean;
   message?: string;
   children?: React.ReactNode;
@@ -15,12 +15,12 @@ export interface LiveRegionProps extends React.HTMLAttributes<HTMLDivElement> {
  * without disrupting ongoing reading unless urgent (assertive).
  */
 export function LiveRegion({
-  mode = 'polite',
-  role = mode === 'assertive' ? 'alert' : 'status',
+  mode = "polite",
+  role = mode === "assertive" ? "alert" : "status",
   atomic = true,
   message,
   children,
-  className = '',
+  className = "",
   ...props
 }: LiveRegionProps) {
   return (
@@ -36,4 +36,3 @@ export function LiveRegion({
     </div>
   );
 }
-

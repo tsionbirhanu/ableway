@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import React, { useId } from 'react';
+import React, { useId } from "react";
 
 export interface RadioOption {
   value: string;
@@ -37,7 +37,8 @@ export function RadioGroup({
   return (
     <fieldset className="space-y-3 border-0 p-0 m-0">
       <legend className="text-sm font-bold text-slate-100">
-        {legend} {required ? <span className="text-emerald-400 font-semibold">(required)</span> : null}
+        {legend}{" "}
+        {required ? <span className="text-emerald-400 font-semibold">(required)</span> : null}
       </legend>
 
       {hint && (
@@ -56,8 +57,8 @@ export function RadioGroup({
               htmlFor={optId}
               className={`flex items-start gap-3 p-3.5 rounded-xl border min-h-[44px] cursor-pointer transition-colors ${
                 isChecked
-                  ? 'bg-emerald-950/80 border-emerald-500 text-white'
-                  : 'bg-slate-950 border-slate-700 text-slate-200 hover:border-slate-600'
+                  ? "bg-emerald-950/80 border-emerald-500 text-white"
+                  : "bg-slate-950 border-slate-700 text-slate-200 hover:border-slate-600"
               }`}
             >
               <input
@@ -72,7 +73,9 @@ export function RadioGroup({
               <div className="space-y-0.5">
                 <span className="text-sm font-bold block">{opt.label}</span>
                 {(opt.hint || opt.description) && (
-                  <span className="text-xs text-slate-300 block">{opt.hint || opt.description}</span>
+                  <span className="text-xs text-slate-300 block">
+                    {opt.hint || opt.description}
+                  </span>
                 )}
               </div>
             </label>

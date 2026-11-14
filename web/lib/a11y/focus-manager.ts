@@ -29,7 +29,7 @@ export function trapFocus(container: HTMLElement, e: KeyboardEvent) {
   if (e.key !== "Tab") return;
 
   const focusable = container.querySelectorAll<HTMLElement>(
-    'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
   );
 
   if (focusable.length === 0) return;
@@ -49,4 +49,3 @@ export function trapFocus(container: HTMLElement, e: KeyboardEvent) {
     }
   }
 }
-

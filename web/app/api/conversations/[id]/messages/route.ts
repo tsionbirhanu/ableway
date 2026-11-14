@@ -1,13 +1,15 @@
 import { asc, eq } from "drizzle-orm";
 import { getDb } from "@/lib/db/client";
 import { conversations, messages } from "@/lib/db/schema";
-import { NotFoundError, withErrors } from "@/lib/auth/errors";
+import { withApi } from "@/lib/api/handler";
+import { NotFoundError } from "@/lib/auth/errors";
 import { parseId } from "@/lib/auth/params";
 import { canViewMessages } from "@/lib/auth/policies";
 import { authorize, requireActor } from "@/lib/auth/session";
 
 /** Messages in one conversation, oldest first. Owner or admin only (not helpers). */
-export const GET = withErrors(
+export const GET = withApi(
+  {},
   async (_request: Request, ctx: RouteContext<"/api/conversations/[id]/messages">) => {
     const actor = await requireActor();
     const id = parseId((await ctx.params).id);

@@ -2,7 +2,8 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { getDb } from "@/lib/db/client";
 import { lessons } from "@/lib/db/schema";
-import { NotFoundError, withErrors } from "@/lib/auth/errors";
+import { NotFoundError } from "@/lib/auth/errors";
+import { withApi } from "@/lib/api/handler";
 import { readJson } from "@/lib/auth/params";
 import { requireRole } from "@/lib/auth/session";
 import { assertLessonPublishChecklist } from "@/lib/learn/checklist";
@@ -11,7 +12,7 @@ interface RouteProps {
   params: Promise<{ id: string }>;
 }
 
-const updateLessonSchema = z.object({
+const updateLessonSchema = z.strictObject({
   title: z.string().trim().min(1).max(200).optional(),
   transcript: z.string().optional(),
   audioUrl: z.string().url().startsWith("https://").optional().nullable(),
@@ -21,7 +22,7 @@ const updateLessonSchema = z.object({
   imageDescriptions: z.record(z.string(), z.string()).optional(),
 });
 
-export const PATCH = withErrors(async (request: Request, props: RouteProps) => {
+export const PATCH = withApi({}, async (request: Request, props: RouteProps) => {
   await requireRole(["content_manager", "admin"]);
   const { id } = await props.params;
   const body = updateLessonSchema.parse(await readJson(request));
@@ -59,4 +60,3 @@ export const PATCH = withErrors(async (request: Request, props: RouteProps) => {
 
   return Response.json({ lesson: updated });
 });
-

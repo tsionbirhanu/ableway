@@ -35,7 +35,8 @@ const PAGE_METADATA: Record<string, { title: string; announcement: string }> = {
   },
   "/settings": {
     title: "Accessibility Settings - Ableway",
-    announcement: "Settings page loaded. Configure interaction mode, speech rate, voice, language, and theme.",
+    announcement:
+      "Settings page loaded. Configure interaction mode, speech rate, voice, language, and theme.",
   },
   "/help": {
     title: "Help and Accessibility Guide - Ableway",
@@ -86,4 +87,3 @@ export function RouteFocusAnnouncer() {
 
   return null;
 }
-

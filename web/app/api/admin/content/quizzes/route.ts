@@ -1,12 +1,11 @@
-import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { getDb } from "@/lib/db/client";
 import { quizQuestions, quizzes } from "@/lib/db/schema";
-import { withErrors } from "@/lib/auth/errors";
+import { withApi } from "@/lib/api/handler";
 import { readJson } from "@/lib/auth/params";
 import { requireRole } from "@/lib/auth/session";
 
-const questionInputSchema = z.object({
+const questionInputSchema = z.strictObject({
   position: z.number().int().min(1),
   prompt: z.string().trim().min(1),
   choices: z.array(z.string().trim().min(1)).min(2).max(6),
@@ -14,7 +13,7 @@ const questionInputSchema = z.object({
   explanation: z.string().trim().min(1),
 });
 
-const createQuizSchema = z.object({
+const createQuizSchema = z.strictObject({
   moduleId: z.string().uuid(),
   lessonId: z.string().uuid().optional().nullable(),
   title: z.string().trim().min(1).max(200),
@@ -23,7 +22,7 @@ const createQuizSchema = z.object({
   questions: z.array(questionInputSchema).optional(),
 });
 
-export const POST = withErrors(async (request: Request) => {
+export const POST = withApi({}, async (request: Request) => {
   await requireRole(["content_manager", "admin"]);
   const body = createQuizSchema.parse(await readJson(request));
   const db = getDb();
@@ -64,7 +63,6 @@ export const POST = withErrors(async (request: Request) => {
         questions: createdQuestions,
       },
     },
-    { status: 201 }
+    { status: 201 },
   );
 });
-

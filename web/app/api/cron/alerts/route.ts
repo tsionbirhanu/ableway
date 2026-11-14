@@ -1,17 +1,19 @@
-import { timingSafeEqual } from "node:crypto";
-import { getDb } from "@/lib/db/client";
-import { getEnv } from "@/lib/env";
 import { telegramSender, smsSender } from "@/lib/alerts/senders";
 import { runAlertBatch } from "@/lib/alerts/service";
+import { withApi } from "@/lib/api/handler";
+import { requireCronSecret } from "@/lib/api/secrets";
+import { getDb } from "@/lib/db/client";
+import { logger } from "@/lib/log";
 
-export async function GET(request: Request) {
-  const supplied = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ?? "";
-  const expected = getEnv().CRON_SECRET;
-  const a = Buffer.from(supplied), b = Buffer.from(expected);
-  if (a.length !== b.length || !timingSafeEqual(a, b)) return Response.json({ error: "Unauthorized" }, { status: 401 });
+/** Job alerts. Vercel Cron calls this every 15 minutes with the CRON_SECRET bearer token. */
+export const GET = withApi({ rateLimit: "cron", csrf: false }, async (request: Request) => {
+  requireCronSecret(request);
   try {
-    return Response.json(await runAlertBatch(getDb(), { telegram: telegramSender, sms: smsSender }));
-  } catch {
+    const result = await runAlertBatch(getDb(), { telegram: telegramSender, sms: smsSender });
+    logger.info("cron.alerts.done", { result });
+    return Response.json(result);
+  } catch (error) {
+    logger.error("cron.alerts.failed", { error });
     return Response.json({ error: "Alert run failed" }, { status: 500 });
   }
-}
+});

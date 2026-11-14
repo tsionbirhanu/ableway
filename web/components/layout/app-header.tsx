@@ -52,8 +52,8 @@ function HeaderContent() {
                   preferences.interactionMode === "voice-first"
                     ? "screen-reader"
                     : preferences.interactionMode === "screen-reader"
-                    ? "hybrid"
-                    : "voice-first";
+                      ? "hybrid"
+                      : "voice-first";
                 setInteractionMode(nextMode);
               }}
               title="Click to switch interaction mode"

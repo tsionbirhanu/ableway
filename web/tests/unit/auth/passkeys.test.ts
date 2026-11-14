@@ -1,10 +1,7 @@
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { ZodError } from "zod";
-import {
-  verifyAuthenticationResponse,
-  verifyRegistrationResponse,
-} from "@simplewebauthn/server";
+import { verifyAuthenticationResponse, verifyRegistrationResponse } from "@simplewebauthn/server";
 import { ConflictError, RateLimitError } from "@/lib/auth/errors";
 import {
   CHALLENGE_TTL_MS,
@@ -83,7 +80,11 @@ function registrationVerified(credentialId: string) {
 }
 
 async function registerLearner(email: string, credentialId: string) {
-  const started = await startPasskeyRegistration(t.db, { ...details, email }, { ip: freshIp(), rp });
+  const started = await startPasskeyRegistration(
+    t.db,
+    { ...details, email },
+    { ip: freshIp(), rp },
+  );
   registrationVerified(credentialId);
   const actor = await finishPasskeyRegistration(
     t.db,
@@ -161,7 +162,11 @@ describe("startPasskeyRegistration", () => {
   it("refuses an email that already has an account", async () => {
     await registerLearner("taken@example.org", "cred-taken");
     await expect(
-      startPasskeyRegistration(t.db, { ...details, email: "TAKEN@example.org" }, { ip: freshIp(), rp }),
+      startPasskeyRegistration(
+        t.db,
+        { ...details, email: "TAKEN@example.org" },
+        { ip: freshIp(), rp },
+      ),
     ).rejects.toBeInstanceOf(ConflictError);
   });
 
@@ -182,7 +187,11 @@ describe("finishPasskeyRegistration", () => {
     expect(actor.role).toBe("learner");
 
     const [profile] = await t.db.select().from(profiles).where(eq(profiles.id, actor.id));
-    expect(profile).toMatchObject({ name: "Meron Tesfaye", email: "new@example.org", language: "am" });
+    expect(profile).toMatchObject({
+      name: "Meron Tesfaye",
+      email: "new@example.org",
+      language: "am",
+    });
 
     const [cred] = await t.db
       .select()
@@ -274,14 +283,19 @@ describe("finishPasskeyRegistration", () => {
     verifyRegistration.mockRejectedValueOnce(new Error("bad signature"));
     expect(await finishPasskeyRegistration(t.db, input, { ip: freshIp(), rp })).toBeNull();
 
-    const found = await t.db.select().from(profiles).where(eq(profiles.email, "unverified@example.org"));
+    const found = await t.db
+      .select()
+      .from(profiles)
+      .where(eq(profiles.email, "unverified@example.org"));
     expect(found).toHaveLength(0);
   });
 
   it("returns null for malformed input instead of throwing", async () => {
     const opts = { ip: freshIp(), rp };
     expect(await finishPasskeyRegistration(t.db, null, opts)).toBeNull();
-    expect(await finishPasskeyRegistration(t.db, { challengeId: "x", response: {} }, opts)).toBeNull();
+    expect(
+      await finishPasskeyRegistration(t.db, { challengeId: "x", response: {} }, opts),
+    ).toBeNull();
   });
 
   it("cannot be used with a sign-in challenge", async () => {

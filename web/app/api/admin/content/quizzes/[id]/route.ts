@@ -2,7 +2,8 @@ import { asc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { getDb } from "@/lib/db/client";
 import { quizQuestions, quizzes } from "@/lib/db/schema";
-import { NotFoundError, withErrors } from "@/lib/auth/errors";
+import { NotFoundError } from "@/lib/auth/errors";
+import { withApi } from "@/lib/api/handler";
 import { readJson } from "@/lib/auth/params";
 import { requireRole } from "@/lib/auth/session";
 
@@ -10,7 +11,7 @@ interface RouteProps {
   params: Promise<{ id: string }>;
 }
 
-const questionInputSchema = z.object({
+const questionInputSchema = z.strictObject({
   id: z.string().uuid().optional(),
   position: z.number().int().min(1),
   prompt: z.string().trim().min(1),
@@ -19,7 +20,7 @@ const questionInputSchema = z.object({
   explanation: z.string().trim().min(1),
 });
 
-const updateQuizSchema = z.object({
+const updateQuizSchema = z.strictObject({
   title: z.string().trim().min(1).max(200).optional(),
   passMark: z.number().int().min(0).max(100).optional(),
   status: z.enum(["draft", "published"]).optional(),
@@ -27,7 +28,7 @@ const updateQuizSchema = z.object({
   questions: z.array(questionInputSchema).optional(),
 });
 
-export const GET = withErrors(async (_request: Request, props: RouteProps) => {
+export const GET = withApi({}, async (_request: Request, props: RouteProps) => {
   await requireRole(["content_manager", "admin"]);
   const { id } = await props.params;
   const db = getDb();
@@ -49,7 +50,7 @@ export const GET = withErrors(async (_request: Request, props: RouteProps) => {
   });
 });
 
-export const PATCH = withErrors(async (request: Request, props: RouteProps) => {
+export const PATCH = withApi({}, async (request: Request, props: RouteProps) => {
   await requireRole(["content_manager", "admin"]);
   const { id } = await props.params;
   const body = updateQuizSchema.parse(await readJson(request));
@@ -99,7 +100,7 @@ export const PATCH = withErrors(async (request: Request, props: RouteProps) => {
   });
 });
 
-export const DELETE = withErrors(async (_request: Request, props: RouteProps) => {
+export const DELETE = withApi({}, async (_request: Request, props: RouteProps) => {
   await requireRole(["content_manager", "admin"]);
   const { id } = await props.params;
   const db = getDb();
@@ -109,4 +110,3 @@ export const DELETE = withErrors(async (_request: Request, props: RouteProps) =>
 
   return Response.json({ deleted: true });
 });
-

@@ -1,4 +1,5 @@
 import "server-only";
+import { logger } from "@/lib/log";
 import { Bot, type Context } from "grammy";
 import { requireFeatureKey } from "@/lib/env";
 import {
@@ -28,7 +29,7 @@ export function createTelegramBot(token: string): Bot {
 
   // Global error handler
   bot.catch((err) => {
-    console.error("Telegram bot error in update:", err.ctx.update.update_id, err.error);
+    logger.error("telegram.bot.error", { updateId: err.ctx.update.update_id, error: err.error });
   });
 
   // 1. Commands

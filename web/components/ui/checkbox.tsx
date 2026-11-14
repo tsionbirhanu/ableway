@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import React, { useId } from 'react';
+import React, { useId } from "react";
 
-export interface CheckboxProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'> {
+export interface CheckboxProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "type"> {
   label: string;
   hint?: string;
   error?: string;
@@ -10,7 +10,7 @@ export interface CheckboxProps extends Omit<React.InputHTMLAttributes<HTMLInputE
 }
 
 export const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
-  ({ label, hint, error, required = false, id: providedId, className = '', ...props }, ref) => {
+  ({ label, hint, error, required = false, id: providedId, className = "", ...props }, ref) => {
     const generatedId = useId();
     const id = providedId || generatedId;
     const hintId = `${id}-hint`;
@@ -27,7 +27,7 @@ export const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
             id={id}
             type="checkbox"
             required={required}
-            aria-required={required ? 'true' : undefined}
+            aria-required={required ? "true" : undefined}
             aria-invalid={Boolean(error)}
             aria-describedby={error ? errorId : hint ? hintId : undefined}
             className={`w-5 h-5 mt-0.5 rounded text-emerald-600 bg-slate-950 border-slate-600 focus:ring-emerald-500 ${className}`}
@@ -35,7 +35,8 @@ export const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
           />
           <div className="space-y-0.5">
             <span className="text-sm font-bold block">
-              {label} {required ? <span className="text-emerald-400 font-semibold">(required)</span> : null}
+              {label}{" "}
+              {required ? <span className="text-emerald-400 font-semibold">(required)</span> : null}
             </span>
             {hint && (
               <span id={hintId} className="text-xs text-slate-300 block">
@@ -52,8 +53,7 @@ export const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
         )}
       </div>
     );
-  }
+  },
 );
 
-Checkbox.displayName = 'Checkbox';
-
+Checkbox.displayName = "Checkbox";

@@ -42,4 +42,3 @@ export interface Course {
   estimatedHours: number;
   skillsTaught: string[];
 }
-

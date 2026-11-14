@@ -20,7 +20,9 @@ export interface ChecklistValidationResult {
  * 2. Audio or text (transcript satisfies text).
  * 3. A text description for every image.
  */
-export function validateLessonPublishChecklist(input: LessonChecklistInput): ChecklistValidationResult {
+export function validateLessonPublishChecklist(
+  input: LessonChecklistInput,
+): ChecklistValidationResult {
   const errors: string[] = [];
 
   if (input.status !== "published") {
@@ -60,7 +62,9 @@ export function validateLessonPublishChecklist(input: LessonChecklistInput): Che
     const attrs = match[1] || "";
     const altMatch = /alt=["']([^"']*)["']/i.exec(attrs);
     if (!altMatch || !altMatch[1]?.trim()) {
-      errors.push("Every HTML image in the lesson transcript must have a non-empty alt description.");
+      errors.push(
+        "Every HTML image in the lesson transcript must have a non-empty alt description.",
+      );
       break;
     }
   }
@@ -89,4 +93,3 @@ export function assertLessonPublishChecklist(input: LessonChecklistInput): void 
     throw new BadRequestError(`Cannot publish lesson: ${result.errors.join(" ")}`);
   }
 }
-

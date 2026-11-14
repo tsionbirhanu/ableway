@@ -62,7 +62,10 @@ export default function LessonDetailPage() {
     <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100">
       <AppHeader />
 
-      <main id="main-content" className="flex-1 max-w-5xl w-full mx-auto px-4 py-8 sm:px-6 lg:px-8 space-y-8">
+      <main
+        id="main-content"
+        className="flex-1 max-w-5xl w-full mx-auto px-4 py-8 sm:px-6 lg:px-8 space-y-8"
+      >
         {/* Breadcrumb / Back button */}
         <Link
           href="/learn"
@@ -80,10 +83,7 @@ export default function LessonDetailPage() {
         </div>
 
         {/* Audio Player Component */}
-        <AccessibleAudioPlayer
-          title={lessonData.title}
-          transcript={lessonData.transcript}
-        />
+        <AccessibleAudioPlayer title={lessonData.title} transcript={lessonData.transcript} />
 
         {/* Interactive Practice Quiz Section */}
         <section
@@ -130,7 +130,10 @@ export default function LessonDetailPage() {
               role="alert"
               className="p-4 bg-emerald-900/40 border border-emerald-600/50 rounded-xl text-emerald-200 text-sm flex items-start gap-2.5"
             >
-              <CheckCircle2 className="h-5 w-5 text-emerald-400 flex-none mt-0.5" aria-hidden="true" />
+              <CheckCircle2
+                className="h-5 w-5 text-emerald-400 flex-none mt-0.5"
+                aria-hidden="true"
+              />
               <p>{feedback}</p>
             </div>
           )}
@@ -141,7 +144,8 @@ export default function LessonDetailPage() {
           <div className="space-y-1">
             <h3 className="font-semibold text-white">Unclear about any concept?</h3>
             <p className="text-slate-300 text-sm">
-              The AI tutor is grounded in this lesson&apos;s transcript and ready to explain by voice.
+              The AI tutor is grounded in this lesson&apos;s transcript and ready to explain by
+              voice.
             </p>
           </div>
           <button
@@ -158,4 +162,3 @@ export default function LessonDetailPage() {
     </div>
   );
 }
-

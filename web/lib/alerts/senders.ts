@@ -8,7 +8,8 @@ export const telegramSender: AlertSender = {
   async send({ recipient, text }) {
     const token = requireFeatureKey("TELEGRAM_BOT_TOKEN");
     const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ chat_id: recipient, text }),
     });
     if (!response.ok) throw new Error("Telegram delivery failed");

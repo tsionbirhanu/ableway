@@ -1,7 +1,10 @@
 import "server-only";
 import { createHash, randomInt } from "node:crypto";
 import { and, eq, gt, isNull } from "drizzle-orm";
+import { recordAudit } from "@/lib/audit";
+import { hit, LIMITS } from "@/lib/auth/rate-limit";
 import { getDb } from "@/lib/db/client";
+import { recordConsent } from "@/lib/privacy/consent";
 import { alertSubscriptions, linkCodes, profiles, telegramLinks } from "@/lib/db/schema";
 import type { Db } from "@/lib/db/types";
 
@@ -53,6 +56,15 @@ export async function redeemLinkCode(
   const codeHash = hashLinkCode(code);
   const now = new Date();
 
+  // Codes are 6 digits, so limit guesses per Telegram account.
+  const attempt = await hit(db, `tg-link:${telegramId}`, LIMITS.telegramLinkPerAccount, now);
+  if (!attempt.allowed) {
+    return {
+      success: false,
+      error: "Too many tries. Please wait 15 minutes, then send the code again.",
+    };
+  }
+
   // Look for unused, unexpired code
   const [match] = await db
     .select()
@@ -69,8 +81,20 @@ export async function redeemLinkCode(
     };
   }
 
-  // Mark code as used
-  await db.update(linkCodes).set({ usedAt: now }).where(eq(linkCodes.id, match.id));
+  // Mark the code used. The condition makes this atomic: if two messages
+  // race with the same code, only one of them links.
+  const [claimed] = await db
+    .update(linkCodes)
+    .set({ usedAt: now })
+    .where(and(eq(linkCodes.id, match.id), isNull(linkCodes.usedAt)))
+    .returning({ id: linkCodes.id });
+  if (!claimed) {
+    return {
+      success: false,
+      error:
+        "The linking code is invalid or has expired. Please generate a new code on your web profile.",
+    };
+  }
 
   // Retrieve learner profile to check preferred language
   const [profile] = await db.select().from(profiles).where(eq(profiles.id, match.profileId));
@@ -94,6 +118,13 @@ export async function redeemLinkCode(
         consentAt: now,
       },
     });
+  // Sending the code from Telegram is the learner's opt-in to bot messages.
+  await recordConsent(db, {
+    profileId: match.profileId,
+    purpose: "telegram_messages",
+    granted: true,
+    source: "telegram",
+  });
 
   return {
     success: true,
@@ -104,38 +135,68 @@ export async function redeemLinkCode(
 }
 
 /**
- * Unlink Telegram account and stop all Telegram job alerts.
+ * Unlink a Telegram account: stop Telegram job alerts, delete the link,
+ * record the withdrawn consent, and write an audit row.
  */
+async function removeLink(
+  db: Db,
+  link: { profileId: string; telegramId: number },
+  source: "web" | "telegram",
+): Promise<void> {
+  await db.transaction(async (tx) => {
+    await tx
+      .update(alertSubscriptions)
+      .set({ active: false })
+      .where(
+        and(
+          eq(alertSubscriptions.profileId, link.profileId),
+          eq(alertSubscriptions.channel, "telegram"),
+        ),
+      );
+    await tx.delete(telegramLinks).where(eq(telegramLinks.telegramId, link.telegramId));
+    await recordAudit(tx, {
+      actorId: link.profileId,
+      action: "telegram.unlinked",
+      target: `profiles:${link.profileId}`,
+      metadata: { source },
+    });
+  });
+  await recordConsent(db, {
+    profileId: link.profileId,
+    purpose: "telegram_messages",
+    granted: false,
+    source,
+  });
+}
+
+/** Unlink from Telegram (the learner sent /unlink). */
 export async function unlinkTelegram(
   telegramId: number,
   customDb?: Db,
 ): Promise<{ success: boolean; profileId?: string }> {
   const db = customDb ?? getDb();
-
   const [link] = await db
     .select()
     .from(telegramLinks)
     .where(eq(telegramLinks.telegramId, telegramId));
-
-  if (!link) {
-    return { success: false };
-  }
-
-  // Stop all Telegram job alerts for this profile
-  await db
-    .update(alertSubscriptions)
-    .set({ active: false })
-    .where(
-      and(
-        eq(alertSubscriptions.profileId, link.profileId),
-        eq(alertSubscriptions.channel, "telegram"),
-      ),
-    );
-
-  // Remove the Telegram link
-  await db.delete(telegramLinks).where(eq(telegramLinks.telegramId, telegramId));
-
+  if (!link) return { success: false };
+  await removeLink(db, link, "telegram");
   return { success: true, profileId: link.profileId };
+}
+
+/** Unlink from the web profile. */
+export async function unlinkTelegramForProfile(
+  profileId: string,
+  customDb?: Db,
+): Promise<{ success: boolean }> {
+  const db = customDb ?? getDb();
+  const [link] = await db
+    .select()
+    .from(telegramLinks)
+    .where(eq(telegramLinks.profileId, profileId));
+  if (!link) return { success: false };
+  await removeLink(db, link, "web");
+  return { success: true };
 }
 
 /**

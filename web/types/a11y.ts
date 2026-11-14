@@ -22,4 +22,3 @@ export interface Announcement {
   politeness: "polite" | "assertive";
   timestamp: number;
 }
-

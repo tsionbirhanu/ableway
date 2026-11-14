@@ -2,7 +2,8 @@ import { EMBEDDING_DIMENSIONS } from "@/lib/db/schema";
 import { getEnv } from "@/lib/env";
 import type { Embedder } from "./types";
 
-const GEMINI_EMBEDDING_API = "https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004";
+const GEMINI_EMBEDDING_API =
+  "https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004";
 export const GEMINI_EMBEDDING_MODEL = "models/text-embedding-004";
 
 /**
@@ -56,7 +57,7 @@ export class GeminiEmbedder implements Embedder {
       if (!res.ok) {
         const errorText = await res.text().catch(() => "");
         throw new Error(
-          `Gemini embed error: ${res.status} ${res.statusText} ${errorText.slice(0, 200)}`
+          `Gemini embed error: ${res.status} ${res.statusText} ${errorText.slice(0, 200)}`,
         );
       }
 
@@ -65,7 +66,7 @@ export class GeminiEmbedder implements Embedder {
 
       if (batchEmbeddings.length !== slice.length) {
         throw new Error(
-          `Gemini batchEmbedContents returned ${batchEmbeddings.length} embeddings for ${slice.length} inputs.`
+          `Gemini batchEmbedContents returned ${batchEmbeddings.length} embeddings for ${slice.length} inputs.`,
         );
       }
 
@@ -79,10 +80,50 @@ export class GeminiEmbedder implements Embedder {
 }
 
 const STOPWORDS = new Set([
-  "a", "about", "an", "and", "are", "as", "at", "be", "by", "can", "could", "do",
-  "does", "for", "from", "get", "has", "have", "how", "i", "in", "is", "it", "me",
-  "my", "of", "on", "or", "our", "that", "the", "this", "to", "was", "we", "what",
-  "when", "where", "which", "who", "will", "with", "you", "your",
+  "a",
+  "about",
+  "an",
+  "and",
+  "are",
+  "as",
+  "at",
+  "be",
+  "by",
+  "can",
+  "could",
+  "do",
+  "does",
+  "for",
+  "from",
+  "get",
+  "has",
+  "have",
+  "how",
+  "i",
+  "in",
+  "is",
+  "it",
+  "me",
+  "my",
+  "of",
+  "on",
+  "or",
+  "our",
+  "that",
+  "the",
+  "this",
+  "to",
+  "was",
+  "we",
+  "what",
+  "when",
+  "where",
+  "which",
+  "who",
+  "will",
+  "with",
+  "you",
+  "your",
 ]);
 
 /**
@@ -104,9 +145,7 @@ export class FakeEmbedder implements Embedder {
   }
 
   private stem(w: string): string {
-    let s = w
-      .replace(/(ing|tion|tions|ment|ments|ed|es|s)$/i, "")
-      .replace(/(er|ers|or|ors)$/i, "");
+    let s = w.replace(/(ing|tion|tions|ment|ments|ed|es|s)$/i, "").replace(/(er|ers|or|ors)$/i, "");
     // Amharic common prefixes: በ (with/in), የ (of), ለ (for), ከ (from)
     if (/^[በየለከ][\u1200-\u137F]{2,}/.test(s)) {
       s = s.slice(1);

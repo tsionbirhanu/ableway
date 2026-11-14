@@ -1,10 +1,12 @@
+import { logger } from "@/lib/log";
 import { getEnv } from "@/lib/env";
 import { buildSystemPrompt, formatRetrievedKnowledgeBlock } from "./prompts";
 import { GEMINI_TOOL_DECLARATIONS, validateAndFilterAction } from "./tools";
 import type { AssistantActionResult, PageContext } from "./types";
 import type { SearchResult } from "@/lib/knowledge/types";
 
-const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+const GEMINI_API_URL =
+  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
 
 export interface GeminiCallParams {
   text: string;
@@ -96,14 +98,14 @@ export async function callGeminiAssistant(params: GeminiCallParams): Promise<Gem
     });
 
     if (!res.ok) {
-      console.warn(`Gemini API returned ${res.status}, using grounded fallback.`);
+      logger.warn("assistant.gemini.http_error", { status: res.status });
       return generateFallbackResponse(params);
     }
 
     const data = await res.json();
     return parseGeminiResponse(data, params.pageContext);
   } catch (err) {
-    console.warn("Gemini API call failed, using grounded fallback:", err);
+    logger.warn("assistant.gemini.failed", { error: err });
     return generateFallbackResponse(params);
   }
 }
@@ -111,11 +113,25 @@ export async function callGeminiAssistant(params: GeminiCallParams): Promise<Gem
 /**
  * Parses the raw Gemini API response candidate, extracting text and validating function calls.
  */
-export function parseGeminiResponse(data: any, pageContext?: PageContext | null): GeminiCallResult {
-  const candidate = data?.candidates?.[0];
+/** The parts of a Gemini generateContent response we read. Everything else is ignored. */
+type GeminiResponse = {
+  candidates?: {
+    finishReason?: string;
+    content?: {
+      parts?: { text?: string; functionCall?: { name: string; args?: Record<string, unknown> } }[];
+    };
+  }[];
+};
+
+export function parseGeminiResponse(
+  data: unknown,
+  pageContext?: PageContext | null,
+): GeminiCallResult {
+  const candidate = (data as GeminiResponse | null)?.candidates?.[0];
   if (!candidate) {
     return {
-      reply: "I am not sure how to answer that. Would you like me to connect you with a human helper?",
+      reply:
+        "I am not sure how to answer that. Would you like me to connect you with a human helper?",
       actions: [],
       confidence: 0.2,
     };
@@ -217,9 +233,21 @@ export function generateFallbackResponse(params: GeminiCallParams): GeminiCallRe
   }
 
   // 3. Distress detection
-  const distressTriggers = ["want to die", "kill myself", "end my life", "hurt myself", "መሞት እፈልጋለሁ", "ራሴን ላጠፋ", "ተስፋ ቆርጫለሁ ራሴን"];
+  const distressTriggers = [
+    "want to die",
+    "kill myself",
+    "end my life",
+    "hurt myself",
+    "መሞት እፈልጋለሁ",
+    "ራሴን ላጠፋ",
+    "ተስፋ ቆርጫለሁ ራሴን",
+  ];
   if (distressTriggers.some((t) => lower.includes(t))) {
-    const validated = validateAndFilterAction("request_human", { type: "urgent", reason: "Distress detected" }, pageContext);
+    const validated = validateAndFilterAction(
+      "request_human",
+      { type: "urgent", reason: "Distress detected" },
+      pageContext,
+    );
     return {
       reply: isAmharic
         ? "በጣም አዝናለሁ። እባክዎ ብቻዎን አይሁኑ። እርስዎን ለመርዳት ዝግጁ የሆነ የሰው አጋዥ አሁን እያገናኘሁልዎ ነው።"
@@ -230,7 +258,10 @@ export function generateFallbackResponse(params: GeminiCallParams): GeminiCallRe
   }
 
   // 4. Explicit human request
-  const isPayment = pageContext?.page?.toLowerCase()?.startsWith("/payment") || lower.includes("pay") || lower.includes("ክፍያ");
+  const isPayment =
+    pageContext?.page?.toLowerCase()?.startsWith("/payment") ||
+    lower.includes("pay") ||
+    lower.includes("ክፍያ");
   const humanTriggers = [
     "call a person",
     "call person",
@@ -253,7 +284,11 @@ export function generateFallbackResponse(params: GeminiCallParams): GeminiCallRe
   ];
   if (humanTriggers.some((t) => lower.includes(t))) {
     const helpType = isPayment ? "payment" : "general";
-    const validated = validateAndFilterAction("request_human", { type: helpType, reason: text }, pageContext);
+    const validated = validateAndFilterAction(
+      "request_human",
+      { type: helpType, reason: text },
+      pageContext,
+    );
     return {
       reply: isAmharic
         ? "እሺ፣ ከሰው አጋዥ ጋር አሁን አገናኝዎታለሁ። እባክዎ ጥቂት ደቂቃ ይጠብቁ።"
@@ -268,7 +303,7 @@ export function generateFallbackResponse(params: GeminiCallParams): GeminiCallRe
     const action = validateAndFilterAction(
       "select_course",
       { courseId: "data-analytics" },
-      pageContext
+      pageContext,
     );
     const actions: AssistantActionResult[] = action ? [action] : [];
     return {
@@ -284,7 +319,7 @@ export function generateFallbackResponse(params: GeminiCallParams): GeminiCallRe
     const action = validateAndFilterAction(
       "fill_field",
       { field: "email", value: "learner@example.com" },
-      pageContext
+      pageContext,
     );
     const actions: AssistantActionResult[] = action ? [action] : [];
     return {
@@ -299,7 +334,7 @@ export function generateFallbackResponse(params: GeminiCallParams): GeminiCallRe
   // 5. Answer grounded in knowledge chunks
   if (knowledgeChunks.length > 0) {
     const lessonChunk = knowledgeChunks.find(
-      (c) => c.sourceType === "lesson" || c.title.toLowerCase().includes("lesson")
+      (c) => c.sourceType === "lesson" || c.title.toLowerCase().includes("lesson"),
     );
     const courseChunk = knowledgeChunks.find(
       (c) =>
@@ -307,37 +342,59 @@ export function generateFallbackResponse(params: GeminiCallParams): GeminiCallRe
         c.title.toLowerCase().includes("catalog") ||
         c.sourceType === "course" ||
         (c.title.toLowerCase().includes("course") && !c.title.toLowerCase().includes("payment")) ||
-        (c.title.includes("ኮርስ") && !c.title.includes("ክፍያ"))
+        (c.title.includes("ኮርስ") && !c.title.includes("ክፍያ")),
     );
     const paymentChunk = knowledgeChunks.find(
       (c) =>
         c.title.toLowerCase().includes("payment") ||
         c.text.toLowerCase().includes("telebirr") ||
         c.title.includes("ክፍያ") ||
-        c.text.includes("ቴሌብር")
+        c.text.includes("ቴሌብር"),
     );
     const telegramChunk = knowledgeChunks.find(
-      (c) => c.title.toLowerCase().includes("telegram") || c.text.toLowerCase().includes("telegram") || c.title.includes("ቴሌግራም")
+      (c) =>
+        c.title.toLowerCase().includes("telegram") ||
+        c.text.toLowerCase().includes("telegram") ||
+        c.title.includes("ቴሌግራም"),
     );
 
     let reply = "";
 
-    if (lessonChunk && (lower.includes("lesson") || lower.includes("transcript") || lower.includes("explain") || lower.includes("what is") || lower.includes("summary") || lower.includes("ትምህርት") || knowledgeChunks[0] === lessonChunk)) {
+    if (
+      lessonChunk &&
+      (lower.includes("lesson") ||
+        lower.includes("transcript") ||
+        lower.includes("explain") ||
+        lower.includes("what is") ||
+        lower.includes("summary") ||
+        lower.includes("ትምህርት") ||
+        knowledgeChunks[0] === lessonChunk)
+    ) {
       reply = isAmharic
         ? `በትምህርቱ መሰረት፦ ${lessonChunk.text.slice(0, 220).trim()}`
         : `According to the lesson: ${lessonChunk.text.slice(0, 220).trim()}`;
-    } else if ((lower.includes("course") || lower.includes("ኮርስ") || lower.includes("ዋጋ")) && courseChunk) {
+    } else if (
+      (lower.includes("course") || lower.includes("ኮርስ") || lower.includes("ዋጋ")) &&
+      courseChunk
+    ) {
       reply = isAmharic
         ? "ኢብልዌይ አራት ዋና ዋና ኮርሶችን ያቀርባል፦ ዳታ አናሊቲክስ፣ የውጤታማ ተግባቦት መርሆዎች፣ ቨርቹዋል አሲስታንት እና ዲጂታል ተደራሽነት። የሚከፈሉ ኮርሶች 500 የኢትዮጵያ ብር ናቸው።"
         : "Ableway offers four courses: Data Analytics, Fundamentals of Communication, Virtual Assistant, and Digital Accessibility. Paid courses cost 500 ETB.";
     } else if (
-      (lower.includes("telebirr") || lower.includes("payment") || lower.includes("pay") || lower.includes("ቴሌብር") || lower.includes("ክፍያ")) &&
+      (lower.includes("telebirr") ||
+        lower.includes("payment") ||
+        lower.includes("pay") ||
+        lower.includes("ቴሌብር") ||
+        lower.includes("ክፍያ")) &&
       paymentChunk
     ) {
       reply = isAmharic
         ? "ክፍያ በቴሌብር ወይም በኢትዮጵያ ንግድ ባንክ መክፈል ይችላሉ። እርዳታ ከፈለጉ የሰው አጋዥ መጠየቅ ይችላሉ።"
         : "We accept Telebirr and Commercial Bank of Ethiopia. You can also request a human helper to guide your payment safely.";
-    } else if ((lower.includes("telegram") || lower.includes("ቴሌግራም") || lower.includes("audio")) && telegramChunk) {
+    } else if (
+      (lower.includes("telegram") || lower.includes("ቴሌግራም") || lower.includes("audio")) &&
+      telegramChunk
+    ) {
       reply = isAmharic
         ? "የድምጽ ትምህርቶችን በቴሌግራም ለመቀበል አካውንትዎን ከ @ableway_bot ጋር ያገናኙ።"
         : "To receive audio lessons on Telegram, link your account with @ableway_bot on Telegram.";
@@ -362,4 +419,3 @@ export function generateFallbackResponse(params: GeminiCallParams): GeminiCallRe
     confidence: 0.3,
   };
 }
-

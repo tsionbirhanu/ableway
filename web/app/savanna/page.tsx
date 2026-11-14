@@ -1,18 +1,19 @@
-'use client';
+"use client";
 
-import React, { useState, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { ExternalLink, Layers, ArrowLeft } from 'lucide-react';
+import React, { useState, Suspense } from "react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { ExternalLink, Layers, ArrowLeft } from "lucide-react";
 
 function SavannaContent() {
   const searchParams = useSearchParams();
-  const initialPage = searchParams.get('page') || 'homepage-v1-paced.html';
+  const initialPage = searchParams.get("page") || "homepage-v1-paced.html";
   const [currentPage, setCurrentPage] = useState(initialPage);
 
   const pages = [
-    { name: '1. Paced Track', file: 'homepage-v1-paced.html' },
-    { name: '2. Self-Paced Track', file: 'homepage-v1-self-paced.html' },
-    { name: '3. Concept Navigation', file: 'concept-with-navigation.html' },
+    { name: "1. Paced Track", file: "homepage-v1-paced.html" },
+    { name: "2. Self-Paced Track", file: "homepage-v1-self-paced.html" },
+    { name: "3. Concept Navigation", file: "concept-with-navigation.html" },
   ];
 
   return (
@@ -20,14 +21,16 @@ function SavannaContent() {
       {/* Savanna Switcher Toolbar (Rule 12: min 44px) */}
       <div className="bg-slate-900 border-b border-slate-700 px-4 py-2 flex flex-wrap items-center justify-between text-xs gap-3">
         <div className="flex items-center gap-3">
-          <a
+          <Link
             href="/"
             className="flex items-center gap-1.5 text-slate-200 hover:text-white font-bold min-h-[44px] px-2 rounded-lg"
           >
             <ArrowLeft className="w-4 h-4" aria-hidden="true" />
             <span>Back to Hub</span>
-          </a>
-          <span className="text-slate-600" aria-hidden="true">|</span>
+          </Link>
+          <span className="text-slate-600" aria-hidden="true">
+            |
+          </span>
           <div className="flex items-center gap-1.5 font-bold text-white">
             <Layers className="w-4 h-4 text-emerald-400" aria-hidden="true" />
             <h1 className="text-sm font-bold m-0 p-0 text-white">ALX Savanna Learning Portal</h1>
@@ -43,8 +46,8 @@ function SavannaContent() {
               onClick={() => setCurrentPage(p.file)}
               className={`px-3 py-2 rounded-lg font-bold min-h-[44px] transition-colors border ${
                 currentPage === p.file
-                  ? 'bg-emerald-600 border-emerald-400 text-white'
-                  : 'bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700'
+                  ? "bg-emerald-600 border-emerald-400 text-white"
+                  : "bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700"
               }`}
               aria-pressed={currentPage === p.file}
             >
@@ -78,7 +81,9 @@ function SavannaContent() {
 
 export default function SavannaPage() {
   return (
-    <Suspense fallback={<div className="p-8 text-center text-slate-200">Loading Savanna Portal...</div>}>
+    <Suspense
+      fallback={<div className="p-8 text-center text-slate-200">Loading Savanna Portal...</div>}
+    >
       <SavannaContent />
     </Suspense>
   );

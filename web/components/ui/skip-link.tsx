@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import React from 'react';
+import React from "react";
 
 export interface SkipLinkProps extends React.AnchorHTMLAttributes<HTMLAnchorElement> {
   targetId?: string;
@@ -12,9 +12,9 @@ export interface SkipLinkProps extends React.AnchorHTMLAttributes<HTMLAnchorElem
  * and screen reader users to skip repeated navigation blocks directly to main content.
  */
 export function SkipLink({
-  targetId = 'main-content',
-  children = 'Skip to main content',
-  className = '',
+  targetId = "main-content",
+  children = "Skip to main content",
+  className = "",
   onClick,
   ...props
 }: SkipLinkProps) {
@@ -22,7 +22,7 @@ export function SkipLink({
     if (onClick) onClick(e);
     const target = document.getElementById(targetId);
     if (target) {
-      target.setAttribute('tabindex', '-1');
+      target.setAttribute("tabindex", "-1");
       target.focus();
     }
   };
@@ -38,4 +38,3 @@ export function SkipLink({
     </a>
   );
 }
-

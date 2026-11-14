@@ -7,7 +7,7 @@ import type { Embedder, SearchResult } from "./types";
 
 export interface RetrieveOptions {
   embedder?: Embedder;
-  db?: Db | any;
+  db?: Db;
   /** Minimum similarity threshold (0 to 1). Defaults to 0.20. */
   minSimilarity?: number;
   /** Automatically record as unanswered question if nothing meets minSimilarity. */
@@ -15,7 +15,7 @@ export interface RetrieveOptions {
   channel?: "web" | "telegram";
 }
 
-export const DEFAULT_MIN_SIMILARITY = 0.20;
+export const DEFAULT_MIN_SIMILARITY = 0.2;
 
 /**
  * Retrieves the top-k most relevant knowledge chunks for a question.
@@ -28,7 +28,7 @@ export async function retrieve(
   question: string,
   language: string = "en",
   k: number = 5,
-  options: RetrieveOptions = {}
+  options: RetrieveOptions = {},
 ): Promise<SearchResult[]> {
   const cleanQuestion = question.trim();
   if (!cleanQuestion) return [];
@@ -65,8 +65,8 @@ export async function retrieve(
       and(
         eq(knowledgeChunks.status, "published"),
         langCondition,
-        isNotNull(knowledgeChunks.embedding)
-      )
+        isNotNull(knowledgeChunks.embedding),
+      ),
     )
     .orderBy(sql`${knowledgeChunks.embedding} <=> ${vectorStr}::vector`)
     .limit(k);
@@ -85,7 +85,7 @@ export async function retrieve(
   }
 
   // Filter only results that meet the minimum threshold
-  return rows.filter((r: any) => r.similarity >= minSimilarity);
+  return rows.filter((r) => r.similarity >= minSimilarity);
 }
 
 /**
@@ -93,7 +93,7 @@ export async function retrieve(
  */
 export async function recordUnanswered(
   question: string,
-  options?: { language?: string; channel?: "web" | "telegram"; db?: Db | any }
+  options?: { language?: string; channel?: "web" | "telegram"; db?: Db },
 ): Promise<void> {
   const clean = question.trim();
   if (!clean) return;
@@ -106,4 +106,3 @@ export async function recordUnanswered(
     resolved: false,
   });
 }
-

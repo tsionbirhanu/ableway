@@ -1,8 +1,9 @@
-import { and, desc, eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { getDb } from "@/lib/db/client";
 import { conversations, helpRequests, messages } from "@/lib/db/schema";
-import { NotFoundError, BadRequestError, withErrors } from "@/lib/auth/errors";
+import { NotFoundError, BadRequestError } from "@/lib/auth/errors";
+import { withApi } from "@/lib/api/handler";
 import { readJson } from "@/lib/auth/params";
 import { requireRole } from "@/lib/auth/session";
 import { relayHelperMessage } from "@/lib/telegram/relay";
@@ -11,7 +12,7 @@ interface RouteProps {
   params: Promise<{ id: string }>;
 }
 
-const messageSchema = z.object({
+const messageSchema = z.strictObject({
   message: z.string().trim().min(1, "Message cannot be empty").max(2000),
 });
 
@@ -19,17 +20,13 @@ const messageSchema = z.object({
  * POST /api/helper/requests/[id]/message
  * Dispatches a human helper message into the learner's active conversation (web or Telegram).
  */
-export const POST = withErrors(async (request: Request, props: RouteProps) => {
-  const actor = await requireRole(["helper", "admin"]);
+export const POST = withApi({}, async (request: Request, props: RouteProps) => {
+  await requireRole(["helper", "admin"]);
   const { id } = await props.params;
   const { message } = messageSchema.parse(await readJson(request));
   const db = getDb();
 
-  const [helpReq] = await db
-    .select()
-    .from(helpRequests)
-    .where(eq(helpRequests.id, id))
-    .limit(1);
+  const [helpReq] = await db.select().from(helpRequests).where(eq(helpRequests.id, id)).limit(1);
 
   if (!helpReq) {
     throw new NotFoundError("Help request not found.");

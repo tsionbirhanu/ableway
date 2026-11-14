@@ -1,8 +1,12 @@
+import { logger } from "@/lib/log";
 import { and, desc, eq } from "drizzle-orm";
 import { getDb } from "@/lib/db/client";
-import { conversations, lessons, messages, unansweredQuestions } from "@/lib/db/schema";
+import { conversations, lessons, messages } from "@/lib/db/schema";
 import { retrieve } from "@/lib/knowledge/retrieve";
+import type { SearchResult } from "@/lib/knowledge/types";
+import type { MessageFlag } from "@/lib/db/json-types";
 import type { Db } from "@/lib/db/types";
+import { redactSensitiveData } from "@/lib/privacy/redact";
 import { callGeminiAssistant } from "./gemini";
 import {
   hasThreeFailedTurnsInARow,
@@ -13,7 +17,6 @@ import {
 import type {
   AskAssistantParams,
   AskAssistantResult,
-  AssistantActionResult,
   EscalationResult,
   HelpRequestType,
 } from "./types";
@@ -51,10 +54,13 @@ export async function askAssistant(params: AskAssistantParams): Promise<AskAssis
   } = params;
 
   const db = customDb ?? getDb();
-  const cleanText = text.trim();
+  // Card numbers, PINs and passwords are removed before the text is stored
+  // or sent to the model provider.
+  const { cleanText, flags: redactionFlags } = redactSensitiveData(text.trim());
 
   // 1. Resolve or create conversation
-  let conv: { id: string; handledBy: "assistant" | "helper"; profileId: string | null } | null = null;
+  let conv: { id: string; handledBy: "assistant" | "helper"; profileId: string | null } | null =
+    null;
 
   if (params.conversationId) {
     const [existing] = await db
@@ -66,7 +72,9 @@ export async function askAssistant(params: AskAssistantParams): Promise<AskAssis
       .from(conversations)
       .where(eq(conversations.id, params.conversationId))
       .limit(1);
-    if (existing) conv = existing;
+    // Only continue a conversation that belongs to the same person (or, for
+    // signed-out visitors, one that was also anonymous). Otherwise start fresh.
+    if (existing && existing.profileId === userId) conv = existing;
   }
 
   if (!conv && userId) {
@@ -112,7 +120,7 @@ export async function askAssistant(params: AskAssistantParams): Promise<AskAssis
       role: "learner",
       content: cleanText,
       handledBy: "helper",
-      flags: [],
+      flags: redactionFlags,
     });
 
     return {
@@ -129,7 +137,7 @@ export async function askAssistant(params: AskAssistantParams): Promise<AskAssis
     role: "learner",
     content: cleanText,
     handledBy: "assistant",
-    flags: [],
+    flags: redactionFlags,
   });
 
   // 4. Check for distress
@@ -142,7 +150,7 @@ export async function askAssistant(params: AskAssistantParams): Promise<AskAssis
   const threeFailedTurns = await hasThreeFailedTurnsInARow(conv.id, db);
 
   // 7. Retrieve knowledge chunks
-  let knowledgeChunks: any[] = [];
+  let knowledgeChunks: SearchResult[] = [];
   const minSimilarity = language.startsWith("am") ? 0.05 : 0.2;
   try {
     knowledgeChunks = await retrieve(cleanText, language, 5, {
@@ -151,7 +159,7 @@ export async function askAssistant(params: AskAssistantParams): Promise<AskAssis
       minSimilarity,
     });
   } catch (err) {
-    console.warn("Knowledge retrieval failed, proceeding without chunks:", err);
+    logger.warn("assistant.retrieval.failed", { error: err });
   }
 
   // Prepend lesson transcript to retrieval context if in lesson context
@@ -182,7 +190,7 @@ export async function askAssistant(params: AskAssistantParams): Promise<AskAssis
         });
       }
     } catch (err) {
-      console.warn("Could not load lesson transcript for assistant:", err);
+      logger.warn("assistant.lesson_transcript.failed", { error: err });
     }
   } else if (pageContext?.lessonTranscript && typeof pageContext.lessonTranscript === "string") {
     knowledgeChunks.unshift({
@@ -233,12 +241,11 @@ export async function askAssistant(params: AskAssistantParams): Promise<AskAssis
     await recordUnansweredQuestion(cleanText, {
       language,
       channel,
-      notes: "Distress detected",
       db,
     });
   } else if (requestedHuman || requestHumanAction) {
     const actionType = requestHumanAction?.params?.type as HelpRequestType;
-    const finalType = (actionType && actionType !== "general") ? actionType : helpType;
+    const finalType = actionType && actionType !== "general" ? actionType : helpType;
     escalate = {
       type: finalType,
       reason: (requestHumanAction?.params?.reason as string) || "Learner requested a human helper",
@@ -251,7 +258,6 @@ export async function askAssistant(params: AskAssistantParams): Promise<AskAssis
     await recordUnansweredQuestion(cleanText, {
       language,
       channel,
-      notes: "Three consecutive failed turns",
       db,
     });
   } else if (geminiResult.confidence < 0.6) {
@@ -262,7 +268,6 @@ export async function askAssistant(params: AskAssistantParams): Promise<AskAssis
     await recordUnansweredQuestion(cleanText, {
       language,
       channel,
-      notes: "Low model confidence",
       db,
     });
   } else if (
@@ -295,14 +300,13 @@ export async function askAssistant(params: AskAssistantParams): Promise<AskAssis
       await recordUnansweredQuestion(cleanText, {
         language,
         channel,
-        notes: "No relevant knowledge found",
         db,
       });
     }
   }
 
   // 10. Persist Assistant Reply
-  const messageFlags: string[] = [];
+  const messageFlags: MessageFlag[] = [];
   if (geminiResult.confidence < 0.6) messageFlags.push("low_confidence");
   if (escalate) messageFlags.push("escalated");
 
@@ -312,7 +316,7 @@ export async function askAssistant(params: AskAssistantParams): Promise<AskAssis
       role: "assistant",
       content: geminiResult.reply,
       handledBy: "assistant",
-      flags: messageFlags as any,
+      flags: messageFlags,
     });
   }
 
@@ -337,7 +341,7 @@ function isGreetingOrCommand(text: string): boolean {
  */
 export async function summarizeConversation(
   conversationId: string,
-  options?: { db?: Db | any }
+  options?: { db?: Db },
 ): Promise<string> {
   const db = options?.db ?? getDb();
   try {
@@ -350,10 +354,9 @@ export async function summarizeConversation(
 
     if (rows.length === 0) return "No prior conversation messages.";
 
-    const dialog = rows.map((r: any) => `${r.role}: ${r.content}`).join("\n");
+    const dialog = rows.map((r) => `${r.role}: ${r.content}`).join("\n");
     return `Learner conversation summary:\n${dialog.slice(0, 500)}`;
   } catch {
     return "Conversation summary unavailable.";
   }
 }
-

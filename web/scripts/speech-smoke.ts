@@ -55,7 +55,6 @@ async function main() {
     ...providers(env),
     cache: new TtsCache(),
     lowConfidenceThreshold: env.SPEECH_LOW_CONFIDENCE_THRESHOLD,
-    retention: { enabled: false, dir: "", days: 1 },
   };
   console.log(`Provider: ${deps.providerName}`);
   const outDir = join(".data", "speech-smoke");

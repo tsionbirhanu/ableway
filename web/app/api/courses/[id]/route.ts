@@ -1,25 +1,18 @@
-import { and, asc, eq, or } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
+import { withApi } from "@/lib/api/handler";
+import { courseRef, isUuid } from "@/lib/api/schemas";
+import { NotFoundError } from "@/lib/auth/errors";
 import { getDb } from "@/lib/db/client";
 import { courses, modules } from "@/lib/db/schema";
-import { NotFoundError, withErrors } from "@/lib/auth/errors";
 
-interface RouteProps {
-  params: Promise<{ id: string }>;
-}
+type RouteProps = { params: Promise<{ id: string }> };
 
-/**
- * GET /api/courses/[id]: returns a single published course by ID or slug.
- * Returns published courses only.
- */
-export const GET = withErrors(async (_request: Request, props: RouteProps) => {
-  const { id } = await props.params;
+/** GET /api/courses/[id]: one published course, by id or slug. */
+export const GET = withApi({}, async (_request: Request, props: RouteProps) => {
+  const parsed = courseRef.safeParse((await props.params).id);
+  if (!parsed.success) throw new NotFoundError("Course not found or is currently unpublished.");
+  const ref = parsed.data;
   const db = getDb();
-
-  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
-
-  const condition = isUuid
-    ? or(eq(courses.id, id), eq(courses.slug, id))
-    : eq(courses.slug, id);
 
   const [course] = await db
     .select({
@@ -33,14 +26,15 @@ export const GET = withErrors(async (_request: Request, props: RouteProps) => {
       status: courses.status,
     })
     .from(courses)
-    .where(and(condition, eq(courses.status, "published")))
+    .where(
+      and(
+        isUuid(ref) ? eq(courses.id, ref) : eq(courses.slug, ref),
+        eq(courses.status, "published"),
+      ),
+    )
     .limit(1);
+  if (!course) throw new NotFoundError("Course not found or is currently unpublished.");
 
-  if (!course) {
-    throw new NotFoundError("Course not found or is currently unpublished.");
-  }
-
-  // Fetch course modules
   const courseModules = await db
     .select({
       id: modules.id,
@@ -56,7 +50,8 @@ export const GET = withErrors(async (_request: Request, props: RouteProps) => {
   return Response.json({
     course: {
       ...course,
-      priceFormatted: course.priceMinor > 0 ? `${course.priceMinor / 100} ${course.currency}` : "Free",
+      priceFormatted:
+        course.priceMinor > 0 ? `${course.priceMinor / 100} ${course.currency}` : "Free",
       modules: courseModules,
     },
   });

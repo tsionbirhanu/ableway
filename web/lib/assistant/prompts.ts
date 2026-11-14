@@ -57,7 +57,7 @@ export function formatRetrievedKnowledgeBlock(chunks: SearchResult[]): string {
   const formatted = chunks
     .map(
       (c, index) =>
-        `[CHUNK ${index + 1}] Source: ${c.sourceType} | Title: ${c.title} | Similarity: ${c.similarity.toFixed(2)}\n${c.text}\n[/CHUNK ${index + 1}]`
+        `[CHUNK ${index + 1}] Source: ${c.sourceType} | Title: ${c.title} | Similarity: ${c.similarity.toFixed(2)}\n${c.text}\n[/CHUNK ${index + 1}]`,
     )
     .join("\n\n");
 
@@ -67,7 +67,9 @@ export function formatRetrievedKnowledgeBlock(chunks: SearchResult[]): string {
 /**
  * Formats a job post or forwarded message into clearly marked, untrusted data blocks.
  */
-export function formatDataBlock(tag: "job_post" | "forwarded_message" | "page_content", content: string): string {
+export function formatDataBlock(
+  tag: "job_post" | "forwarded_message" | "page_content",
+  content: string,
+): string {
   return `<${tag}>\n${content}\n</${tag}>`;
 }
-

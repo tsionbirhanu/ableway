@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import React, { useId } from 'react';
+import React, { useId } from "react";
 
 export interface SelectOption {
   value: string;
@@ -17,18 +17,33 @@ export interface SelectFieldProps extends React.SelectHTMLAttributes<HTMLSelectE
 }
 
 export const SelectField = React.forwardRef<HTMLSelectElement, SelectFieldProps>(
-  ({ label, options, hint, error, required = false, id: providedId, className = '', children, ...props }, ref) => {
+  (
+    {
+      label,
+      options,
+      hint,
+      error,
+      required = false,
+      id: providedId,
+      className = "",
+      children,
+      ...props
+    },
+    ref,
+  ) => {
     const generatedId = useId();
     const id = providedId || generatedId;
     const hintId = `${id}-hint`;
     const errorId = `${id}-error`;
 
-    const describedBy = [hint ? hintId : '', error ? errorId : ''].filter(Boolean).join(' ') || undefined;
+    const describedBy =
+      [hint ? hintId : "", error ? errorId : ""].filter(Boolean).join(" ") || undefined;
 
     return (
       <div className="space-y-1.5 w-full">
         <label htmlFor={id} className="block text-sm font-bold text-slate-100">
-          {label} {required ? <span className="text-emerald-400 font-semibold">(required)</span> : null}
+          {label}{" "}
+          {required ? <span className="text-emerald-400 font-semibold">(required)</span> : null}
         </label>
 
         {hint && (
@@ -41,13 +56,11 @@ export const SelectField = React.forwardRef<HTMLSelectElement, SelectFieldProps>
           ref={ref}
           id={id}
           required={required}
-          aria-required={required ? 'true' : undefined}
+          aria-required={required ? "true" : undefined}
           aria-invalid={Boolean(error)}
           aria-describedby={describedBy}
           className={`w-full bg-slate-950 border rounded-xl px-4 py-3 text-white text-base min-h-[44px] focus:outline-none focus:ring-2 ${
-            error
-              ? 'border-red-500 focus:ring-red-500'
-              : 'border-slate-600 focus:ring-emerald-500'
+            error ? "border-red-500 focus:ring-red-500" : "border-slate-600 focus:ring-emerald-500"
           } ${className}`}
           {...props}
         >
@@ -67,8 +80,7 @@ export const SelectField = React.forwardRef<HTMLSelectElement, SelectFieldProps>
         )}
       </div>
     );
-  }
+  },
 );
 
-SelectField.displayName = 'SelectField';
-
+SelectField.displayName = "SelectField";
