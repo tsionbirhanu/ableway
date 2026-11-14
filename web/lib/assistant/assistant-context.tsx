@@ -73,6 +73,9 @@ export interface AssistantContextType {
   // Mode control
   setMode: (mode: InteractionModeType) => void;
 
+  // Page Context
+  setPageContext: (ctx: Record<string, unknown> | null) => void;
+
   // Permission Flow
   requestMicPermission: () => Promise<boolean>;
   explainMicPermission: () => void;
@@ -181,6 +184,11 @@ export function AssistantProvider({
   const registerAction = useCallback((action: ActionDefinition) => {
     registeredActionsRef.current[action.name] = action;
     setRegistryVersion((v) => v + 1);
+  }, []);
+
+  const pageContextRef = useRef<Record<string, unknown> | null>(null);
+  const setPageContext = useCallback((ctx: Record<string, unknown> | null) => {
+    pageContextRef.current = ctx;
   }, []);
 
   const unregisterAction = useCallback((name: string) => {
@@ -445,6 +453,11 @@ export function AssistantProvider({
             message: text,
             currentPage: pathname,
             registeredActions: registeredNames,
+            pageContext: {
+              page: pathname,
+              allowedActions: registeredNames,
+              ...(pageContextRef.current || {}),
+            },
           }),
         });
 
@@ -717,6 +730,7 @@ export function AssistantProvider({
         confirmAction,
         cancelAction,
         setMode: setExplicitMode,
+        setPageContext,
         requestMicPermission,
         explainMicPermission,
         dismissMicExplanation,

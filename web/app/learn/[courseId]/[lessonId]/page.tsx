@@ -5,12 +5,14 @@ import Link from "next/link";
 import { AppHeader } from "@/components/layout/app-header";
 import { AccessibleAudioPlayer } from "@/components/audio-player/accessible-audio-player";
 import { useA11y } from "@/lib/a11y/a11y-context";
+import { useAssistant } from "@/lib/assistant/assistant-context";
 import { useEarcons } from "@/hooks/use-earcons";
 import { Bot, ArrowLeft, CheckCircle2 } from "lucide-react";
 
 export default function LessonDetailPage() {
   const { speak } = useA11y();
   const { play } = useEarcons();
+  const { setIsOpen, setPageContext } = useAssistant();
 
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
@@ -33,6 +35,14 @@ export default function LessonDetailPage() {
         "Correct! The three-point rule directs you to state your premise, present supporting evidence, and close with a clear call to action.",
     },
   };
+
+  React.useEffect(() => {
+    setPageContext({
+      page: "/learn",
+      lessonTitle: lessonData.title,
+      lessonTranscript: lessonData.transcript,
+    });
+  }, [setPageContext, lessonData.title, lessonData.transcript]);
 
   const handleAnswer = (index: number) => {
     setSelectedOption(index);
@@ -134,13 +144,15 @@ export default function LessonDetailPage() {
               The AI tutor is grounded in this lesson&apos;s transcript and ready to explain by voice.
             </p>
           </div>
-          <Link
-            href="/tutor"
-            className="px-5 py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-medium rounded-xl shadow transition flex items-center gap-2 focus:outline-none focus:ring-4 focus:ring-purple-300 flex-none"
+          <button
+            type="button"
+            onClick={() => setIsOpen(true)}
+            className="px-5 py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-medium rounded-xl shadow transition flex items-center gap-2 focus:outline-none focus:ring-4 focus:ring-purple-300 flex-none min-h-[44px]"
+            aria-label="Ask AI Tutor about this lesson"
           >
             <Bot className="h-4 w-4" aria-hidden="true" />
             <span>Ask Tutor</span>
-          </Link>
+          </button>
         </div>
       </main>
     </div>

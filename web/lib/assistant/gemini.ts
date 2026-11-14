@@ -298,6 +298,9 @@ export function generateFallbackResponse(params: GeminiCallParams): GeminiCallRe
 
   // 5. Answer grounded in knowledge chunks
   if (knowledgeChunks.length > 0) {
+    const lessonChunk = knowledgeChunks.find(
+      (c) => c.sourceType === "lesson" || c.title.toLowerCase().includes("lesson")
+    );
     const courseChunk = knowledgeChunks.find(
       (c) =>
         c.title.includes("ዝርዝር") ||
@@ -319,7 +322,11 @@ export function generateFallbackResponse(params: GeminiCallParams): GeminiCallRe
 
     let reply = "";
 
-    if ((lower.includes("course") || lower.includes("ኮርስ") || lower.includes("ዋጋ")) && courseChunk) {
+    if (lessonChunk && (lower.includes("lesson") || lower.includes("transcript") || lower.includes("explain") || lower.includes("what is") || lower.includes("summary") || lower.includes("ትምህርት") || knowledgeChunks[0] === lessonChunk)) {
+      reply = isAmharic
+        ? `በትምህርቱ መሰረት፦ ${lessonChunk.text.slice(0, 220).trim()}`
+        : `According to the lesson: ${lessonChunk.text.slice(0, 220).trim()}`;
+    } else if ((lower.includes("course") || lower.includes("ኮርስ") || lower.includes("ዋጋ")) && courseChunk) {
       reply = isAmharic
         ? "ኢብልዌይ አራት ዋና ዋና ኮርሶችን ያቀርባል፦ ዳታ አናሊቲክስ፣ የውጤታማ ተግባቦት መርሆዎች፣ ቨርቹዋል አሲስታንት እና ዲጂታል ተደራሽነት። የሚከፈሉ ኮርሶች 500 የኢትዮጵያ ብር ናቸው።"
         : "Ableway offers four courses: Data Analytics, Fundamentals of Communication, Virtual Assistant, and Digital Accessibility. Paid courses cost 500 ETB.";

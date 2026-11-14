@@ -1,6 +1,6 @@
 import { and, desc, eq } from "drizzle-orm";
 import { getDb } from "@/lib/db/client";
-import { conversations, messages, unansweredQuestions } from "@/lib/db/schema";
+import { conversations, lessons, messages, unansweredQuestions } from "@/lib/db/schema";
 import { retrieve } from "@/lib/knowledge/retrieve";
 import type { Db } from "@/lib/db/types";
 import { callGeminiAssistant } from "./gemini";
@@ -152,6 +152,50 @@ export async function askAssistant(params: AskAssistantParams): Promise<AskAssis
     });
   } catch (err) {
     console.warn("Knowledge retrieval failed, proceeding without chunks:", err);
+  }
+
+  // Prepend lesson transcript to retrieval context if in lesson context
+  const lessonId = (pageContext?.lessonId as string) || undefined;
+  if (lessonId) {
+    try {
+      const [lesson] = await db
+        .select({
+          id: lessons.id,
+          title: lessons.title,
+          transcript: lessons.transcript,
+        })
+        .from(lessons)
+        .where(eq(lessons.id, lessonId))
+        .limit(1);
+
+      if (lesson && lesson.transcript) {
+        knowledgeChunks.unshift({
+          id: `lesson-${lesson.id}`,
+          sourceType: "lesson",
+          sourceId: lesson.id,
+          title: `Lesson: ${lesson.title}`,
+          text: lesson.transcript,
+          language,
+          version: 1,
+          status: "published",
+          similarity: 1.0,
+        });
+      }
+    } catch (err) {
+      console.warn("Could not load lesson transcript for assistant:", err);
+    }
+  } else if (pageContext?.lessonTranscript && typeof pageContext.lessonTranscript === "string") {
+    knowledgeChunks.unshift({
+      id: "lesson-context",
+      sourceType: "lesson",
+      sourceId: null,
+      title: (pageContext.lessonTitle as string) || "Current Lesson",
+      text: pageContext.lessonTranscript,
+      language,
+      version: 1,
+      status: "published",
+      similarity: 1.0,
+    });
   }
 
   const sources = knowledgeChunks.map((c) => ({
