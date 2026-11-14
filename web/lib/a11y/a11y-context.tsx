@@ -187,9 +187,17 @@ export function A11yProvider({ children }: { children: React.ReactNode }) {
   const setLanguage = useCallback((lang: string) => {
     saveSettings({ language: lang });
     if (typeof document !== "undefined") {
-      document.documentElement.lang = lang === 'am-ET' ? 'am' : 'en';
+      const code = lang.startsWith('am') ? 'am' : lang.startsWith('om') ? 'om' : lang.startsWith('ti') ? 'ti' : 'en';
+      document.documentElement.lang = code;
     }
-    const msg = lang === 'am-ET' ? 'ቋንቋ ወደ አማርኛ ተቀይሯል።' : 'Language set to English.';
+    const msg =
+      lang.startsWith('am')
+        ? 'ቋንቋ ወደ አማርኛ ተቀይሯል።'
+        : lang.startsWith('om')
+        ? 'Afaan Oromoo filatameera.'
+        : lang.startsWith('ti')
+        ? 'ቋንቋ ናብ ትግርኛ ተቐይሩ።'
+        : 'Language set to English.';
     setLastAnnouncement(msg);
   }, [saveSettings]);
 
