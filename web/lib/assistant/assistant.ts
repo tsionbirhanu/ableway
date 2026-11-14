@@ -2,8 +2,10 @@ import "server-only";
 import { eq } from "drizzle-orm";
 import { getDb } from "@/lib/db/client";
 import { conversations, messages } from "@/lib/db/schema";
-import type { MessageFlag } from "@/lib/db/json-types";
 import { getEnv } from "@/lib/env";
+import { redactSensitiveData } from "@/lib/privacy/redact";
+
+export { redactSensitiveData };
 
 export interface AssistantRequest {
   message: string;
@@ -17,33 +19,6 @@ export interface AssistantResponse {
   reply: string;
   language: string;
   escalateToHuman?: boolean;
-}
-
-/**
- * Redacts sensitive credentials (card numbers, PINs, passwords)
- * so they are never persisted to the database.
- */
-export function redactSensitiveData(text: string): { cleanText: string; flags: MessageFlag[] } {
-  let cleanText = text;
-  const flags: MessageFlag[] = [];
-
-  // 13-19 digit card numbers
-  const cardRegex = /\b(?:\d[ -]*?){13,19}\b/g;
-  if (cardRegex.test(cleanText)) {
-    flags.push("sensitive_data_redacted");
-    cleanText = cleanText.replace(cardRegex, "[REDACTED_CARD]");
-  }
-
-  // PIN / password patterns
-  const pinRegex = /\b(?:secret\s+)?(?:pin|password|cvv|secret|code)\s*[:=]?\s*([A-Za-z0-9_-]+)/gi;
-  if (pinRegex.test(cleanText)) {
-    if (!flags.includes("sensitive_data_redacted")) {
-      flags.push("sensitive_data_redacted");
-    }
-    cleanText = cleanText.replace(pinRegex, "[REDACTED_CREDENTIAL]");
-  }
-
-  return { cleanText, flags };
 }
 
 /**
@@ -72,13 +47,16 @@ export function stripDecorativeSymbols(text: string): string {
  * Used by both Web and Telegram channels.
  */
 export async function askAssistant({
-  message,
+  message: rawMessage,
   channel,
   profileId,
   language = "en",
   isUntrustedData = false,
 }: AssistantRequest): Promise<AssistantResponse> {
   const env = getEnv();
+  // Card numbers, PINs and passwords are removed before the text is sent to
+  // the model provider or stored.
+  const message = redactSensitiveData(rawMessage).cleanText;
   const lower = message.toLowerCase().trim();
 
   // 1. Untrusted data fencing: forwarded messages or files
@@ -102,10 +80,11 @@ export async function askAssistant({
         ].join("\n");
 
         const res = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${env.GEMINI_API_KEY}`,
+          "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent",
           {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            // The key goes in a header, never the URL (URLs end up in logs).
+            headers: { "Content-Type": "application/json", "x-goog-api-key": env.GEMINI_API_KEY },
             body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
           },
         );
@@ -189,10 +168,10 @@ export async function askAssistant({
       ].join(" ");
 
       const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${env.GEMINI_API_KEY}`,
+        "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent",
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", "x-goog-api-key": env.GEMINI_API_KEY },
           body: JSON.stringify({
             system_instruction: { parts: [{ text: systemInstruction }] },
             contents: [{ parts: [{ text: message }] }],
@@ -257,7 +236,7 @@ export async function askAssistant({
       }
 
       if (convId) {
-        const { cleanText, flags } = redactSensitiveData(message);
+        const { cleanText, flags } = redactSensitiveData(rawMessage);
         await db.insert(messages).values({
           conversationId: convId,
           role: "learner",

@@ -1,7 +1,8 @@
 import "server-only";
 import { toProviderWav, toTelegramVoice } from "./audio";
 import { normalizeLanguage, resolveVoice } from "./languages";
-import { retainAudio, type RetentionConfig } from "./retention";
+import { noRetention, type RecordingOwner, type RetentionPolicy } from "./retention";
+import { logger } from "@/lib/log";
 import { TtsCache, ttsCacheKey } from "./tts-cache";
 import {
   SpeechError,
@@ -26,7 +27,8 @@ export type SpeechDeps = {
   tts: TextToSpeech;
   cache: TtsCache;
   lowConfidenceThreshold: number;
-  retention: RetentionConfig;
+  /** Decides whether a recording is kept. Defaults to keeping nothing. */
+  retention?: RetentionPolicy;
 };
 
 export type TranscribeResult = Transcription & {
@@ -38,12 +40,14 @@ export type TranscribeResult = Transcription & {
 /**
  * Upload (webm, ogg or wav) -> text.
  * The audio lives only in memory: it is converted, sent to the provider,
- * then dropped. It is saved only if retention is switched on.
+ * then dropped. It is kept only if the retention policy says so, which
+ * needs the operator switch AND the learner's own opt-in (see ./retention.ts).
  */
 export async function transcribeRecording(
   deps: SpeechDeps,
   upload: Uint8Array,
   language: string | undefined,
+  owner: RecordingOwner = { profileId: null },
 ): Promise<TranscribeResult> {
   const { wav, seconds } = await toProviderWav(upload);
   try {
@@ -54,9 +58,9 @@ export async function transcribeRecording(
       lowConfidence: isLowConfidence(result, deps.lowConfidenceThreshold),
     };
   } finally {
-    // Retention is opt-in; when off this does nothing and the buffers are dropped.
-    await retainAudio(deps.retention, wav).catch((error: unknown) => {
-      console.error("Could not retain audio", error);
+    // Retention is opt-in; by default this keeps nothing and the buffers are dropped.
+    await (deps.retention ?? noRetention).retain(wav, owner).catch((error: unknown) => {
+      logger.error("speech.retain_failed", { error });
     });
   }
 }
@@ -97,8 +101,13 @@ export async function synthesizeSpeech(
 // ---------- Telegram voice notes ----------
 
 /** Telegram voice note (OGG/Opus) -> text. Same limits and privacy rules as web uploads. */
-export function transcribeTelegramVoice(deps: SpeechDeps, oggOpus: Uint8Array, language?: string) {
-  return transcribeRecording(deps, oggOpus, language);
+export function transcribeTelegramVoice(
+  deps: SpeechDeps,
+  oggOpus: Uint8Array,
+  language?: string,
+  owner: RecordingOwner = { profileId: null },
+) {
+  return transcribeRecording(deps, oggOpus, language, owner);
 }
 
 /** Text -> OGG/Opus voice note for Telegram's sendVoice. */

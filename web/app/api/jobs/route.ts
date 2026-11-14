@@ -1,45 +1,89 @@
 import { eq } from "drizzle-orm";
 import { z } from "zod";
+import { withApi } from "@/lib/api/handler";
+import { queryInt } from "@/lib/api/schemas";
+import { NotFoundError } from "@/lib/auth/errors";
+import { parseQuery, readJson } from "@/lib/auth/params";
+import { canManageJobs } from "@/lib/auth/policies";
+import { authorize, requireActor } from "@/lib/auth/session";
 import { getDb } from "@/lib/db/client";
-import { jobs, knowledgeChunks } from "@/lib/db/schema";
-import { withErrors, NotFoundError, BadRequestError } from "@/lib/auth/errors";
-import { requireRole } from "@/lib/auth/session";
-import { createJob, searchJobs, reviewReason, ingestJob, type JobInput } from "@/lib/jobs/service";
+import { jobs, jobStatus, jobType, knowledgeChunks } from "@/lib/db/schema";
+import { createJob, ingestJob, reviewReason, searchJobs, type JobInput } from "@/lib/jobs/service";
 
-const jobSchema = z.object({ title: z.string().min(1), employer: z.string(), location: z.string().min(1), jobType: z.enum(["full_time", "part_time", "contract", "internship", "volunteer"]), description: z.string().default(""), requirements: z.string().min(1), howToApply: z.string().min(1), deadline: z.string().nullable().optional(), accessibilityNotes: z.string().nullable().optional(), status: z.enum(["draft", "published"]).optional() });
+const text = (max: number) => z.string().trim().max(max);
 
-export async function GET(request: Request) {
-  const params = new URL(request.url).searchParams;
-  const offset = Math.max(0, Number.parseInt(params.get("offset") ?? "0", 10) || 0);
-  const [job] = await searchJobs(getDb(), params.get("query") ?? "", params.get("location") ?? "", params.get("type") ?? "", offset);
-  return Response.json({ job: job ?? null, nextOffset: job ? offset + 1 : null });
-}
+const jobFields = {
+  title: text(200).min(1),
+  employer: text(200),
+  location: text(200).min(1),
+  jobType: z.enum(jobType.enumValues),
+  description: text(10_000).default(""),
+  requirements: text(5_000).min(1),
+  howToApply: text(2_000).min(1),
+  deadline: z.iso.date().nullable().optional(),
+  accessibilityNotes: text(2_000).nullable().optional(),
+};
 
-export const POST = withErrors(async (request: Request) => {
-  await requireRole(["content_manager", "admin"]);
-  const body = jobSchema.safeParse(await request.json());
-  if (!body.success) throw new BadRequestError();
-  const status = body.data.status === "published" ? "published" : "draft";
-  const { status: _status, ...input } = body.data;
+const createSchema = z.strictObject({
+  ...jobFields,
+  status: z.enum(["draft", "published"]).default("draft"),
+});
+
+const updateSchema = z.strictObject({
+  id: z.uuid(),
+  ...z.strictObject(jobFields).partial().shape,
+  status: z.enum(jobStatus.enumValues).optional(),
+});
+
+const searchQuery = z.strictObject({
+  query: text(200).default(""),
+  location: text(200).default(""),
+  type: z.enum(jobType.enumValues).or(z.literal("")).default(""),
+  offset: queryInt(0, 10_000, 0),
+});
+
+/** One job at a time (it is read aloud), with the offset of the next one. */
+export const GET = withApi({}, async (request: Request) => {
+  const q = parseQuery(request, searchQuery);
+  const [job] = await searchJobs(getDb(), q.query, q.location, q.type, q.offset);
+  return Response.json({ job: job ?? null, nextOffset: job ? q.offset + 1 : null });
+});
+
+export const POST = withApi({}, async (request: Request) => {
+  const actor = await requireActor();
+  authorize(canManageJobs(actor));
+  const { status, ...input } = createSchema.parse(await readJson(request));
   const job = await createJob(getDb(), input as JobInput, status);
   return Response.json({ job }, { status: 201 });
 });
 
-export const PATCH = withErrors(async (request: Request) => {
-  await requireRole(["content_manager", "admin"]);
-  const body = z.object({ id: z.string().uuid(), ...jobSchema.partial().shape, status: z.enum(["draft", "published", "closed"]).optional() }).safeParse(await request.json());
-  if (!body.success) throw new BadRequestError();
-  const { id, status, ...fields } = body.data;
+export const PATCH = withApi({}, async (request: Request) => {
+  const actor = await requireActor();
+  authorize(canManageJobs(actor));
+  const { id, status, ...fields } = updateSchema.parse(await readJson(request));
   const db = getDb();
+
   const [old] = await db.select().from(jobs).where(eq(jobs.id, id));
   if (!old) throw new NotFoundError();
-  const merged = { ...old, ...fields };
-  const reason = reviewReason(merged);
-  const values = { ...fields, suspicious: Boolean(reason), reviewReason: reason, ...(status ? { status } : {}), ...(status === "published" && !old.publishedAt ? { publishedAt: new Date() } : {}) };
+  const reason = reviewReason({ ...old, ...fields } as JobInput);
+  const values = {
+    ...fields,
+    suspicious: Boolean(reason),
+    reviewReason: reason,
+    ...(status ? { status } : {}),
+    ...(status === "published" && !old.publishedAt ? { publishedAt: new Date() } : {}),
+  };
+
   const job = await db.transaction(async (tx) => {
     const [updated] = await tx.update(jobs).set(values).where(eq(jobs.id, id)).returning();
+    if (!updated) throw new NotFoundError();
     if (updated.status === "published") await ingestJob(tx as never, updated);
-    else if (updated.status === "closed") await tx.update(knowledgeChunks).set({ status: "draft" }).where(eq(knowledgeChunks.sourceId, updated.id));
+    else if (updated.status === "closed") {
+      await tx
+        .update(knowledgeChunks)
+        .set({ status: "draft" })
+        .where(eq(knowledgeChunks.sourceId, updated.id));
+    }
     return updated;
   });
   return Response.json({ job });

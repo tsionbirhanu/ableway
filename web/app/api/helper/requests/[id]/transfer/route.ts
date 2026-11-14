@@ -1,69 +1,68 @@
 import { eq } from "drizzle-orm";
 import { z } from "zod";
+import { withApi } from "@/lib/api/handler";
+import { recordAudit } from "@/lib/audit";
+import { BadRequestError, NotFoundError } from "@/lib/auth/errors";
+import { parseId, readJson } from "@/lib/auth/params";
+import { canUpdateHelpRequest } from "@/lib/auth/policies";
+import { authorize, requireRole } from "@/lib/auth/session";
 import { getDb } from "@/lib/db/client";
-import { auditLog, helpRequests } from "@/lib/db/schema";
-import { NotFoundError, withErrors } from "@/lib/auth/errors";
-import { readJson } from "@/lib/auth/params";
-import { requireRole } from "@/lib/auth/session";
+import { helpRequests, profiles } from "@/lib/db/schema";
 
-interface RouteProps {
-  params: Promise<{ id: string }>;
-}
+type RouteProps = { params: Promise<{ id: string }> };
 
-const transferSchema = z.object({
-  targetHelperId: z.string().uuid().optional().nullable(),
+const transferSchema = z.strictObject({
+  targetHelperId: z.uuid().nullable().optional(),
   notes: z.string().trim().max(1000).optional(),
 });
 
 /**
  * POST /api/helper/requests/[id]/transfer
- * Transfers the help request to another helper or releases it back to the waiting queue.
+ * Give the request to another helper, or release it back to the queue.
+ * The target must be a helper or admin, so a request (and the learner's
+ * contact details) can never be handed to a learner account.
  */
-export const POST = withErrors(async (request: Request, props: RouteProps) => {
+export const POST = withApi({}, async (request: Request, props: RouteProps) => {
   const actor = await requireRole(["helper", "admin"]);
-  const { id } = await props.params;
+  authorize(canUpdateHelpRequest(actor));
+  const id = parseId((await props.params).id);
   const body = transferSchema.parse(await readJson(request));
-  const db = getDb();
+  const targetHelperId = body.targetHelperId ?? null;
 
-  const [helpReq] = await db
-    .select()
-    .from(helpRequests)
-    .where(eq(helpRequests.id, id))
-    .limit(1);
+  const updated = await getDb().transaction(async (tx) => {
+    if (targetHelperId) {
+      const [target] = await tx
+        .select({ role: profiles.role })
+        .from(profiles)
+        .where(eq(profiles.id, targetHelperId));
+      if (!target || (target.role !== "helper" && target.role !== "admin")) {
+        throw new BadRequestError("Choose a helper to transfer this request to.");
+      }
+    }
 
-  if (!helpReq) {
-    throw new NotFoundError("Help request not found.");
-  }
+    const newStatus = targetHelperId ? "assigned" : "waiting";
+    const [row] = await tx
+      .update(helpRequests)
+      .set({ assignedHelperId: targetHelperId, status: newStatus })
+      .where(eq(helpRequests.id, id))
+      .returning();
+    if (!row) throw new NotFoundError("Help request not found.");
 
-  const newStatus = body.targetHelperId ? "assigned" : "waiting";
-
-  const [updated] = await db
-    .update(helpRequests)
-    .set({
-      assignedHelperId: body.targetHelperId ?? null,
-      status: newStatus,
-    })
-    .where(eq(helpRequests.id, id))
-    .returning();
-
-  await db.insert(auditLog).values({
-    actorId: actor.id,
-    action: "help_request.transferred",
-    target: `help_requests:${id}`,
-    metadata: {
-      fromHelperId: actor.id,
-      toHelperId: body.targetHelperId ?? null,
-      notes: body.notes ?? null,
-    },
+    await recordAudit(tx, {
+      actorId: actor.id,
+      action: "help_request.transferred",
+      target: `help_requests:${id}`,
+      metadata: { toHelperId: targetHelperId, hasNotes: Boolean(body.notes) },
+    });
+    return row;
   });
 
   return Response.json({
     ok: true,
-    status: newStatus,
+    status: updated.status,
     helpRequest: updated,
-    message: body.targetHelperId
+    message: targetHelperId
       ? "Help request transferred to designated helper."
       : "Help request released back to queue.",
   });
 });
-

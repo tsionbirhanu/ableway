@@ -4,7 +4,10 @@ import { InputFile, type Context } from "grammy";
 import { askAssistant } from "@/lib/assistant/assistant";
 import { getDb } from "@/lib/db/client";
 import { conversations, messages } from "@/lib/db/schema";
-import { synthesizeSpeech, transcribeAudio } from "@/lib/speech";
+import { logger } from "@/lib/log";
+import { synthesizeVoiceNote, transcribeVoiceNote } from "@/lib/speech";
+import { MAX_AUDIO_BYTES } from "@/lib/speech/audio";
+import { SpeechError } from "@/lib/speech/types";
 import {
   getUnlinkedMessage,
   handleAlertsCommand,
@@ -196,25 +199,42 @@ export async function handleVoiceMessage(ctx: Context) {
     return;
   }
 
-  // Download audio file
-  let audioBuffer: Buffer;
-  try {
-    const file = await ctx.getFile();
-    if (file.file_path) {
-      const botToken = ctx.api.token;
-      const downloadUrl = `https://api.telegram.org/file/bot${botToken}/${file.file_path}`;
-      const response = await fetch(downloadUrl);
-      const arrayBuffer = await response.arrayBuffer();
-      audioBuffer = Buffer.from(arrayBuffer);
-    } else {
-      audioBuffer = Buffer.alloc(100);
-    }
-  } catch {
-    audioBuffer = Buffer.alloc(100);
+  const notUnderstood = lang.startsWith("am")
+    ? "ይቅርታ፣ የድምጽ መልእክቱን መረዳት አልቻልኩም። እባክዎ እንደገና ይሞክሩ ወይም ይጻፉ።"
+    : "Sorry, I could not understand that voice note. Please try again, or type your message.";
+
+  // Telegram tells us the size first, so a huge file is never downloaded.
+  if (voice.file_size !== undefined && voice.file_size > MAX_AUDIO_BYTES) {
+    await ctx.reply(new SpeechError("audio_too_large").message);
+    return;
   }
 
-  // Transcribe audio
-  const transcript = await transcribeAudio(audioBuffer, "audio/ogg");
+  let audio: Uint8Array;
+  try {
+    const file = await ctx.getFile();
+    if (!file.file_path) throw new Error("Telegram returned no file path");
+    // The bot token is part of Telegram's file URL. It is never logged.
+    const response = await fetch(
+      `https://api.telegram.org/file/bot${ctx.api.token}/${file.file_path}`,
+    );
+    if (!response.ok) throw new Error(`Telegram file download failed (${response.status})`);
+    audio = new Uint8Array(await response.arrayBuffer());
+    if (audio.length > MAX_AUDIO_BYTES) throw new SpeechError("audio_too_large");
+  } catch (error) {
+    logger.warn("telegram.voice.download_failed", { error });
+    await ctx.reply(error instanceof SpeechError ? error.message : notUnderstood);
+    return;
+  }
+
+  let transcript: string;
+  try {
+    transcript = await transcribeVoiceNote(audio, lang, profile.id);
+  } catch (error) {
+    if (!(error instanceof SpeechError))
+      logger.error("telegram.voice.transcribe_failed", { error });
+    await ctx.reply(error instanceof SpeechError ? error.message : notUnderstood);
+    return;
+  }
 
   // Call assistant with channel = "telegram"
   const assistantResult = await askAssistant({
@@ -229,11 +249,8 @@ export async function handleVoiceMessage(ctx: Context) {
     return;
   }
 
-  // Synthesize voice reply
-  const replyAudioBuffer = await synthesizeSpeech(assistantResult.reply, lang);
-
-  // Reply with voice if learner sent voice, AND also send text
-  await ctx.replyWithVoice(new InputFile(replyAudioBuffer, "reply.ogg"));
+  // Reply with voice because the learner sent voice, and always send the text too.
+  await replyWithVoiceIfPossible(ctx, assistantResult.reply, lang, "reply.ogg");
   await ctx.reply(assistantResult.reply);
 }
 
@@ -291,11 +308,24 @@ export async function handleForwardedOrFileMessage(ctx: Context) {
     isUntrustedData: true,
   });
 
-  // Read aloud (synthesize speech) and summarise (text)
-  const speechBuffer = await synthesizeSpeech(assistantResult.reply, lang);
-
-  await ctx.replyWithVoice(new InputFile(speechBuffer, "summary.ogg"));
+  // Read aloud (voice note) and summarise (text)
+  await replyWithVoiceIfPossible(ctx, assistantResult.reply, lang, "summary.ogg");
   await ctx.reply(assistantResult.reply);
+}
+
+/** Send a voice note of `text`. If speech fails, the text reply that follows is enough. */
+async function replyWithVoiceIfPossible(
+  ctx: Context,
+  text: string,
+  language: string,
+  filename: string,
+): Promise<void> {
+  try {
+    const voice = await synthesizeVoiceNote(text, language);
+    await ctx.replyWithVoice(new InputFile(voice, filename));
+  } catch (error) {
+    logger.warn("telegram.voice.synthesize_failed", { error });
+  }
 }
 
 /**

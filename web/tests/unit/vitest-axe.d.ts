@@ -1,7 +1,8 @@
-import 'vitest';
-import type { AxeResults } from 'axe-core';
+import "vitest";
 
-declare module 'vitest' {
+declare module "vitest" {
+  // The type parameter must match vitest's own declaration to merge with it.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any
   interface Assertion<T = any> {
     toHaveNoViolations(): void;
   }
@@ -9,4 +10,3 @@ declare module 'vitest' {
     toHaveNoViolations(): void;
   }
 }
-

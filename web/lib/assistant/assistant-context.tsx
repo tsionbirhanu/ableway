@@ -1,6 +1,14 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useSyncExternalStore,
+} from "react";
 import { useRouter } from "next/navigation";
 import { useA11y } from "@/lib/a11y/a11y-context";
 import { playEarcon } from "@/lib/audio/earcons";
@@ -55,7 +63,6 @@ export interface AssistantContextType {
   // Action Registry
   registerAction: (action: ActionDefinition) => void;
   unregisterAction: (name: string) => void;
-  registeredActions: Record<string, ActionDefinition>;
 
   // Interaction Methods
   sendMessage: (text: string) => Promise<void>;
@@ -81,6 +88,14 @@ export interface AssistantContextType {
 
 const AssistantContext = createContext<AssistantContextType | undefined>(undefined);
 
+/** Re-read the path on back/forward navigation. */
+function subscribeToHistory(onChange: () => void): () => void {
+  window.addEventListener("popstate", onChange);
+  return () => window.removeEventListener("popstate", onChange);
+}
+
+const readPathname = () => window.location.pathname;
+
 export function AssistantProvider({
   initialMode,
   children,
@@ -88,12 +103,9 @@ export function AssistantProvider({
   initialMode?: InteractionModeType;
   children: React.ReactNode;
 }) {
-  const [pathname, setPathname] = useState("/");
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      setPathname(window.location.pathname);
-    }
-  }, []);
+  // The current page path. Read from the browser after hydration ("/" on the
+  // server), without usePathname, which would need a Suspense boundary here.
+  const pathname = useSyncExternalStore(subscribeToHistory, readPathname, () => "/");
   const router = useRouter();
   const { mode: a11yMode, speechRate, announce, language } = useA11y();
 
@@ -108,7 +120,9 @@ export function AssistantProvider({
   const [status, setStatus] = useState<AssistantStatus>("idle");
   const [isMuted, setIsMuted] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [helpStatus, setHelpStatus] = useState<"idle" | "pending" | "connected" | "error" | null>(null);
+  const [helpStatus, setHelpStatus] = useState<"idle" | "pending" | "connected" | "error" | null>(
+    null,
+  );
   const [helpRequestId, setHelpRequestId] = useState<string | null>(null);
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
   const [micPermissionState, setMicPermissionState] = useState<MicPermissionState>("prompt");
@@ -135,8 +149,12 @@ export function AssistantProvider({
   useEffect(() => {
     // Register standard goToPage and fillField actions
     const navigateHandler = (p: Record<string, unknown>) => {
-      const targetPath = (typeof p.path === "string" ? p.path : "") || (typeof p.url === "string" ? p.url : "");
-      if (targetPath) router.push(targetPath);
+      const targetPath =
+        (typeof p.page === "string" ? p.page : "") ||
+        (typeof p.path === "string" ? p.path : "") ||
+        (typeof p.url === "string" ? p.url : "");
+      // Same-site paths only: the assistant must never navigate off the site.
+      if (/^\/(?![\/\\])/.test(targetPath)) router.push(targetPath);
     };
 
     registeredActionsRef.current["goToPage"] = {
@@ -164,8 +182,11 @@ export function AssistantProvider({
         if (typeof window === "undefined") return;
         const fieldName = String(p.field || "");
         const fieldValue = String(p.value ?? "");
-        if (typeof (window as any).fillField === "function") {
-          (window as any).fillField(fieldName, fieldValue);
+        const pageWindow = window as unknown as {
+          fillField?: (name: string, value: string) => void;
+        };
+        if (typeof pageWindow.fillField === "function") {
+          pageWindow.fillField(fieldName, fieldValue);
         }
         const input = (document.querySelector(`[name="${fieldName}"]`) ||
           document.getElementById(fieldName)) as HTMLInputElement | null;
@@ -284,7 +305,7 @@ export function AssistantProvider({
         setStatus("idle");
       }
     },
-    [mode, isMuted, speechRate, stopSpeaking, language]
+    [mode, isMuted, speechRate, stopSpeaking, language],
   );
 
   // Escalate to human helper
@@ -326,7 +347,7 @@ export function AssistantProvider({
         announce("Network error while connecting to helper service.");
       }
     },
-    [announce, mode, pathname, speakText]
+    [announce, mode, pathname, speakText],
   );
 
   // Execute confirmed action
@@ -398,8 +419,25 @@ export function AssistantProvider({
         }
       }
     },
-    [announce, mode, speakText]
+    [announce, mode, speakText],
   );
+
+  // Repeat last message
+  const repeatLastMessage = useCallback(() => {
+    const assistantMessages = conversation.filter(
+      (m) => m.sender === "assistant" || m.sender === "helper",
+    );
+    const last = assistantMessages[assistantMessages.length - 1];
+    if (last) {
+      if (mode === "screen-reader") {
+        announce(`Repeating: ${last.text}`, "polite");
+      } else {
+        speakText(last.text);
+      }
+    } else {
+      announce("No previous message to repeat.", "polite");
+    }
+  }, [conversation, mode, announce, speakText]);
 
   // Send text message to /api/assistant
   const sendMessage = useCallback(
@@ -481,7 +519,7 @@ export function AssistantProvider({
         if (data.actions && data.actions.length > 0) {
           await executeActions(data.actions);
         }
-      } catch (_err) {
+      } catch {
         setStatus("idle");
         playEarcon("error");
         const failureMsg =
@@ -493,23 +531,17 @@ export function AssistantProvider({
         }
       }
     },
-    [pathname, stopSpeaking, announce, mode, speakText, callPerson, executeActions]
+    [
+      pathname,
+      stopSpeaking,
+      announce,
+      mode,
+      speakText,
+      callPerson,
+      executeActions,
+      repeatLastMessage,
+    ],
   );
-
-  // Repeat last message
-  const repeatLastMessage = useCallback(() => {
-    const assistantMessages = conversation.filter((m) => m.sender === "assistant" || m.sender === "helper");
-    const last = assistantMessages[assistantMessages.length - 1];
-    if (last) {
-      if (mode === "screen-reader") {
-        announce(`Repeating: ${last.text}`, "polite");
-      } else {
-        speakText(last.text);
-      }
-    } else {
-      announce("No previous message to repeat.", "polite");
-    }
-  }, [conversation, mode, announce, speakText]);
 
   // Request mic permission
   const requestMicPermission = useCallback(async (): Promise<boolean> => {
@@ -527,7 +559,7 @@ export function AssistantProvider({
       setMicPermissionState("denied");
       announce(
         "Microphone access was denied. You can continue using your keyboard to type messages below.",
-        "assertive"
+        "assertive",
       );
       return false;
     }
@@ -592,7 +624,8 @@ export function AssistantProvider({
             // The server sends a short message the learner can hear (for example "too long").
             const failure = await transcribeRes.json().catch(() => null);
             throw Object.assign(new Error("Transcription service error"), {
-              spoken: typeof failure?.error?.message === "string" ? failure.error.message : undefined,
+              spoken:
+                typeof failure?.error?.message === "string" ? failure.error.message : undefined,
             });
           }
 
@@ -650,7 +683,7 @@ export function AssistantProvider({
       playEarcon("error");
       announce(
         "Could not access your microphone. You can type using your keyboard in the text box below.",
-        "assertive"
+        "assertive",
       );
     }
   }, [micPermissionState, requestMicPermission, announce, mode, speakText, sendMessage, language]);
@@ -706,7 +739,6 @@ export function AssistantProvider({
         setIsMuted,
         registerAction,
         unregisterAction,
-        registeredActions: registeredActionsRef.current,
         sendMessage,
         startListening,
         stopListening,
@@ -734,4 +766,3 @@ export function useAssistant() {
   }
   return context;
 }
-

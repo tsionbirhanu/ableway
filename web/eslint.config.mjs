@@ -34,6 +34,19 @@ const eslintConfig = defineConfig([
       ],
     },
   },
+  {
+    // Server code logs only through lib/log.ts, which removes personal data.
+    files: ["lib/**/*.{ts,tsx}", "app/api/**/*.ts", "instrumentation.ts"],
+    ignores: ["lib/log.ts"],
+    rules: {
+      "no-console": "error",
+    },
+  },
+  {
+    // Browser-only modules may report to the learner's own console.
+    files: ["lib/a11y/**", "lib/passkeys/client.ts", "lib/speech/client/**", "lib/audio/**"],
+    rules: { "no-console": "off" },
+  },
   // Must be last: turns off rules that clash with Prettier.
   prettier,
   globalIgnores([

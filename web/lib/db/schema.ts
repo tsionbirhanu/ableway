@@ -4,6 +4,7 @@ import {
   boolean,
   char,
   check,
+  customType,
   date,
   index,
   integer,
@@ -89,6 +90,21 @@ export const jobType = pgEnum("job_type", [
 ]);
 export const alertChannel = pgEnum("alert_channel", ["telegram", "sms"]);
 export const deliveryStatus = pgEnum("delivery_status", ["pending", "sent", "failed", "skipped"]);
+/**
+ * Things a learner can agree to. Each is opt-in and can be withdrawn.
+ * - privacy_policy: accepted the privacy notice (version in policy_version).
+ * - voice_retention: allow keeping voice recordings for a limited time to
+ *   improve recognition. Off unless the learner turns it on.
+ * - telegram_messages: allow the Telegram bot to message them.
+ * - job_alerts: allow job alert messages.
+ */
+export const consentPurpose = pgEnum("consent_purpose", [
+  "privacy_policy",
+  "voice_retention",
+  "telegram_messages",
+  "job_alerts",
+]);
+export const consentSource = pgEnum("consent_source", ["web", "telegram", "helper"]);
 export const knowledgeSourceType = pgEnum("knowledge_source_type", [
   "course",
   "lesson",
@@ -161,7 +177,10 @@ export const passkeyCredentials = pgTable(
     publicKey: text("public_key").notNull(),
     /** Signature counter, used to spot cloned authenticators. */
     counter: bigint("counter", { mode: "number" }).notNull().default(0),
-    transports: text("transports").array().notNull().default(sql`'{}'::text[]`),
+    transports: text("transports")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
     /** "singleDevice" or "multiDevice" (synced, e.g. Google Password Manager, iCloud Keychain). */
     deviceType: text("device_type").notNull(),
     backedUp: boolean("backed_up").notNull().default(false),
@@ -361,9 +380,14 @@ export const paymentRecords = pgTable(
   "payment_records",
   {
     ...baseColumns,
-    enrollmentId: uuid("enrollment_id")
-      .notNull()
-      .references(() => enrollments.id, { onDelete: "restrict" }),
+    /**
+     * Null after the learner deletes their account: the payment stays as an
+     * anonymous financial record (amount, currency, method, date) with no
+     * link to the person.
+     */
+    enrollmentId: uuid("enrollment_id").references(() => enrollments.id, {
+      onDelete: "set null",
+    }),
     amountMinor: integer("amount_minor").notNull(),
     currency: char("currency", { length: 3 }).notNull(),
     method: paymentMethod("method").notNull(),
@@ -613,6 +637,57 @@ export const unansweredQuestions = pgTable(
 );
 
 // =====================================================================
+// Privacy: consent and voice recordings
+// =====================================================================
+
+/**
+ * Consent history. Append-only: a change of mind is a new row, so we can
+ * show when consent was given and when it was withdrawn. The current state
+ * for a purpose is the newest row.
+ */
+export const consentRecords = pgTable(
+  "consent_records",
+  {
+    ...baseColumns,
+    profileId: uuid("profile_id")
+      .notNull()
+      .references(() => profiles.id, { onDelete: "cascade" }),
+    purpose: consentPurpose("purpose").notNull(),
+    granted: boolean("granted").notNull(),
+    /** Version of the wording the learner agreed to, for example "2026-11". */
+    policyVersion: text("policy_version").notNull(),
+    source: consentSource("source").notNull(),
+  },
+  (t) => [index("consent_records_profile_purpose_idx").on(t.profileId, t.purpose, t.createdAt)],
+);
+
+const bytea = customType<{ data: Uint8Array; driverData: Uint8Array }>({
+  dataType: () => "bytea",
+});
+
+/**
+ * Voice recordings kept with the learner's opt-in only (voice_retention
+ * consent AND SPEECH_RETAIN_AUDIO=true). Every row has an expiry; the
+ * retention cron deletes expired rows. No transcript is stored here.
+ */
+export const voiceRecordings = pgTable(
+  "voice_recordings",
+  {
+    ...baseColumns,
+    profileId: uuid("profile_id")
+      .notNull()
+      .references(() => profiles.id, { onDelete: "cascade" }),
+    audio: bytea("audio").notNull(),
+    contentType: text("content_type").notNull().default("audio/wav"),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  },
+  (t) => [
+    index("voice_recordings_profile_id_idx").on(t.profileId),
+    index("voice_recordings_expires_at_idx").on(t.expiresAt),
+  ],
+);
+
+// =====================================================================
 // Audit
 // =====================================================================
 
@@ -660,5 +735,7 @@ export const allTables = {
   alertCronState,
   knowledgeChunks,
   unansweredQuestions,
+  consentRecords,
+  voiceRecordings,
   auditLog,
 };

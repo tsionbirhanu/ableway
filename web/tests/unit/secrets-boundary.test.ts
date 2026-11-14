@@ -57,16 +57,17 @@ describe("secrets boundary", () => {
       "APP_URL",
       "AUTH_SECRET",
       "AZURE_SPEECH_REGION",
+      "CONVERSATION_RETENTION_DAYS",
       "CRON_SECRET",
       "DATABASE_URL",
       "FFMPEG_PATH",
       "GEMINI_API_KEY",
       "SMS_API_KEY",
+      "SMS_ENABLED",
       "SPEECH_LOW_CONFIDENCE_THRESHOLD",
       "SPEECH_PROVIDER",
       "SPEECH_RETAIN_AUDIO",
       "SPEECH_RETENTION_DAYS",
-      "SPEECH_RETENTION_DIR",
       "STT_API_KEY",
       "TELEGRAM_BOT_TOKEN",
       "TELEGRAM_WEBHOOK_SECRET",
@@ -74,6 +75,7 @@ describe("secrets boundary", () => {
     ]);
     const example = read(join(root, ".env.example"));
     for (const name of [
+      "DATABASE_URL",
       "AUTH_SECRET",
       "GEMINI_API_KEY",
       "STT_API_KEY",
@@ -85,5 +87,7 @@ describe("secrets boundary", () => {
     ]) {
       expect(example).toMatch(new RegExp(`^${name}=\\r?$`, "m"));
     }
+    // No connection string with a password anywhere in the file, not even in a comment.
+    expect(example).not.toMatch(/postgres(ql)?:\/\/[^\s:@]+:(?!PASSWORD@)[^\s@]+@/);
   });
 });

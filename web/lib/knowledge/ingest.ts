@@ -1,4 +1,4 @@
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { getDb } from "@/lib/db/client";
 import { knowledgeChunks, courses, lessons, jobs, modules } from "@/lib/db/schema";
 import type { Db } from "@/lib/db/types";
@@ -9,7 +9,7 @@ import type { Embedder, IngestSource, KnowledgeChunk } from "./types";
 
 export interface IngestOptions {
   embedder?: Embedder;
-  db?: Db | any;
+  db?: Db;
 }
 
 /**
@@ -20,7 +20,7 @@ export interface IngestOptions {
  */
 export async function ingest(
   source: IngestSource,
-  options: IngestOptions = {}
+  options: IngestOptions = {},
 ): Promise<KnowledgeChunk[]> {
   const db = options.db ?? getDb();
   const embedder = options.embedder ?? getEmbedder();
@@ -47,8 +47,8 @@ export async function ingest(
         .where(
           and(
             eq(knowledgeChunks.sourceType, source.sourceType),
-            eq(knowledgeChunks.sourceId, source.sourceId)
-          )
+            eq(knowledgeChunks.sourceId, source.sourceId),
+          ),
         )
         .limit(1);
 
@@ -65,8 +65,8 @@ export async function ingest(
       .where(
         and(
           eq(knowledgeChunks.sourceType, source.sourceType),
-          eq(knowledgeChunks.sourceId, source.sourceId)
-        )
+          eq(knowledgeChunks.sourceId, source.sourceId),
+        ),
       );
   } else {
     // For help articles without sourceId, replace if title and language match
@@ -76,8 +76,8 @@ export async function ingest(
         and(
           eq(knowledgeChunks.sourceType, source.sourceType),
           eq(knowledgeChunks.title, source.title),
-          eq(knowledgeChunks.language, language)
-        )
+          eq(knowledgeChunks.language, language),
+        ),
       );
   }
 
@@ -85,8 +85,7 @@ export async function ingest(
 
   for (let i = 0; i < textChunks.length; i++) {
     const chunkText = textChunks[i];
-    const chunkTitle =
-      textChunks.length > 1 ? `${source.title} (Part ${i + 1})` : source.title;
+    const chunkTitle = textChunks.length > 1 ? `${source.title} (Part ${i + 1})` : source.title;
     const embedding = embeddings[i] ?? new Array(embedder.dimensions).fill(0);
 
     const [row] = await db
@@ -116,24 +115,17 @@ export async function ingest(
  */
 export async function ingestCourse(
   courseId: string,
-  options: IngestOptions = {}
+  options: IngestOptions = {},
 ): Promise<KnowledgeChunk[]> {
   const db = options.db ?? getDb();
 
-  const [course] = await db
-    .select()
-    .from(courses)
-    .where(eq(courses.id, courseId))
-    .limit(1);
+  const [course] = await db.select().from(courses).where(eq(courses.id, courseId)).limit(1);
 
   if (!course) return [];
 
-  const courseModules = await db
-    .select()
-    .from(modules)
-    .where(eq(modules.courseId, course.id));
+  const courseModules = await db.select().from(modules).where(eq(modules.courseId, course.id));
 
-  const moduleTitles = courseModules.map((m: any) => m.title).join(", ");
+  const moduleTitles = courseModules.map((m) => m.title).join(", ");
   const priceDisplay =
     course.priceMinor === 0 ? "Free" : `${course.priceMinor / 100} ${course.currency}`;
 
@@ -158,7 +150,7 @@ ${moduleTitles || "Self-paced accessibility learning modules."}`;
       language: course.language,
       status: course.status === "published" ? "published" : "draft",
     },
-    options
+    options,
   );
 }
 
@@ -167,15 +159,11 @@ ${moduleTitles || "Self-paced accessibility learning modules."}`;
  */
 export async function ingestLesson(
   lessonId: string,
-  options: IngestOptions = {}
+  options: IngestOptions = {},
 ): Promise<KnowledgeChunk[]> {
   const db = options.db ?? getDb();
 
-  const [lesson] = await db
-    .select()
-    .from(lessons)
-    .where(eq(lessons.id, lessonId))
-    .limit(1);
+  const [lesson] = await db.select().from(lessons).where(eq(lessons.id, lessonId)).limit(1);
 
   if (!lesson) return [];
 
@@ -194,7 +182,7 @@ ${lesson.transcript}`;
       language: "en",
       status: lesson.status === "published" ? "published" : "draft",
     },
-    options
+    options,
   );
 }
 
@@ -203,15 +191,11 @@ ${lesson.transcript}`;
  */
 export async function ingestJob(
   jobId: string,
-  options: IngestOptions = {}
+  options: IngestOptions = {},
 ): Promise<KnowledgeChunk[]> {
   const db = options.db ?? getDb();
 
-  const [job] = await db
-    .select()
-    .from(jobs)
-    .where(eq(jobs.id, jobId))
-    .limit(1);
+  const [job] = await db.select().from(jobs).where(eq(jobs.id, jobId)).limit(1);
 
   if (!job) return [];
 
@@ -241,7 +225,7 @@ ${job.accessibilityNotes || "Accessible workplace. Assistive technology provided
       language: "en",
       status: job.status === "published" ? "published" : "draft",
     },
-    options
+    options,
   );
 }
 
@@ -251,7 +235,7 @@ ${job.accessibilityNotes || "Accessible workplace. Assistive technology provided
 export async function reingestOnEntityChange(
   entityType: "course" | "lesson" | "job",
   entityId: string,
-  options: IngestOptions = {}
+  options: IngestOptions = {},
 ): Promise<KnowledgeChunk[]> {
   switch (entityType) {
     case "course":
@@ -266,9 +250,7 @@ export async function reingestOnEntityChange(
 /**
  * Ingests all predefined static knowledge sources (help pages, guides, FAQs).
  */
-export async function ingestStaticSources(
-  options: IngestOptions = {}
-): Promise<KnowledgeChunk[]> {
+export async function ingestStaticSources(options: IngestOptions = {}): Promise<KnowledgeChunk[]> {
   const all: KnowledgeChunk[] = [];
   for (const src of STATIC_KNOWLEDGE_SOURCES) {
     const chunks = await ingest(src, options);
@@ -276,4 +258,3 @@ export async function ingestStaticSources(
   }
   return all;
 }
-

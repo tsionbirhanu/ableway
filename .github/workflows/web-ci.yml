@@ -36,7 +36,59 @@ jobs:
       - run: pnpm lint
       - run: pnpm format:check
       - run: pnpm typecheck
+      # Schema and migrations agree (nothing left un-generated).
+      - run: pnpm exec drizzle-kit check
       - run: pnpm test
+
+  security:
+    name: Dependency audit, build, and client bundle secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: web/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      # Fails on any high or critical advisory, in any dependency.
+      # Known moderate dev-only advisories are listed in SECURITY.md.
+      - name: Dependency audit
+        run: pnpm audit --audit-level high
+      # Build with a unique fake value ("canary") for every server secret,
+      # then fail if any of them, or anything shaped like a credential,
+      # appears in what browsers can download (scripts/check-client-bundle.ts).
+      - name: Production build with canary secrets
+        run: pnpm build
+        env:
+          NODE_ENV: production
+          NEXT_TELEMETRY_DISABLED: "1"
+          DATABASE_URL: postgresql://canary_user:ci-canary-db-password-9f3k2@db.invalid/canary
+          AUTH_SECRET: ci-canary-auth-secret-7d1e9a4b2c6f8e0a3b5d
+          GEMINI_API_KEY: ci-canary-gemini-key-4b8e1f
+          STT_API_KEY: ci-canary-stt-key-2a7c9e
+          TTS_API_KEY: ci-canary-tts-key-6d3f0b
+          TELEGRAM_BOT_TOKEN: "123456789:ci-canary-telegram-token-abcdefghijk"
+          TELEGRAM_WEBHOOK_SECRET: ci_canary_webhook_secret_5e2a8c
+          SMS_API_KEY: ci-canary-sms-key-8b4d1a
+          CRON_SECRET: ci-canary-cron-secret-3f9b7e
+          APP_URL: https://ableway.example
+          SPEECH_PROVIDER: gemini
+      - name: No secrets in client bundles
+        run: pnpm check:bundle
+        env:
+          DATABASE_URL: postgresql://canary_user:ci-canary-db-password-9f3k2@db.invalid/canary
+          AUTH_SECRET: ci-canary-auth-secret-7d1e9a4b2c6f8e0a3b5d
+          GEMINI_API_KEY: ci-canary-gemini-key-4b8e1f
+          STT_API_KEY: ci-canary-stt-key-2a7c9e
+          TTS_API_KEY: ci-canary-tts-key-6d3f0b
+          TELEGRAM_BOT_TOKEN: "123456789:ci-canary-telegram-token-abcdefghijk"
+          TELEGRAM_WEBHOOK_SECRET: ci_canary_webhook_secret_5e2a8c
+          SMS_API_KEY: ci-canary-sms-key-8b4d1a
+          CRON_SECRET: ci-canary-cron-secret-3f9b7e
 
   e2e:
     name: End-to-end tests

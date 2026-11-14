@@ -1,8 +1,8 @@
+import { logger } from "@/lib/log";
 import { eq } from "drizzle-orm";
 import { getDb } from "@/lib/db/client";
 import { messages, unansweredQuestions } from "@/lib/db/schema";
 import type { Db } from "@/lib/db/types";
-import type { EscalationResult, HelpRequestType } from "./types";
 
 const HUMAN_REQUEST_KEYWORDS_EN = [
   "human helper",
@@ -52,12 +52,7 @@ const DISTRESS_KEYWORDS_EN = [
   "i want to disappear forever",
 ];
 
-const DISTRESS_KEYWORDS_AM = [
-  "መሞት እፈልጋለሁ",
-  "ራሴን ላጠፋ",
-  "ሕይወቴን ላጥፋ",
-  "ተስፋ ቆርጫለሁ",
-];
+const DISTRESS_KEYWORDS_AM = ["መሞት እፈልጋለሁ", "ራሴን ላጠፋ", "ሕይወቴን ላጥፋ", "ተስፋ ቆርጫለሁ"];
 
 /**
  * Checks if the text explicitly requests human assistance.
@@ -84,7 +79,7 @@ export function isDistress(text: string): boolean {
 /**
  * Checks if the conversation has had 3 consecutive failed or low-confidence turns.
  */
-export async function hasThreeFailedTurnsInARow(conversationId: string, db: Db | any): Promise<boolean> {
+export async function hasThreeFailedTurnsInARow(conversationId: string, db: Db): Promise<boolean> {
   if (!conversationId) return false;
   try {
     const recent = await db
@@ -98,9 +93,9 @@ export async function hasThreeFailedTurnsInARow(conversationId: string, db: Db |
 
     // Check last 3 messages for failed or low-confidence flags
     const lastThree = recent.slice(-3);
-    const allThreeFailed = lastThree.every((m: any) => {
+    const allThreeFailed = lastThree.every((m) => {
       const flags = Array.isArray(m.flags) ? m.flags : [];
-      return flags.includes("low_confidence") || flags.includes("failed") || flags.includes("unanswered");
+      return flags.includes("low_confidence") || flags.includes("unanswered");
     });
 
     return allThreeFailed;
@@ -117,9 +112,8 @@ export async function recordUnansweredQuestion(
   options: {
     language?: string;
     channel?: "web" | "telegram";
-    notes?: string;
-    db?: Db | any;
-  }
+    db?: Db;
+  },
 ): Promise<void> {
   const clean = text.trim();
   if (!clean) return;
@@ -131,10 +125,8 @@ export async function recordUnansweredQuestion(
       language: options.language || "en",
       channel: options.channel || "web",
       resolved: false,
-      notes: options.notes ?? null,
     });
   } catch (err) {
-    console.error("Failed to record unanswered question:", err);
+    logger.error("assistant.unanswered.record_failed", { error: err });
   }
 }
-

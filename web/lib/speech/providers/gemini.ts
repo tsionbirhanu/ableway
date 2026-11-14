@@ -1,3 +1,4 @@
+import { logger } from "@/lib/log";
 import { speechLanguage } from "../languages";
 import {
   SpeechError,
@@ -45,7 +46,7 @@ async function call(config: GeminiConfig, url: string, body: unknown): Promise<u
   }
   if (!res.ok) {
     // 400 bad request, 403 key, 429 quota, 5xx outage. Never log the key or the audio.
-    console.error(`Gemini speech request failed: ${res.status} ${url.replace(API, "")}`);
+    logger.error("speech.gemini.http_error", { status: res.status, path: url.replace(API, "") });
     throw new SpeechError("speech_unavailable");
   }
   return res.json();

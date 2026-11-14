@@ -1,52 +1,31 @@
-import { NextResponse } from 'next/server';
+import { withApi } from "@/lib/api/handler";
+import { recordAudit } from "@/lib/audit";
+import { requireActor } from "@/lib/auth/session";
+import { getDb } from "@/lib/db/client";
+import { buildPersonalDataExport } from "@/lib/privacy/export";
 
-export async function GET() {
-  try {
-    const exportData = {
-      exportedAt: new Date().toISOString(),
-      platform: 'Ableway Accessibility Learning Platform',
-      profile: {
-        name: 'Learner User',
-        email: 'learner@example.com',
-        phone: '+251911234567',
-        language: 'en',
-        role: 'learner',
-      },
-      accessibility: {
-        interactionMode: 'voice-first',
-        contrastTheme: 'default',
-        textSize: 'normal',
-        speechRate: 0.82,
-        shortcutsEnabled: true,
-      },
-      jobAlerts: [
-        {
-          id: 'alert-1',
-          keywords: ['Accessibility tester', 'Customer support'],
-          location: 'Remote',
-          jobType: 'Full-time',
-          channel: 'Telegram',
-          active: true,
-        },
-      ],
-      enrollments: [
-        {
-          courseSlug: 'accessible-web-dev',
-          status: 'active',
-          progress: 40,
-        },
-      ],
-    };
+/**
+ * GET /api/profile/export: everything we hold about the signed-in learner,
+ * as a JSON download. Rate limited (5 per hour). Each export is audited.
+ */
+export const GET = withApi({ rateLimit: "export" }, async (_request: Request) => {
+  const actor = await requireActor();
+  const db = getDb();
+  const data = await buildPersonalDataExport(db, actor.id);
+  await recordAudit(db, {
+    actorId: actor.id,
+    action: "data.exported",
+    target: `profiles:${actor.id}`,
+    metadata: { formatVersion: data.formatVersion },
+  });
 
-    return new NextResponse(JSON.stringify(exportData, null, 2), {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Content-Disposition': 'attachment; filename="ableway-learner-data.json"',
-      },
-    });
-  } catch {
-    return NextResponse.json({ error: 'Could not export data.' }, { status: 500 });
-  }
-}
-
+  const date = data.exportedAt.slice(0, 10);
+  return new Response(JSON.stringify(data, null, 2), {
+    status: 200,
+    headers: {
+      "Content-Type": "application/json; charset=utf-8",
+      "Content-Disposition": `attachment; filename="ableway-my-data-${date}.json"`,
+      "Cache-Control": "no-store",
+    },
+  });
+});

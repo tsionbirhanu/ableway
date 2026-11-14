@@ -2,25 +2,25 @@ import { asc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { getDb } from "@/lib/db/client";
 import { helpRequests, helpRequestStatus, profiles } from "@/lib/db/schema";
-import { withErrors } from "@/lib/auth/errors";
+import { withApi } from "@/lib/api/handler";
 import { helpRequestColumns, helpRequestView } from "@/lib/auth/help-request-view";
-import { readJson } from "@/lib/auth/params";
+import { parseQuery, readJson } from "@/lib/auth/params";
 import { canListHelpRequests } from "@/lib/auth/policies";
 import { authorize, requireRole } from "@/lib/auth/session";
 import { createLearnerHelpRequest, helpRequestInput } from "@/lib/help-requests";
 
 const openStatuses = ["waiting", "assigned", "in_progress", "callback"] as const;
 
-const listQuery = z.object({
+const listQuery = z.strictObject({
   status: z.enum(helpRequestStatus.enumValues).optional(),
 });
 
 /** The help queue: open requests, oldest first. Helpers and admins only. */
-export const GET = withErrors(async (request: Request) => {
+export const GET = withApi({}, async (request: Request) => {
   const actor = await requireRole(["helper", "admin"]);
   authorize(canListHelpRequests(actor));
 
-  const { status } = listQuery.parse(Object.fromEntries(new URL(request.url).searchParams));
+  const { status } = parseQuery(request, listQuery);
 
   const rows = await getDb()
     .select(helpRequestColumns)
@@ -39,7 +39,7 @@ export const GET = withErrors(async (request: Request) => {
  * Ask for a human helper. Works before sign-in too, because people often
  * need help most when they cannot sign in. Rate limited per IP.
  */
-export const POST = withErrors(async (request: Request) => {
+export const POST = withApi({}, async (request: Request) => {
   const input = helpRequestInput.parse(await readJson(request));
   const created = await createLearnerHelpRequest(request, input);
 

@@ -1,54 +1,53 @@
 import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { z } from "zod";
+import { withApi } from "@/lib/api/handler";
+import { languageTag, queryInt } from "@/lib/api/schemas";
+import { recordAudit } from "@/lib/audit";
+import { parseQuery, readJson } from "@/lib/auth/params";
 import { canManageKnowledge } from "@/lib/auth/policies";
 import { authorize, requireActor } from "@/lib/auth/session";
-import { withErrors } from "@/lib/auth/errors";
-import { readJson } from "@/lib/auth/params";
 import { getDb } from "@/lib/db/client";
-import { knowledgeChunks, knowledgeSourceType, contentStatus } from "@/lib/db/schema";
+import { contentStatus, knowledgeChunks, knowledgeSourceType } from "@/lib/db/schema";
 import { ingest } from "@/lib/knowledge/ingest";
 
-const createSchema = z.object({
-  title: z.string().min(1).max(300),
-  text: z.string().min(1),
+const createSchema = z.strictObject({
+  title: z.string().trim().min(1).max(300),
+  text: z.string().trim().min(1).max(50_000),
   sourceType: z.enum(knowledgeSourceType.enumValues),
-  sourceId: z.string().uuid().nullable().optional(),
-  language: z.string().min(2).max(10).optional().default("en"),
-  status: z.enum(contentStatus.enumValues).optional().default("published"),
-  version: z.number().int().positive().optional(),
+  sourceId: z.uuid().nullable().optional(),
+  language: languageTag.default("en"),
+  status: z.enum(contentStatus.enumValues).default("published"),
+  version: z.number().int().positive().max(1_000_000).optional(),
 });
 
-export const GET = withErrors(async (request: Request) => {
+const listQuery = z.strictObject({
+  sourceType: z.enum(knowledgeSourceType.enumValues).optional(),
+  language: languageTag.optional(),
+  status: z.enum(contentStatus.enumValues).optional(),
+  search: z.string().trim().max(200).optional(),
+  limit: queryInt(1, 100, 50),
+  offset: queryInt(0, 100_000, 0),
+});
+
+/** Escape LIKE wildcards so a search for "100%" means the text "100%". */
+const likeEscape = (value: string) => value.replace(/[\\%_]/g, (c) => `\\${c}`);
+
+export const GET = withApi({}, async (request: Request) => {
   const actor = await requireActor();
   authorize(canManageKnowledge(actor));
+  const q = parseQuery(request, listQuery);
 
-  const url = new URL(request.url);
-  const sourceType = url.searchParams.get("sourceType");
-  const language = url.searchParams.get("language");
-  const status = url.searchParams.get("status");
-  const search = url.searchParams.get("search");
-  const limit = Math.min(100, Math.max(1, Number(url.searchParams.get("limit") || 50)));
-  const offset = Math.max(0, Number(url.searchParams.get("offset") || 0));
-
-  const db = getDb();
   const conditions = [];
-
-  if (sourceType && (knowledgeSourceType.enumValues as readonly string[]).includes(sourceType)) {
-    conditions.push(eq(knowledgeChunks.sourceType, sourceType as any));
-  }
-  if (language) {
-    conditions.push(eq(knowledgeChunks.language, language));
-  }
-  if (status && (contentStatus.enumValues as readonly string[]).includes(status)) {
-    conditions.push(eq(knowledgeChunks.status, status as any));
-  }
-  if (search) {
-    const term = `%${search}%`;
+  if (q.sourceType) conditions.push(eq(knowledgeChunks.sourceType, q.sourceType));
+  if (q.language) conditions.push(eq(knowledgeChunks.language, q.language));
+  if (q.status) conditions.push(eq(knowledgeChunks.status, q.status));
+  if (q.search) {
+    const term = `%${likeEscape(q.search)}%`;
     conditions.push(or(ilike(knowledgeChunks.title, term), ilike(knowledgeChunks.text, term)));
   }
-
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
+  const db = getDb();
   const [totalRes] = await db
     .select({ count: sql<number>`count(*)` })
     .from(knowledgeChunks)
@@ -70,33 +69,36 @@ export const GET = withErrors(async (request: Request) => {
     .from(knowledgeChunks)
     .where(whereClause)
     .orderBy(desc(knowledgeChunks.updatedAt))
-    .limit(limit)
-    .offset(offset);
+    .limit(q.limit)
+    .offset(q.offset);
 
   return Response.json({
     chunks,
     total: Number(totalRes?.count ?? 0),
-    limit,
-    offset,
+    limit: q.limit,
+    offset: q.offset,
   });
 });
 
-export const POST = withErrors(async (request: Request) => {
+export const POST = withApi({ maxBodyBytes: 256 * 1024 }, async (request: Request) => {
   const actor = await requireActor();
   authorize(canManageKnowledge(actor));
-
   const body = createSchema.parse(await readJson(request));
+  const db = getDb();
 
-  const chunks = await ingest({
-    sourceType: body.sourceType,
-    sourceId: body.sourceId,
-    title: body.title,
-    text: body.text,
-    language: body.language,
-    status: body.status,
-    version: body.version,
+  const chunks = await ingest(body, { db });
+  await recordAudit(db, {
+    actorId: actor.id,
+    action: "knowledge.created",
+    target: `knowledge_chunks:${chunks[0]?.id ?? "none"}`,
+    metadata: {
+      sourceType: body.sourceType,
+      sourceId: body.sourceId ?? null,
+      chunkIds: chunks.map((c) => c.id),
+      status: body.status,
+      version: chunks[0]?.version ?? null,
+    },
   });
 
   return Response.json({ chunks }, { status: 201 });
 });
-

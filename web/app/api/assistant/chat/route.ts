@@ -1,16 +1,17 @@
 import { z } from "zod";
-import { replyTo } from "@/lib/assistant/keyword-replies";
-import { withErrors } from "@/lib/auth/errors";
+import { withApi } from "@/lib/api/handler";
+import { appPath, languageTag } from "@/lib/api/schemas";
 import { readJson } from "@/lib/auth/params";
+import { replyTo } from "@/lib/assistant/keyword-replies";
 
-/** Web assistant chat. Input is untrusted and validated; see lib/assistant/keyword-replies.ts. */
-const body = z.object({
+/** Keyword assistant (no model). Input is untrusted and validated; see lib/assistant/keyword-replies.ts. */
+const body = z.strictObject({
   message: z.string().max(2000),
-  currentPage: z.string().max(300).optional(),
-  language: z.string().min(2).max(10).default("en"),
+  currentPage: appPath.optional(),
+  language: languageTag.default("en"),
 });
 
-export const POST = withErrors(async (request: Request) => {
+export const POST = withApi({ rateLimit: "assistant" }, async (request: Request) => {
   const { message, language } = body.parse(await readJson(request));
   return Response.json(replyTo(message, language));
 });

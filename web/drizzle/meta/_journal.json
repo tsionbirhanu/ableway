@@ -52,10 +52,17 @@
       "breakpoints": true
     },
     {
-      "idx": 6,
+      "idx": 7,
       "version": "7",
       "when": 1794594000000,
       "tag": "0007_jobs_alerts",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1794614643084,
+      "tag": "0008_privacy_consent_retention",
       "breakpoints": true
     }
   ]

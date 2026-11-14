@@ -1,15 +1,11 @@
 import { asc, eq } from "drizzle-orm";
+import { withApi } from "@/lib/api/handler";
 import { getDb } from "@/lib/db/client";
 import { courses } from "@/lib/db/schema";
-import { withErrors } from "@/lib/auth/errors";
 
-/**
- * GET /api/courses: lists all published courses.
- * Returns published courses only.
- */
-export const GET = withErrors(async (_request: Request) => {
-  const db = getDb();
-  const publishedCourses = await db
+/** GET /api/courses: published courses only. */
+export const GET = withApi({}, async (_request: Request) => {
+  const publishedCourses = await getDb()
     .select({
       id: courses.id,
       slug: courses.slug,

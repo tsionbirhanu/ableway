@@ -4,12 +4,13 @@ import { askAssistant } from "@/lib/assistant";
 import { FakeEmbedder } from "@/lib/knowledge/embedder";
 import { ingestStaticSources } from "@/lib/knowledge/ingest";
 import { createTestDb } from "../tests/unit/db/test-db";
+import type { PageContext } from "../lib/assistant/types";
 
 interface TestCase {
   id: string;
   category: string;
   language: string;
-  pageContext?: any;
+  pageContext?: PageContext;
   question: string;
   dataBlock?: string;
   expected: {
@@ -105,14 +106,14 @@ export async function runAssistantEval(): Promise<{ success: boolean; stats: Eva
         const didEscalate = !!result.escalate;
         if (didEscalate !== expected.expectedEscalate) {
           throw new Error(
-            `Expected escalate=${expected.expectedEscalate}, but got ${didEscalate} (${result.escalate?.reason})`
+            `Expected escalate=${expected.expectedEscalate}, but got ${didEscalate} (${result.escalate?.reason})`,
           );
         }
       }
 
       if (expected.escalateType && result.escalate?.type !== expected.escalateType) {
         throw new Error(
-          `Expected escalateType=${expected.escalateType}, but got ${result.escalate?.type}`
+          `Expected escalateType=${expected.escalateType}, but got ${result.escalate?.type}`,
         );
       }
 
@@ -122,7 +123,7 @@ export async function runAssistantEval(): Promise<{ success: boolean; stats: Eva
           throw new Error(
             `Expected action "${expected.mustIncludeAction}" to be present, but got [${result.actions
               .map((a) => a.name)
-              .join(", ")}]`
+              .join(", ")}]`,
           );
         }
       }
@@ -131,17 +132,18 @@ export async function runAssistantEval(): Promise<{ success: boolean; stats: Eva
         const hasAction = result.actions.some((a) => a.name === expected.mustExcludeAction);
         if (hasAction) {
           throw new Error(
-            `Expected action "${expected.mustExcludeAction}" to be rejected on this page, but it was executed.`
+            `Expected action "${expected.mustExcludeAction}" to be rejected on this page, but it was executed.`,
           );
         }
       }
 
       stats.passed++;
       console.log(`PASS [${tc.category.toUpperCase()}] ${tc.id} (${tc.language})`);
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
       stats.failed++;
-      failures.push({ id: tc.id, error: err.message });
-      console.log(`FAIL [${tc.category.toUpperCase()}] ${tc.id}: ${err.message}`);
+      failures.push({ id: tc.id, error: message });
+      console.log(`FAIL [${tc.category.toUpperCase()}] ${tc.id}: ${message}`);
     }
   }
 

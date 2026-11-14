@@ -121,4 +121,3 @@ All courses include bite-sized audio lessons, interactive practice quizzes, and 
 4. አስስቲቭ ቴክኖሎጂ እና ዲጂታል ተደራሽነት (Assistive Tech AT-101)፦ 6 ሳምንታት (24 ሰዓታት)። ዋጋው ነጻ (Free)። NVDA, JAWS እና TalkBack አጠቃቀምን ያስተምራል።`,
   },
 ];
-

@@ -1,6 +1,5 @@
-import { z } from "zod";
 import type { Db } from "@/lib/db/types";
-import type { Embedder, SearchResult } from "@/lib/knowledge/types";
+import type { Embedder } from "@/lib/knowledge/types";
 
 export type AssistantChannel = "web" | "telegram";
 
@@ -20,7 +19,7 @@ export interface AskAssistantParams {
   text: string;
   pageContext?: PageContext | null;
   /** Test/mock overrides */
-  db?: Db | any;
+  db?: Db;
   embedder?: Embedder;
   fetch?: typeof fetch;
   apiKey?: string;
@@ -50,4 +49,3 @@ export interface AskAssistantResult {
   conversationId?: string;
   confidence?: number;
 }
-

@@ -1,8 +1,17 @@
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { getDb } from "@/lib/db/client";
-import { auditLog, conversations, courses, enrollments, messages, paymentMethod, paymentRecords } from "@/lib/db/schema";
-import { BadRequestError, ConflictError, NotFoundError, withErrors } from "@/lib/auth/errors";
+import { withApi } from "@/lib/api/handler";
+import { recordAudit } from "@/lib/audit";
+import {
+  conversations,
+  courses,
+  enrollments,
+  messages,
+  paymentMethod,
+  paymentRecords,
+} from "@/lib/db/schema";
+import { BadRequestError, ConflictError, NotFoundError } from "@/lib/auth/errors";
 import { readJson } from "@/lib/auth/params";
 import { canConfirmPayment } from "@/lib/auth/policies";
 import { authorize, requireRole } from "@/lib/auth/session";
@@ -27,7 +36,7 @@ const body = z.strictObject({
  * Records the payment, activates the enrollment, and writes an audit entry,
  * all in one transaction.
  */
-export const POST = withErrors(async (request: Request) => {
+export const POST = withApi({}, async (request: Request) => {
   const actor = await requireRole(["helper", "admin"]);
   const input = body.parse(await readJson(request));
 
@@ -76,11 +85,11 @@ export const POST = withErrors(async (request: Request) => {
         role: "helper",
         content: `Payment of ${input.amountMinor / 100} ${input.currency} confirmed. Your course is now unlocked!`,
         handledBy: "helper",
-        flags: ["payment_confirmed" as any],
+        flags: ["payment_confirmed"],
       });
     }
 
-    await tx.insert(auditLog).values({
+    await recordAudit(tx, {
       actorId: actor.id,
       action: "payment.confirmed",
       target: `enrollments:${enrollment.id}`,
@@ -88,10 +97,16 @@ export const POST = withErrors(async (request: Request) => {
         paymentId: payment?.id ?? null,
         method: input.method,
         amountMinor: input.amountMinor,
-        notified: true,
+        currency: input.currency,
+        notified: Boolean(learnerConv),
       },
     });
-    return { paymentId: payment?.id, enrollmentId: enrollment.id, status: "active" as const, notified: true };
+    return {
+      paymentId: payment?.id,
+      enrollmentId: enrollment.id,
+      status: "active" as const,
+      notified: Boolean(learnerConv),
+    };
   });
 
   return Response.json({ payment: result }, { status: 201 });

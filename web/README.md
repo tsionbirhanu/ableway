@@ -31,13 +31,17 @@ variables are wrong, but never their values.
 | `pnpm db:migrate`   | Apply migrations to `DATABASE_URL`                    |
 | `pnpm db:seed`      | Add sample data (safe to re-run)                      |
 | `pnpm env:check`    | Validate `.env.local`, or a file: `pnpm env:check f`  |
+| `pnpm check:bundle` | After `pnpm build`: fail if a secret is in the bundle |
+| `pnpm audit:deps`   | Dependency audit of production packages               |
 
 First time running e2e tests: `pnpm exec playwright install chromium`.
 
 ## Layout
 
 - `app/` routes. `app/api/health` is the liveness check.
-- `lib/` server code: `assistant`, `knowledge`, `speech`, `telegram`, `jobs`, `alerts`, `auth`, `db`.
+- `lib/` server code: `assistant`, `knowledge`, `speech`, `telegram`, `jobs`, `alerts`, `auth`, `db`,
+  `api` (the `withApi` wrapper every route uses), `privacy` (consent, export, deletion, retention),
+  `audit.ts`, `log.ts`.
   `lib/env.ts` is the only place that reads `process.env`.
 - `components/` shared React components.
 - `tests/unit`, `tests/e2e`.
@@ -48,3 +52,15 @@ First time running e2e tests: `pnpm exec playwright install chromium`.
 `lib/env.ts` imports `server-only`, so the build fails if client code imports it.
 ESLint blocks it in `components/`, and `tests/unit/secrets-boundary.test.ts` checks that no
 `"use client"` file imports it or reads `process.env`. Never give a secret a `NEXT_PUBLIC_` prefix.
+
+## Security, privacy and deployment
+
+- [`../SECURITY.md`](../SECURITY.md): controls, threat model (prompt injection, Telegram webhook
+  spoofing, helper account misuse), dependency audit, and how to report a vulnerability.
+- [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md): Vercel and Neon setup, environment variables, cron
+  jobs, Telegram webhook.
+- [`docs/SRS-6.4-CHECKLIST.md`](docs/SRS-6.4-CHECKLIST.md): every SRS 6.4 requirement with its code
+  and the test that proves it (checked in CI).
+
+Every API route must be wrapped in `withApi` (rate limit, size limit, CSRF, safe errors) and
+validate input with `z.strictObject`; `tests/unit/security/api-guards.test.ts` fails otherwise.

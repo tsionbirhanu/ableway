@@ -1,110 +1,64 @@
-import { timingSafeEqual } from "node:crypto";
-import { after, NextResponse } from "next/server";
+import { after } from "next/server";
 import type { Update } from "grammy/types";
-
+import { z } from "zod";
+import { withApi } from "@/lib/api/handler";
+import { BadRequestError, UnauthorizedError } from "@/lib/auth/errors";
+import { readJson } from "@/lib/auth/params";
 import { getEnv } from "@/lib/env";
-import { getTelegramBot } from "@/lib/telegram/bot";
+import { logger } from "@/lib/log";
+import {
+  isUpdateProcessed,
+  isValidSecret,
+  markUpdateCompleted,
+  markUpdateInFlight,
+  processTelegramUpdate,
+} from "@/lib/telegram/webhook";
 
-export const runtime = "nodejs";
+/** Telegram updates are small JSON objects; 1 MB is far above any real one. */
+const MAX_UPDATE_BYTES = 1024 * 1024;
 
-const processedUpdates = new Set<number>();
-const inFlightUpdates = new Set<number>();
+/** Only the envelope is checked here; grammY validates the update's contents. */
+const updateEnvelope = z.looseObject({ update_id: z.number().int().nonnegative() });
 
-export function isUpdateProcessed(updateId: number): boolean {
-  return processedUpdates.has(updateId) || inFlightUpdates.has(updateId);
-}
-
-export function markUpdateInFlight(updateId: number): void {
-  inFlightUpdates.add(updateId);
-}
-
-export function markUpdateCompleted(updateId: number): void {
-  inFlightUpdates.delete(updateId);
-  processedUpdates.add(updateId);
-  if (processedUpdates.size > 10000) {
-    const oldest = processedUpdates.keys().next().value;
-    if (oldest !== undefined) processedUpdates.delete(oldest);
-  }
-}
-
-export function resetProcessedUpdatesForTests(): void {
-  processedUpdates.clear();
-  inFlightUpdates.clear();
-}
-
-export function isValidSecret(received: string | null, expected: string): boolean {
-  if (!received) return false;
-
-  const receivedBuffer = Buffer.from(received);
-  const expectedBuffer = Buffer.from(expected);
-
-  if (receivedBuffer.length !== expectedBuffer.length) {
-    return false;
-  }
-
-  return timingSafeEqual(receivedBuffer, expectedBuffer);
-}
-
-/**
- * Core update processing logic.
- */
-export async function processTelegramUpdate(update: Update): Promise<void> {
-  const bot = getTelegramBot();
-  await bot.handleUpdate(update);
-}
-
-export async function POST(request: Request) {
-  // 1. Verify Telegram's webhook secret token
-  const expectedSecret = getEnv().TELEGRAM_WEBHOOK_SECRET;
-  const receivedSecret = request.headers.get("X-Telegram-Bot-Api-Secret-Token");
-
-  if (!isValidSecret(receivedSecret, expectedSecret)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  // 2. Parse the incoming Telegram update
-  let update: Update;
-  try {
-    const body: unknown = await request.json();
-
-    if (
-      typeof body !== "object" ||
-      body === null ||
-      !("update_id" in body) ||
-      typeof body.update_id !== "number"
-    ) {
-      return NextResponse.json({ error: "Invalid Telegram update" }, { status: 400 });
+export const POST = withApi(
+  // Authenticated by the secret header, not cookies, so the CSRF check does not apply.
+  { rateLimit: "telegramWebhook", csrf: false, maxBodyBytes: MAX_UPDATE_BYTES },
+  async (request: Request) => {
+    // 1. Refuse anything without Telegram's secret header, before reading the body.
+    const received = request.headers.get("x-telegram-bot-api-secret-token");
+    if (!isValidSecret(received, getEnv().TELEGRAM_WEBHOOK_SECRET)) {
+      logger.warn("telegram.webhook.bad_secret");
+      throw new UnauthorizedError("Unauthorized");
     }
 
-    update = body as Update;
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
-  }
+    // 2. Parse and check the update envelope.
+    const parsed = updateEnvelope.safeParse(await readJson(request));
+    if (!parsed.success) throw new BadRequestError("Invalid Telegram update");
+    const update = parsed.data as unknown as Update;
 
-  // 3. Make processing idempotent by update_id
-  if (isUpdateProcessed(update.update_id)) {
-    return NextResponse.json({ ok: true, duplicate: true });
-  }
+    // 3. Handle each update_id once.
+    if (isUpdateProcessed(update.update_id)) {
+      return Response.json({ ok: true, duplicate: true });
+    }
+    markUpdateInFlight(update.update_id);
 
-  markUpdateInFlight(update.update_id);
-
-  // 4. Acknowledge quickly and do slow work (speech, Gemini) in the background
-  const runBackground = async () => {
+    // 4. Answer quickly; do slow work (speech, Gemini) after the response.
+    const runBackground = async () => {
+      try {
+        await processTelegramUpdate(update);
+      } catch (error) {
+        logger.error("telegram.update.failed", { error });
+      } finally {
+        markUpdateCompleted(update.update_id);
+      }
+    };
     try {
-      await processTelegramUpdate(update);
-    } catch (error) {
-      console.error("Telegram update processing failed:", error);
-    } finally {
-      markUpdateCompleted(update.update_id);
+      after(runBackground);
+    } catch {
+      // Outside a request scope (tests), run without after().
+      void runBackground();
     }
-  };
 
-  try {
-    after(runBackground);
-  } catch {
-    // If running in an environment where after() is not registered, execute async
-    void runBackground();
-  }
-
-  return NextResponse.json({ ok: true });
-}
+    return Response.json({ ok: true });
+  },
+);

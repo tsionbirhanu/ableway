@@ -3,8 +3,14 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import * as schema from "@/lib/db/schema";
 import { splitIntoChunks } from "@/lib/knowledge/chunker";
 import { FakeEmbedder } from "@/lib/knowledge/embedder";
-import { ingest, ingestCourse, ingestLesson, ingestJob, ingestStaticSources } from "@/lib/knowledge/ingest";
-import { retrieve, recordUnanswered } from "@/lib/knowledge/retrieve";
+import {
+  ingest,
+  ingestCourse,
+  ingestLesson,
+  ingestJob,
+  ingestStaticSources,
+} from "@/lib/knowledge/ingest";
+import { retrieve } from "@/lib/knowledge/retrieve";
 import { createTestDb, type TestDb } from "../db/test-db";
 
 let t: TestDb;
@@ -21,7 +27,8 @@ afterAll(async () => {
 describe("lib/knowledge", () => {
   describe("Chunker (splitIntoChunks)", () => {
     it("keeps short texts as a single chunk", () => {
-      const shortText = "Ableway is an accessible platform for blind learners. It supports screen readers and audio.";
+      const shortText =
+        "Ableway is an accessible platform for blind learners. It supports screen readers and audio.";
       const chunks = splitIntoChunks(shortText);
       expect(chunks).toHaveLength(1);
       expect(chunks[0]).toBe(shortText);
@@ -32,7 +39,11 @@ describe("lib/knowledge", () => {
       const words = Array.from({ length: 900 }, (_, i) => `word${i}`);
       const longText = words.join(" ");
 
-      const chunks = splitIntoChunks(longText, { targetWords: 350, maxWords: 500, overlapWords: 50 });
+      const chunks = splitIntoChunks(longText, {
+        targetWords: 350,
+        maxWords: 500,
+        overlapWords: 50,
+      });
 
       expect(chunks.length).toBeGreaterThanOrEqual(2);
       for (const chunk of chunks) {
@@ -61,14 +72,16 @@ describe("lib/knowledge", () => {
     it("produces high cosine similarity for related texts and low for off-topic", async () => {
       const vec1 = await fakeEmbedder.embed("Telebirr payment process and human helper");
       const vec2 = await fakeEmbedder.embed("How do I pay with Telebirr?");
-      const vecOffTopic = await fakeEmbedder.embed("Astronomical telescope galaxy redshift observation");
+      const vecOffTopic = await fakeEmbedder.embed(
+        "Astronomical telescope galaxy redshift observation",
+      );
 
       // Cosine similarity for unit vectors is dot product
       const dotRelated = vec1.reduce((sum, val, i) => sum + val * vec2[i], 0);
       const dotOffTopic = vec1.reduce((sum, val, i) => sum + val * vecOffTopic[i], 0);
 
-      expect(dotRelated).toBeGreaterThan(0.40);
-      expect(dotOffTopic).toBeLessThan(0.20);
+      expect(dotRelated).toBeGreaterThan(0.4);
+      expect(dotOffTopic).toBeLessThan(0.2);
     });
   });
 
@@ -80,11 +93,16 @@ describe("lib/knowledge", () => {
 
     it("returns the exact right chunk for a question from the test set", async () => {
       // Question 1: Payment & human help
-      const paymentResults = await retrieve("How do I pay with Telebirr and get help from staff?", "en", 3, {
-        db: t.db,
-        embedder: fakeEmbedder,
-        minSimilarity: 0.25,
-      });
+      const paymentResults = await retrieve(
+        "How do I pay with Telebirr and get help from staff?",
+        "en",
+        3,
+        {
+          db: t.db,
+          embedder: fakeEmbedder,
+          minSimilarity: 0.25,
+        },
+      );
 
       expect(paymentResults.length).toBeGreaterThan(0);
       expect(paymentResults[0].title).toContain("Payment");
@@ -94,11 +112,16 @@ describe("lib/knowledge", () => {
     });
 
     it("returns the Telegram guide when asking about Telegram linking", async () => {
-      const telegramResults = await retrieve("How to link Telegram to receive audio lessons?", "en", 3, {
-        db: t.db,
-        embedder: fakeEmbedder,
-        minSimilarity: 0.25,
-      });
+      const telegramResults = await retrieve(
+        "How to link Telegram to receive audio lessons?",
+        "en",
+        3,
+        {
+          db: t.db,
+          embedder: fakeEmbedder,
+          minSimilarity: 0.25,
+        },
+      );
 
       expect(telegramResults.length).toBeGreaterThan(0);
       expect(telegramResults[0].title).toContain("Telegram");
@@ -106,11 +129,16 @@ describe("lib/knowledge", () => {
     });
 
     it("returns the course catalog when asking about course prices and durations", async () => {
-      const courseResults = await retrieve("What courses are available and how much do they cost?", "en", 3, {
-        db: t.db,
-        embedder: fakeEmbedder,
-        minSimilarity: 0.15,
-      });
+      const courseResults = await retrieve(
+        "What courses are available and how much do they cost?",
+        "en",
+        3,
+        {
+          db: t.db,
+          embedder: fakeEmbedder,
+          minSimilarity: 0.15,
+        },
+      );
 
       expect(courseResults.length).toBeGreaterThan(0);
       expect(courseResults[0].title).toContain("Course");
@@ -128,7 +156,7 @@ describe("lib/knowledge", () => {
         const results = await retrieve(question, "en", 5, {
           db: t.db,
           embedder: fakeEmbedder,
-          minSimilarity: 0.20,
+          minSimilarity: 0.2,
         });
 
         // The assistant can say it is not sure!
@@ -141,7 +169,7 @@ describe("lib/knowledge", () => {
       const results = await retrieve(question, "en", 5, {
         db: t.db,
         embedder: fakeEmbedder,
-        minSimilarity: 0.20,
+        minSimilarity: 0.2,
         recordIfUnanswered: true,
         channel: "web",
       });
@@ -168,7 +196,7 @@ describe("lib/knowledge", () => {
           language: "en",
           status: "draft",
         },
-        { db: t.db, embedder: fakeEmbedder }
+        { db: t.db, embedder: fakeEmbedder },
       );
 
       // Search for the draft content
@@ -204,7 +232,8 @@ describe("lib/knowledge", () => {
         .values({
           slug: "test-ai-course",
           title: "Accessible Artificial Intelligence",
-          description: "Learn modern AI tools with your screen reader. Master prompting, transcription, and workflows.",
+          description:
+            "Learn modern AI tools with your screen reader. Master prompting, transcription, and workflows.",
           priceMinor: 50000,
           currency: "ETB",
           language: "en",
@@ -229,11 +258,16 @@ describe("lib/knowledge", () => {
       expect(updatedChunks[0].version).toBe(2);
 
       // Search returns the course
-      const searchRes = await retrieve("Accessible Artificial Intelligence prompting screen reader", "en", 1, {
-        db: t.db,
-        embedder: fakeEmbedder,
-        minSimilarity: 0.25,
-      });
+      const searchRes = await retrieve(
+        "Accessible Artificial Intelligence prompting screen reader",
+        "en",
+        1,
+        {
+          db: t.db,
+          embedder: fakeEmbedder,
+          minSimilarity: 0.25,
+        },
+      );
       expect(searchRes.length).toBeGreaterThan(0);
       expect(searchRes[0].title).toBe("Accessible Artificial Intelligence");
     });
@@ -267,7 +301,8 @@ describe("lib/knowledge", () => {
         .values({
           moduleId: m.id,
           title: "Mastering Tab and Shift Tab",
-          transcript: "In this lesson you learn to move focus forward with Tab, and backward with Shift Tab. Practice navigating links.",
+          transcript:
+            "In this lesson you learn to move focus forward with Tab, and backward with Shift Tab. Practice navigating links.",
           durationSeconds: 180,
           position: 1,
           status: "published",
@@ -305,4 +340,3 @@ describe("lib/knowledge", () => {
     });
   });
 });
-

@@ -14,8 +14,17 @@ export const readBackSchema = z.strictObject({
   message: z.string().optional(),
 });
 
+/**
+ * Only paths on this site, such as "/courses". Never a full URL, "//host",
+ * or "javascript:", so injected text cannot send the learner elsewhere.
+ */
 export const goToPageSchema = z.strictObject({
-  page: z.string().trim().min(1, "Page path is required"),
+  page: z
+    .string()
+    .trim()
+    .min(1, "Page path is required")
+    .max(200)
+    .regex(/^\/(?![\/\\])[A-Za-z0-9\-._~/?=&%#]*$/, "Use a path on this site, like /courses"),
 });
 
 export const selectCourseSchema = z.strictObject({
@@ -63,7 +72,10 @@ export const GEMINI_TOOL_DECLARATIONS = [
     parameters: {
       type: "OBJECT",
       properties: {
-        field: { type: "STRING", description: "The field identifier or label (e.g. email, phone, name)" },
+        field: {
+          type: "STRING",
+          description: "The field identifier or label (e.g. email, phone, name)",
+        },
         value: { type: "STRING", description: "The value to fill into the input field" },
       },
       required: ["field", "value"],
@@ -75,7 +87,10 @@ export const GEMINI_TOOL_DECLARATIONS = [
     parameters: {
       type: "OBJECT",
       properties: {
-        message: { type: "STRING", description: "Optional specific message or values to read back" },
+        message: {
+          type: "STRING",
+          description: "Optional specific message or values to read back",
+        },
       },
     },
   },
@@ -85,7 +100,10 @@ export const GEMINI_TOOL_DECLARATIONS = [
     parameters: {
       type: "OBJECT",
       properties: {
-        page: { type: "STRING", description: "The path to navigate to, e.g. /courses, /profile, /jobs" },
+        page: {
+          type: "STRING",
+          description: "The path to navigate to, e.g. /courses, /profile, /jobs",
+        },
       },
       required: ["page"],
     },
@@ -178,7 +196,10 @@ export function normalizeToolName(name: string): ToolName | null {
  * Checks whether an action is permitted on the current page.
  * Rejects any action not allowed on the current page.
  */
-export function isActionAllowedOnPage(actionName: ToolName, pageContext?: PageContext | null): boolean {
+export function isActionAllowedOnPage(
+  actionName: ToolName,
+  pageContext?: PageContext | null,
+): boolean {
   if (!pageContext) return true;
 
   // 1. If explicit allowedActions are provided in context, respect them strictly
@@ -233,7 +254,7 @@ export function isActionAllowedOnPage(actionName: ToolName, pageContext?: PageCo
 export function validateAndFilterAction(
   rawName: string,
   rawArgs: unknown,
-  pageContext?: PageContext | null
+  pageContext?: PageContext | null,
 ): AssistantActionResult | null {
   const normalizedName = normalizeToolName(rawName);
   if (!normalizedName) return null;
@@ -255,4 +276,3 @@ export function validateAndFilterAction(
     params: parsed.data as Record<string, unknown>,
   };
 }
-

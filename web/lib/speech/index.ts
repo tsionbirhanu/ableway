@@ -1,120 +1,16 @@
 import "server-only";
 import { getEnv } from "@/lib/env";
+import { databaseRetentionPolicy } from "@/lib/privacy/voice-recordings";
 
-export type TranscriberFn = (audio: Buffer, mimeType?: string) => Promise<string>;
-export type SynthesizerFn = (text: string, language?: string) => Promise<Buffer>;
-
-let mockTranscriber: TranscriberFn | null = null;
-let mockSynthesizer: SynthesizerFn | null = null;
-
-export function setMockTranscriber(fn: TranscriberFn | null): void {
-  mockTranscriber = fn;
-}
-
-export function setMockSynthesizer(fn: SynthesizerFn | null): void {
-  mockSynthesizer = fn;
-}
-
-/**
- * Creates a valid minimal PCM WAV audio buffer.
- * Plays 0.1s of quiet silence, conforming to the WAV specification.
- */
-export function createMinimalWavAudio(): Buffer {
-  const sampleRate = 8000;
-  const numChannels = 1;
-  const bitsPerSample = 8;
-  const dataSize = 800;
-  const buffer = Buffer.alloc(44 + dataSize);
-
-  // "RIFF"
-  buffer.write("RIFF", 0);
-  buffer.writeUInt32LE(36 + dataSize, 4);
-  // "WAVE"
-  buffer.write("WAVE", 8);
-  // "fmt "
-  buffer.write("fmt ", 12);
-  buffer.writeUInt32LE(16, 16);
-  buffer.writeUInt16LE(1, 20); // PCM
-  buffer.writeUInt16LE(numChannels, 22);
-  buffer.writeUInt32LE(sampleRate, 24);
-  buffer.writeUInt32LE(sampleRate * numChannels * (bitsPerSample / 8), 28);
-  buffer.writeUInt16LE(numChannels * (bitsPerSample / 8), 32);
-  buffer.writeUInt16LE(bitsPerSample, 34);
-  // "data"
-  buffer.write("data", 36);
-  buffer.writeUInt32LE(dataSize, 40);
-  buffer.fill(128, 44);
-
-  return buffer;
-}
-
-/**
- * Transcribe an audio recording into text.
- */
-export async function transcribeAudio(audio: Buffer, mimeType = "audio/ogg"): Promise<string> {
-  if (mockTranscriber) {
-    return mockTranscriber(audio, mimeType);
-  }
-
-  const env = getEnv();
-
-  // If Gemini API key is configured, we can use Gemini multimodal audio
-  if (env.GEMINI_API_KEY) {
-    try {
-      const base64Audio = audio.toString("base64");
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${env.GEMINI_API_KEY}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [
-              {
-                parts: [
-                  {
-                    inline_data: {
-                      mime_type: mimeType,
-                      data: base64Audio,
-                    },
-                  },
-                  {
-                    text: "Transcribe the spoken words in this audio exactly. Do not add any explanation or notes.",
-                  },
-                ],
-              },
-            ],
-          }),
-        },
-      );
-
-      if (response.ok) {
-        const json = await response.json();
-        const text = json.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-        if (text) return text;
-      }
-    } catch {
-      // Fallback below
-    }
-  }
-
-  // Fallback for development without external keys:
-  return "Help me find a course";
-}
-
-/**
- * Synthesize text into speech audio.
- */
-export async function synthesizeSpeech(text: string, language = "en"): Promise<Buffer> {
-  if (mockSynthesizer) {
-    return mockSynthesizer(text, language);
-  }
-
-  // Generates clean valid WAV buffer for playback
-  return createMinimalWavAudio();
 import { AzureSpeechToText, AzureTextToSpeech } from "./providers/azure";
 import { GeminiSpeechToText, GeminiTextToSpeech } from "./providers/gemini";
 import { MockSpeechToText, MockTextToSpeech } from "./providers/mock";
-import type { SpeechDeps } from "./service";
+import {
+  MAX_TTS_CHARS,
+  synthesizeTelegramVoice,
+  transcribeTelegramVoice,
+  type SpeechDeps,
+} from "./service";
 import { TtsCache } from "./tts-cache";
 import type { SpeechToText, TextToSpeech } from "./types";
 
@@ -166,10 +62,47 @@ export function getSpeechDeps(): SpeechDeps {
     tts: providers.tts,
     cache: ttsCache,
     lowConfidenceThreshold: env.SPEECH_LOW_CONFIDENCE_THRESHOLD,
-    retention: {
-      enabled: env.SPEECH_RETAIN_AUDIO,
-      dir: env.SPEECH_RETENTION_DIR,
-      days: env.SPEECH_RETENTION_DAYS,
-    },
+    retention: databaseRetentionPolicy(),
   };
+}
+
+// ---------- Telegram voice notes ----------
+
+/** Test hooks: replace speech for the Telegram bot without ffmpeg or a provider. */
+export type VoiceNoteTranscriber = (audio: Uint8Array, language: string) => Promise<string>;
+export type VoiceNoteSynthesizer = (text: string, language: string) => Promise<Uint8Array>;
+
+let mockTranscriber: VoiceNoteTranscriber | null = null;
+let mockSynthesizer: VoiceNoteSynthesizer | null = null;
+
+export function setMockTranscriber(fn: VoiceNoteTranscriber | null): void {
+  mockTranscriber = fn;
+}
+
+export function setMockSynthesizer(fn: VoiceNoteSynthesizer | null): void {
+  mockSynthesizer = fn;
+}
+
+/**
+ * Telegram voice note (OGG/Opus) -> text, through the same speech service,
+ * limits, and retention rules as web uploads. Throws SpeechError when the
+ * audio cannot be understood; it never guesses a transcript.
+ */
+export async function transcribeVoiceNote(
+  audio: Uint8Array,
+  language: string,
+  profileId: string | null,
+): Promise<string> {
+  if (mockTranscriber) return mockTranscriber(audio, language);
+  const result = await transcribeTelegramVoice(getSpeechDeps(), audio, language, { profileId });
+  return result.text;
+}
+
+/** Text -> OGG/Opus voice note for Telegram's sendVoice. */
+export async function synthesizeVoiceNote(text: string, language: string): Promise<Uint8Array> {
+  if (mockSynthesizer) return mockSynthesizer(text, language);
+  return synthesizeTelegramVoice(getSpeechDeps(), {
+    text: text.slice(0, MAX_TTS_CHARS),
+    language,
+  });
 }

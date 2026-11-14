@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build --webpack",
+    "check:bundle": "tsx scripts/check-client-bundle.ts",
     "start": "next start",
     "lint": "eslint . --max-warnings 0",
     "typecheck": "next typegen && tsc --noEmit",
@@ -14,6 +15,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "env:check": "tsx --conditions=react-server scripts/check-env.ts",
+    "audit:deps": "pnpm audit --prod --audit-level high",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx --conditions=react-server scripts/migrate.ts",
     "db:seed": "tsx --conditions=react-server scripts/seed.ts",
