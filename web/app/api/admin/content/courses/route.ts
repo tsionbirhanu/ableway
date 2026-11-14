@@ -41,3 +41,4 @@ export const POST = withErrors(async (request: Request) => {
 
   return Response.json({ course: created }, { status: 201 });
 });
+

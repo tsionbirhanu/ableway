@@ -109,3 +109,4 @@ export const DELETE = withErrors(async (_request: Request, props: RouteProps) =>
 
   return Response.json({ deleted: true });
 });
+

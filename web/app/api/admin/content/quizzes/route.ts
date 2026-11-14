@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { z } from "zod";
+cimport { z } from "zod";
 import { getDb } from "@/lib/db/client";
 import { quizQuestions, quizzes } from "@/lib/db/schema";
 import { withErrors } from "@/lib/auth/errors";
@@ -67,3 +67,4 @@ export const POST = withErrors(async (request: Request) => {
     { status: 201 }
   );
 });
+

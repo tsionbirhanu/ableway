@@ -1,5 +1,5 @@
 'use client';
-
+e
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Play, Pause, RotateCcw, CheckCircle2, BookOpen, Volume2, ArrowRight } from 'lucide-react';
 import { useA11y } from '@/lib/a11y/a11y-context';
@@ -214,9 +214,9 @@ export default function LearnPage() {
             completedLessonId,
             lastPosition: currentLesson?.id
               ? {
-                  lessonId: currentLesson.id,
-                  audioSeconds: audioSeconds ?? currentAudioSecondsRef.current,
-                }
+                lessonId: currentLesson.id,
+                audioSeconds: audioSeconds ?? currentAudioSecondsRef.current,
+              }
               : undefined,
           }),
         });
@@ -390,11 +390,10 @@ export default function LearnPage() {
                               setQuizSubmitted(false);
                               announce(`Switched to ${les.title}`);
                             }}
-                            className={`w-full text-left p-2.5 rounded-lg text-xs font-semibold min-h-[44px] transition-colors flex items-center ${
-                              activeModuleIndex === mIdx && activeLessonIndex === lIdx && !isQuizActive
+                            className={`w-full text-left p-2.5 rounded-lg text-xs font-semibold min-h-[44px] transition-colors flex items-center ${activeModuleIndex === mIdx && activeLessonIndex === lIdx && !isQuizActive
                                 ? 'bg-emerald-800 text-white font-bold'
                                 : 'text-slate-200 hover:bg-slate-800'
-                            }`}
+                              }`}
                             aria-current={
                               activeModuleIndex === mIdx && activeLessonIndex === lIdx && !isQuizActive
                                 ? 'true'
@@ -414,11 +413,10 @@ export default function LearnPage() {
                               setIsQuizActive(true);
                               announce(`Switched to quiz: ${mod.quizzes![0].title}`);
                             }}
-                            className={`w-full text-left p-2.5 rounded-lg text-xs font-semibold min-h-[44px] transition-colors flex items-center ${
-                              activeModuleIndex === mIdx && isQuizActive
+                            className={`w-full text-left p-2.5 rounded-lg text-xs font-semibold min-h-[44px] transition-colors flex items-center ${activeModuleIndex === mIdx && isQuizActive
                                 ? 'bg-emerald-800 text-white font-bold'
                                 : 'text-slate-200 hover:bg-slate-800'
-                            }`}
+                              }`}
                             aria-current={activeModuleIndex === mIdx && isQuizActive ? 'true' : undefined}
                           >
                             Quiz: {mod.quizzes[0].title}
@@ -577,15 +575,14 @@ export default function LearnPage() {
                         <label
                           key={idx}
                           htmlFor={`quiz-opt-${idx}`}
-                          className={`w-full text-left p-3.5 rounded-xl border text-sm font-semibold transition-all flex items-center justify-between min-h-[44px] cursor-pointer ${
-                            isSelected
+                          className={`w-full text-left p-3.5 rounded-xl border text-sm font-semibold transition-all flex items-center justify-between min-h-[44px] cursor-pointer ${isSelected
                               ? quizSubmitted
                                 ? isCorrectChoice
                                   ? 'bg-emerald-950 border-emerald-500 text-emerald-200'
                                   : 'bg-red-950 border-red-500 text-red-200'
                                 : 'bg-slate-800 border-emerald-500 text-white'
                               : 'bg-slate-900 border-slate-700 text-slate-200 hover:bg-slate-850'
-                          }`}
+                            }`}
                         >
                           <div className="flex items-center gap-3">
                             <input

@@ -89,3 +89,4 @@ export function assertLessonPublishChecklist(input: LessonChecklistInput): void 
     throw new BadRequestError(`Cannot publish lesson: ${result.errors.join(" ")}`);
   }
 }
+

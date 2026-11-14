@@ -37,3 +37,4 @@ export const PATCH = withErrors(async (request: Request, props: RouteProps) => {
 
   return Response.json({ module: updated });
 });
+

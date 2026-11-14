@@ -46,3 +46,4 @@ export const POST = withErrors(async (request: Request) => {
 
   return Response.json({ lesson: created }, { status: 201 });
 });
+

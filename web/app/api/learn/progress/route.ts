@@ -207,3 +207,4 @@ export const GET = withErrors(async (request: Request) => {
     isCompleted: allLessons.length > 0 && completedIds.size >= allLessons.length,
   });
 });
+

@@ -157,3 +157,4 @@ export const GET = withErrors(async (_request: Request, props: RouteProps) => {
     lastPosition: enrollment.lastPosition,
   });
 });
+

@@ -94,3 +94,4 @@ export const GET = withErrors(async () => {
     courses: courseSummaries,
   });
 });
+
